@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>手書き数字認識（自前モデル版）</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+
+:root{
+--bg:#fdf6ec;
+--card:#ffffff;
+--primary:#ff7043;
+--primary2:#42a5f5;
+--text:#3e2723;
+--muted:#8d6e63;
+--line:#ffd7c8;
+--shadow:0 10px 28px rgba(0,0,0,.08);
+--r:20px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+body{
+font-family:'M PLUS Rounded 1c',sans-serif;
+background:var(--bg);
+color:var(--text);
+padding:20px;
+display:flex;
+flex-direction:column;
+align-items:center;
+}
+
+h1{
+font-size:2rem;
+color:var(--primary);
+font-weight:900;
+margin-bottom:8px;
+text-align:center;
+}
+
+.sub{
+color:var(--muted);
+font-size:.92rem;
+margin-bottom:18px;
+text-align:center;
+}
+
+.card{
+width:100%;
+max-width:560px;
+background:var(--card);
+border-radius:var(--r);
+box-shadow:var(--shadow);
+padding:20px;
+margin-bottom:16px;
+}
+
+.title{
+font-size:.9rem;
+font-weight:800;
+color:var(--muted);
+margin-bottom:12px;
+}
+
+#statusBox{
+text-align:center;
+}
+
+#msg{
+font-size:1rem;
+font-weight:800;
+margin-bottom:8px;
+}
+
+#detail{
+font-size:.82rem;
+color:var(--muted);
+margin-bottom:10px;
+}
+
+.barWrap{
+width:100%;
+height:12px;
+background:#eee;
+border-radius:99px;
+overflow:hidden;
+}
+
+.bar{
+height:100%;
+width:0%;
+background:linear-gradient(90deg,var(--primary),var(--primary2));
+transition:.4s;
+}
+
+canvas{
+width:100%;
+max-width:500px;
+height:220px;
+background:#111827;
+border:3px solid var(--line);
+border-radius:16px;
+touch-action:none;
+display:block;
+margin:auto;
+}
+
+.hint{
+font-size:.82rem;
+color:var(--muted);
+margin-top:10px;
+text-align:center;
+}
+
+.row{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+justify-content:center;
+margin-top:14px;
+}
+
+button{
+border:none;
+border-radius:999px;
+padding:11px 22px;
+font-family:inherit;
+font-weight:800;
+cursor:pointer;
+font-size:1rem;
+}
+
+.btn1{
+background:var(--primary);
+color:#fff;
+}
+
+.btn2{
+background:#fce4ec;
+color:#c62828;
+}
+
+button:disabled{
+background:#ccc;
+color:#fff;
+cursor:not-allowed;
+}
+
+#result{
+text-align:center;
+}
+
+.big{
+font-size:4rem;
+font-weight:900;
+color:var(--primary);
+line-height:1;
+}
+
+.conf{
+margin-top:6px;
+color:var(--muted);
+font-size:.95rem;
+}
+
+.bars{
+display:flex;
+align-items:flex-end;
+justify-content:center;
+gap:4px;
+height:80px;
+margin-top:14px;
+}
+
+.col{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:3px;
+}
+
+.colBar{
+width:24px;
+background:#ffd7c8;
+border-radius:4px 4px 0 0;
+}
+
+.top{
+background:var(--primary);
+}
+
+.lbl{
+font-size:.7rem;
+color:var(--muted);
+font-weight:700;
+}
+
+footer{
+margin-top:8px;
+font-size:.78rem;
+color:var(--muted);
+text-align:center;
+}
+</style>
+</head>
+<body>
+
+<h1>✏️ 手書き数字認識</h1>
+<p class="sub">Google Colabで学習した自前モデル版</p>
+
+<div class="card">
+<div class="title">① モデル読み込み</div>
+
+<div id="statusBox">
+<div id="msg">起動中...</div>
+<div id="detail">model/model.json を読み込みます</div>
+
+<div class="barWrap">
+<div class="bar" id="bar"></div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<div class="title">② 数字を書く</div>
+
+<canvas id="canvas" width="500" height="220"></canvas>
+<p class="hint">数字を大きく１つ書いてください</p>
+
+<div class="row">
+<button class="btn2" onclick="clearCanvas()">🗑 消す</button>
+<button class="btn1" id="recBtn" onclick="recognize()" disabled>🔍 認識する</button>
+</div>
+</div>
+
+<div class="card">
+<div class="title">③ 結果</div>
+<div id="result">まだ認識していません</div>
+</div>
+
+<footer>TensorFlow.js 自前モデル読込版</footer>
+
+<script>
+let model=null;
+
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+
+let drawing=false;
+let lx=0;
+let ly=0;
+
+function initCanvas(){
+ctx.fillStyle="#111827";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+initCanvas();
+
+function pos(e){
+const r=canvas.getBoundingClientRect();
+const sx=canvas.width/r.width;
+const sy=canvas.height/r.height;
+
+if(e.touches){
+return{
+x:(e.touches[0].clientX-r.left)*sx,
+y:(e.touches[0].clientY-r.top)*sy
+};
+}
+
+return{
+x:(e.clientX-r.left)*sx,
+y:(e.clientY-r.top)*sy
+};
+}
+
+function draw(e){
+const p=pos(e);
+
+ctx.strokeStyle="#ffffff";
+ctx.lineWidth=20;
+ctx.lineCap="round";
+ctx.lineJoin="round";
+
+ctx.beginPath();
+ctx.moveTo(lx,ly);
+ctx.lineTo(p.x,p.y);
+ctx.stroke();
+
+lx=p.x;
+ly=p.y;
+}
+
+canvas.addEventListener("mousedown",e=>{
+drawing=true;
+const p=pos(e);
+lx=p.x;
+ly=p.y;
+});
+
+canvas.addEventListener("mousemove",e=>{
+if(drawing) draw(e);
+});
+
+canvas.addEventListener("mouseup",()=>drawing=false);
+canvas.addEventListener("mouseleave",()=>drawing=false);
+
+canvas.addEventListener("touchstart",e=>{
+e.preventDefault();
+drawing=true;
+const p=pos(e);
+lx=p.x;
+ly=p.y;
+});
+
+canvas.addEventListener("touchmove",e=>{
+e.preventDefault();
+if(drawing) draw(e);
+});
+
+canvas.addEventListener("touchend",()=>drawing=false);
+
+function clearCanvas(){
+initCanvas();
+document.getElementById("result").innerHTML="まだ認識していません";
+}
+
+async function loadModel(){
+try{
+setBar(20);
+setMsg("モデル読み込み中...");
+model=await tf.loadLayersModel("./model/model.json");
+setBar(100);
+setMsg("✅ 読み込み完了！");
+setDetail("Google Colab学習モデルを使用中");
+document.getElementById("recBtn").disabled=false;
+}catch(err){
+setMsg("❌ 読み込み失敗");
+setDetail(err);
+}
+}
+
+function setBar(v){
+document.getElementById("bar").style.width=v+"%";
+}
+
+function setMsg(t){
+document.getElementById("msg").textContent=t;
+}
+
+function setDetail(t){
+document.getElementById("detail").textContent=t;
+}
+
+function cropTo28(){
+const img=ctx.getImageData(0,0,canvas.width,canvas.height);
+
+let minX=canvas.width;
+let minY=canvas.height;
+let maxX=0;
+let maxY=0;
+
+for(let y=0;y<canvas.height;y++){
+for(let x=0;x<canvas.width;x++){
+const i=(y*canvas.width+x)*4;
+if(img.data[i]>30){
+if(x<minX)minX=x;
+if(y<minY)minY=y;
+if(x>maxX)maxX=x;
+if(y>maxY)maxY=y;
+}
+}
+}
+
+if(maxX<=minX || maxY<=minY) return null;
+
+const pad=10;
+minX=Math.max(0,minX-pad);
+minY=Math.max(0,minY-pad);
+maxX=Math.min(canvas.width,maxX+pad);
+maxY=Math.min(canvas.height,maxY+pad);
+
+const sw=maxX-minX;
+const sh=maxY-minY;
+const size=Math.max(sw,sh);
+
+const temp=document.createElement("canvas");
+temp.width=28;
+temp.height=28;
+const t=temp.getContext("2d");
+
+t.fillStyle="black";
+t.fillRect(0,0,28,28);
+
+t.drawImage(
+canvas,
+minX,minY,sw,sh,
+4,4,20,20
+);
+
+return temp;
+}
+
+async function recognize(){
+if(!model) return;
+
+document.getElementById("result").innerHTML="認識中...";
+
+const c28=cropTo28();
+
+if(!c28){
+document.getElementById("result").innerHTML="数字が見つかりません";
+return;
+}
+
+const pred=await tf.tidy(()=>{
+const t=tf.browser.fromPixels(c28,1)
+.toFloat()
+.div(255)
+.reshape([1,28,28,1]);
+
+return model.predict(t).data();
+});
+
+const probs=Array.from(pred);
+const max=Math.max(...probs);
+const digit=probs.indexOf(max);
+
+let html=`
+<div class="big">${digit}</div>
+<div class="conf">確信度 ${(max*100).toFixed(1)}%</div>
+<div class="bars">
+`;
+
+probs.forEach((p,i)=>{
+html+=`
+<div class="col">
+<div class="colBar ${p===max?'top':''}" style="height:${Math.max(3,p*70)}px"></div>
+<div class="lbl">${i}</div>
+</div>
+`;
+});
+
+html+=`</div>`;
+
+document.getElementById("result").innerHTML=html;
+}
+
+loadModel();
+</script>
+</body>
+</html>
