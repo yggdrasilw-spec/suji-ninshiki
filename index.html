@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>手書き数字認識（自前モデル版）</title>
 
+<!-- 修正版：TensorFlow.js 最新版 -->
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
 <style>
@@ -66,9 +67,7 @@ color:var(--muted);
 margin-bottom:12px;
 }
 
-#statusBox{
-text-align:center;
-}
+#statusBox{text-align:center;}
 
 #msg{
 font-size:1rem;
@@ -80,6 +79,7 @@ margin-bottom:8px;
 font-size:.82rem;
 color:var(--muted);
 margin-bottom:10px;
+word-break:break-word;
 }
 
 .barWrap{
@@ -150,9 +150,7 @@ color:#fff;
 cursor:not-allowed;
 }
 
-#result{
-text-align:center;
-}
+#result{text-align:center;}
 
 .big{
 font-size:4rem;
@@ -210,18 +208,14 @@ text-align:center;
 <body>
 
 <h1>✏️ 手書き数字認識</h1>
-<p class="sub">Google Colabで学習した自前モデル版</p>
+<p class="sub">Google Colab学習モデル版</p>
 
 <div class="card">
 <div class="title">① モデル読み込み</div>
-
 <div id="statusBox">
 <div id="msg">起動中...</div>
 <div id="detail">model/model.json を読み込みます</div>
-
-<div class="barWrap">
-<div class="bar" id="bar"></div>
-</div>
+<div class="barWrap"><div class="bar" id="bar"></div></div>
 </div>
 </div>
 
@@ -229,7 +223,7 @@ text-align:center;
 <div class="title">② 数字を書く</div>
 
 <canvas id="canvas" width="500" height="220"></canvas>
-<p class="hint">数字を大きく１つ書いてください</p>
+<p class="hint">数字を大きく1つ書いてください</p>
 
 <div class="row">
 <button class="btn2" onclick="clearCanvas()">🗑 消す</button>
@@ -238,11 +232,11 @@ text-align:center;
 </div>
 
 <div class="card">
-<div class="title">③ 結果</div>
+<div class="title">③ 認識結果</div>
 <div id="result">まだ認識していません</div>
 </div>
 
-<footer>TensorFlow.js 自前モデル読込版</footer>
+<footer>TensorFlow.js latest 対応版</footer>
 
 <script>
 let model=null;
@@ -250,9 +244,7 @@ let model=null;
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 
-let drawing=false;
-let lx=0;
-let ly=0;
+let drawing=false,lx=0,ly=0;
 
 function initCanvas(){
 ctx.fillStyle="#111827";
@@ -266,13 +258,12 @@ const sx=canvas.width/r.width;
 const sy=canvas.height/r.height;
 
 if(e.touches){
-return{
+return {
 x:(e.touches[0].clientX-r.left)*sx,
 y:(e.touches[0].clientY-r.top)*sy
 };
 }
-
-return{
+return {
 x:(e.clientX-r.left)*sx,
 y:(e.clientY-r.top)*sy
 };
@@ -329,40 +320,41 @@ initCanvas();
 document.getElementById("result").innerHTML="まだ認識していません";
 }
 
+function setBar(v){
+document.getElementById("bar").style.width=v+"%";
+}
+function setMsg(t){
+document.getElementById("msg").textContent=t;
+}
+function setDetail(t){
+document.getElementById("detail").textContent=t;
+}
+
 async function loadModel(){
 try{
+console.log("TFJS VERSION:", tf.version.tfjs);
+
 setBar(20);
 setMsg("モデル読み込み中...");
+
 model=await tf.loadLayersModel("./model/model.json");
+
 setBar(100);
 setMsg("✅ 読み込み完了！");
 setDetail("Google Colab学習モデルを使用中");
 document.getElementById("recBtn").disabled=false;
+
 }catch(err){
+console.error(err);
 setMsg("❌ 読み込み失敗");
-setDetail(err);
+setDetail(err.message || err);
 }
-}
-
-function setBar(v){
-document.getElementById("bar").style.width=v+"%";
-}
-
-function setMsg(t){
-document.getElementById("msg").textContent=t;
-}
-
-function setDetail(t){
-document.getElementById("detail").textContent=t;
 }
 
 function cropTo28(){
 const img=ctx.getImageData(0,0,canvas.width,canvas.height);
 
-let minX=canvas.width;
-let minY=canvas.height;
-let maxX=0;
-let maxY=0;
+let minX=canvas.width,minY=canvas.height,maxX=0,maxY=0;
 
 for(let y=0;y<canvas.height;y++){
 for(let x=0;x<canvas.width;x++){
@@ -386,7 +378,6 @@ maxY=Math.min(canvas.height,maxY+pad);
 
 const sw=maxX-minX;
 const sh=maxY-minY;
-const size=Math.max(sw,sh);
 
 const temp=document.createElement("canvas");
 temp.width=28;
@@ -396,11 +387,7 @@ const t=temp.getContext("2d");
 t.fillStyle="black";
 t.fillRect(0,0,28,28);
 
-t.drawImage(
-canvas,
-minX,minY,sw,sh,
-4,4,20,20
-);
+t.drawImage(canvas,minX,minY,sw,sh,4,4,20,20);
 
 return temp;
 }
@@ -418,12 +405,12 @@ return;
 }
 
 const pred=await tf.tidy(()=>{
-const t=tf.browser.fromPixels(c28,1)
+const input=tf.browser.fromPixels(c28,1)
 .toFloat()
 .div(255)
 .reshape([1,28,28,1]);
 
-return model.predict(t).data();
+return model.predict(input).data();
 });
 
 const probs=Array.from(pred);
