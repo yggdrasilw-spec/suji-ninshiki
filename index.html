@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（認識停止バグ修正版）</title>
+<title>手書き数字認識（最終精度改善版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -15,7 +15,6 @@ text-align:center;
 padding:20px;
 margin:0;
 }
-
 h1{color:#ff7043;margin-bottom:5px;}
 p{color:#666;margin-top:0;}
 
@@ -95,7 +94,7 @@ margin-top:8px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>認識停止バグ修正版</p>
+<p>最終精度改善版</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -121,11 +120,10 @@ let model;
 // =====================================================
 async function loadModel(){
 try{
-model = await tf.loadGraphModel("./model/model.json");
+model=await tf.loadGraphModel("./model/model.json");
 msg.innerHTML="✅ モデル読み込み成功";
 }catch(e){
 msg.innerHTML="❌ 読み込み失敗";
-console.error(e);
 }
 }
 loadModel();
@@ -141,16 +139,12 @@ const msg=document.getElementById("msg");
 const result=document.getElementById("result");
 const mini=document.getElementById("mini");
 
-// 白背景
+// =====================================================
 ctx.fillStyle="white";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
-// =====================================================
-// 状態
-// =====================================================
 let drawing=false;
 let phase=0;
-
 let tensDigit=null;
 let onesDigit=null;
 
@@ -158,23 +152,13 @@ let stroke1Box=null;
 let stroke2Box=null;
 
 // =====================================================
-// 座標
-// =====================================================
 function getPos(e){
-
 const rect=canvas.getBoundingClientRect();
 
-if(e.touches && e.touches.length>0){
+if(e.touches && e.touches.length){
 return{
 x:(e.touches[0].clientX-rect.left)*(canvas.width/rect.width),
 y:(e.touches[0].clientY-rect.top)*(canvas.height/rect.height)
-};
-}
-
-if(e.changedTouches && e.changedTouches.length>0){
-return{
-x:(e.changedTouches[0].clientX-rect.left)*(canvas.width/rect.width),
-y:(e.changedTouches[0].clientY-rect.top)*(canvas.height/rect.height)
 };
 }
 
@@ -185,56 +169,39 @@ y:(e.clientY-rect.top)*(canvas.height/rect.height)
 }
 
 // =====================================================
-// box取得
-// =====================================================
 let minX,maxX,minY,maxY;
 
 function resetBox(){
-minX=9999;
-minY=9999;
-maxX=-1;
-maxY=-1;
+minX=9999; minY=9999;
+maxX=-1; maxY=-1;
 }
 
 function updateBox(x,y){
-
-// 線幅20px考慮
-const r=10;
-
-if(x-r<minX)minX=x-r;
-if(y-r<minY)minY=y-r;
-if(x+r>maxX)maxX=x+r;
-if(y+r>maxY)maxY=y+r;
+if(x<minX)minX=x;
+if(y<minY)minY=y;
+if(x>maxX)maxX=x;
+if(y>maxY)maxY=y;
 }
 
 function getCurrentBox(){
-
-let w=maxX-minX;
-let h=maxY-minY;
-
-// 最小保証
-if(w<8)w=8;
-if(h<8)h=8;
-
 return{
-x:Math.max(0,minX),
-y:Math.max(0,minY),
-w:w,
-h:h
+x:minX,
+y:minY,
+w:Math.max(8,maxX-minX),
+h:Math.max(8,maxY-minY)
 };
 }
 
 // =====================================================
-function expandBox(box,pad=14){
+function expandBox(box,padX=22,padY=22){
 
-let x=box.x-pad;
-let y=box.y-pad;
-let w=box.w+pad*2;
-let h=box.h+pad*2;
+let x=box.x-padX;
+let y=box.y-padY;
+let w=box.w+padX*2;
+let h=box.h+padY*2;
 
 if(x<0)x=0;
 if(y<0)y=0;
-
 if(x+w>canvas.width)w=canvas.width-x;
 if(y+h>canvas.height)h=canvas.height-y;
 
@@ -243,7 +210,6 @@ return{x,y,w,h};
 
 // =====================================================
 function isTouch(a,b){
-
 const pad=14;
 
 return !(
@@ -255,37 +221,42 @@ b.y+b.h+pad < a.y
 }
 
 // =====================================================
-function getOnesArea(){
-
-if(stroke2Box)return stroke2Box;
-if(!stroke1Box)return null;
-
-let x=stroke1Box.x+stroke1Box.w+10;
-let w=canvas.width-x-10;
-
-if(w<20)return null;
-
-return{
-x:x,
-y:10,
-w:w,
-h:canvas.height-20
-};
-}
-
-// =====================================================
 function drawBoxes(){
 
 octx.clearRect(0,0,overlay.width,overlay.height);
 
-if(stroke1Box) drawRect(stroke1Box,"#00e676");
-
-const red=getOnesArea();
-if(red) drawRect(red,"#ff5252");
+// 緑枠
+if(stroke1Box){
+drawRect(expandBox(stroke1Box,10,10),"#00e676");
 }
 
-function drawRect(box,color){
+// 赤枠
+let redBox=null;
 
+if(stroke2Box){
+redBox=expandBox(stroke2Box,10,10);
+
+}else if(stroke1Box){
+
+const gap=10;
+
+redBox={
+x:stroke1Box.x+stroke1Box.w+gap,
+y:10,
+w:canvas.width-(stroke1Box.x+stroke1Box.w+gap)-10,
+h:canvas.height-20
+};
+
+if(redBox.w<20)redBox=null;
+}
+
+if(redBox){
+drawRect(redBox,"#ff5252");
+}
+}
+
+// =====================================================
+function drawRect(box,color){
 octx.strokeStyle=color;
 octx.lineWidth=2;
 octx.setLineDash([8,5]);
@@ -294,56 +265,46 @@ octx.setLineDash([]);
 }
 
 // =====================================================
-// 入力イベント（強化版）
-// =====================================================
 canvas.addEventListener("mousedown",start);
 canvas.addEventListener("mousemove",move);
-window.addEventListener("mouseup",end);
+canvas.addEventListener("mouseup",end);
+canvas.addEventListener("mouseleave",end);
 
 canvas.addEventListener("touchstart",start,{passive:false});
 canvas.addEventListener("touchmove",move,{passive:false});
-window.addEventListener("touchend",end,{passive:false});
-window.addEventListener("touchcancel",end,{passive:false});
+canvas.addEventListener("touchend",end,{passive:false});
 
 // =====================================================
 function start(e){
-
 if(phase===3)return;
 
 drawing=true;
 resetBox();
+ctx.beginPath();
 draw(e);
 }
 
-// =====================================================
 function move(e){
 if(!drawing)return;
 draw(e);
 }
 
-// =====================================================
-async function end(e){
+async function end(){
 
 if(!drawing)return;
 
 drawing=false;
 ctx.beginPath();
 
-mini.innerHTML="stroke end → 認識中...";
+const box=getCurrentBox();
 
-const raw=getCurrentBox();
-const box=expandBox(raw,14);
-
-// --------------------------------
 // 1本目
-// --------------------------------
 if(phase===0){
 
-stroke1Box=box;
+stroke1Box=expandBox(box,22,22);
 drawBoxes();
 
-tensDigit=await predict(stroke1Box);
-
+tensDigit=await predict();
 result.innerHTML=tensDigit;
 mini.innerHTML="十の位 仮認識 = "+tensDigit;
 
@@ -351,12 +312,10 @@ phase=1;
 return;
 }
 
-// --------------------------------
 // 2本目
-// --------------------------------
 if(phase===1){
 
-stroke2Box=box;
+stroke2Box=expandBox(box,22,22);
 
 if(isTouch(stroke1Box,stroke2Box)){
 
@@ -365,10 +324,10 @@ stroke2Box=null;
 
 drawBoxes();
 
-tensDigit=await predict(stroke1Box);
+tensDigit=await predict();
 
 result.innerHTML=tensDigit;
-mini.innerHTML="十の位 再認識確定 = "+tensDigit+" / 一の位を書いてください";
+mini.innerHTML="十の位 再認識確定 = "+tensDigit+"<br>一の位を書いてください";
 
 phase=2;
 
@@ -376,7 +335,7 @@ phase=2;
 
 drawBoxes();
 
-onesDigit=await predict(stroke2Box);
+onesDigit=await predict();
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+" 仮";
@@ -387,16 +346,10 @@ phase=2;
 return;
 }
 
-// --------------------------------
 // 3本目
-// --------------------------------
 if(phase===2){
 
-stroke2Box=mergeBox(stroke2Box,box);
-
-drawBoxes();
-
-onesDigit=await predict(stroke2Box);
+onesDigit=await predict();
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+" 確定";
@@ -414,12 +367,7 @@ const y=Math.min(a.y,b.y);
 const r=Math.max(a.x+a.w,b.x+b.w);
 const bt=Math.max(a.y+a.h,b.y+b.h);
 
-return{
-x:x,
-y:y,
-w:r-x,
-h:bt-y
-};
+return{x,y,w:r-x,h:bt-y};
 }
 
 // =====================================================
@@ -454,8 +402,6 @@ result.innerHTML="?";
 mini.innerHTML="十の位から書いてください";
 
 phase=0;
-drawing=false;
-
 tensDigit=null;
 onesDigit=null;
 stroke1Box=null;
@@ -463,43 +409,89 @@ stroke2Box=null;
 }
 
 // =====================================================
-// preprocess
+// ★最終精度改善 前処理
+// 画像認識コード本体は触らず preprocessのみ強化
 // =====================================================
-function preprocess(box){
+function getTargetBox(){
 
+if(phase===0 && stroke1Box) return stroke1Box;
+if(phase===1 && stroke2Box) return stroke2Box;
+if(phase>=2 && stroke2Box) return stroke2Box;
+if(stroke1Box) return stroke1Box;
+
+return {x:0,y:0,w:canvas.width,h:canvas.height};
+}
+
+function preprocess(){
 return tf.tidy(()=>{
 
-let img=tf.browser.fromPixels(canvas,1);
+const box=getTargetBox();
 
-img=tf.slice(
-img,
+// 元画像切り出し
+const src=tf.browser.fromPixels(canvas,1);
+
+let crop=tf.slice(
+src,
 [Math.floor(box.y),Math.floor(box.x),0],
-[Math.floor(box.h),Math.floor(box.w),1]
+[
+Math.max(1,Math.floor(box.h)),
+Math.max(1,Math.floor(box.w)),
+1
+]
 );
 
-img=tf.image.resizeWithPad(img,40,40);
+// 正方形サイズ
+const side=Math.max(crop.shape[0],crop.shape[1]);
 
+// 外周10%余白追加
+const sidePad=Math.floor(side*0.10);
+const finalSide=side + sidePad*2;
+
+// 白背景キャンバスへ中央配置
+let square=tf.fill([finalSide,finalSide,1],255);
+
+const offsetY=Math.floor((finalSide-crop.shape[0])/2);
+const offsetX=Math.floor((finalSide-crop.shape[1])/2);
+
+square=square.pad([[0,0],[0,0],[0,0]]);
+square=tf.tensor(square.arraySync());
+
+const arr=square.arraySync();
+
+const cropArr=crop.arraySync();
+
+for(let y=0;y<crop.shape[0];y++){
+for(let x=0;x<crop.shape[1];x++){
+arr[y+offsetY][x+offsetX][0]=cropArr[y][x][0];
+}
+}
+
+let img=tf.tensor(arr);
+
+// 28x28縮小
 img=tf.image.resizeBilinear(img,[28,28]);
 
+// 白黒反転
 img=tf.sub(255,img);
 
-img=img.toFloat().div(255);
+// 正規化
+img=img.toFloat().div(255.0);
 
+// batch化
 img=img.expandDims(0);
 
 return img;
-
 });
 }
 
 // =====================================================
-// 認識
+// 認識本体そのまま
 // =====================================================
-async function predict(box){
+async function predict(){
 
 if(!model)return 0;
 
-const input=preprocess(box);
+const input=preprocess();
 
 let output=model.predict ?
 model.predict(input) :
