@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識 完全統合版（十の位早期確定）</title>
+<title>手書き数字認識（開始点判定版）</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
 <style>
 body{
 font-family:sans-serif;
@@ -23,6 +24,7 @@ box-shadow:0 8px 24px rgba(0,0,0,.08);
 }
 h1{margin:0;color:#ff7043;}
 p{margin:6px 0 14px;color:#666;}
+
 #board{
 position:relative;
 width:100%;
@@ -42,9 +44,11 @@ border:3px solid #ffccbc;
 }
 #overlay{
 position:absolute;
-left:0;top:0;
+left:0;
+top:0;
 pointer-events:none;
 }
+
 button{
 padding:12px 20px;
 font-size:18px;
@@ -54,6 +58,7 @@ background:#ddd;
 margin-top:12px;
 cursor:pointer;
 }
+
 #msg{font-weight:bold;margin:12px 0;}
 #result{
 font-size:64px;
@@ -66,6 +71,7 @@ color:#666;
 line-height:1.6;
 margin-top:8px;
 }
+
 #debug{
 margin-top:18px;
 display:flex;
@@ -96,8 +102,9 @@ margin-bottom:6px;
 <body>
 
 <div id="wrap">
+
 <h1>✏️ 手書き数字認識</h1>
-<p>十の位早期確定版</p>
+<p>開始点判定版</p>
 
 <div id="msg">モデル読み込み中...</div>
 
@@ -148,7 +155,7 @@ ctx.fillStyle="white";
 ctx.fillRect(0,0,500,220);
 
 let drawing=false;
-let totalStroke=0;
+let strokeCount=0;
 
 let tensDigit=null;
 let onesDigit=null;
@@ -156,11 +163,13 @@ let onesDigit=null;
 let stroke1Box=null;
 let stroke2Box=null;
 
-let tensLocked=false; // ★追加：十の位確定済みフラグ
+let secondStartedFar=false;
+let secondStartX=0;
+let secondStartY=0;
 
 let minX,maxX,minY,maxY;
 
-// ======================
+// =====================
 async function loadModel(){
 try{
 model=await tf.loadGraphModel("./model/model.json");
@@ -171,7 +180,7 @@ msg.innerHTML="❌ モデル読み込み失敗";
 }
 loadModel();
 
-// ======================
+// =====================
 function resetBox(){
 minX=9999;minY=9999;
 maxX=-1;maxY=-1;
@@ -194,6 +203,7 @@ h:Math.max(8,maxY-minY)
 }
 
 function expandBox(b,p=14){
+
 let x=b.x-p;
 let y=b.y-p;
 let w=b.w+p*2;
@@ -215,21 +225,26 @@ const bt=Math.max(a.y+a.h,b.y+b.h);
 return{x,y,w:r-x,h:bt-y};
 }
 
-// ======================
-// 緑枠に入り込んだか判定
-// （少しでも交差なら true）
-// ======================
-function startsInsideGreen(green,newBox){
+// =====================
+// 緑枠から十分離れた開始点か
+// =====================
+function isFarFromGreen(box,x,y){
 
-return !(
-newBox.x+newBox.w < green.x ||
-newBox.x > green.x+green.w ||
-newBox.y+newBox.h < green.y ||
-newBox.y > green.y+green.h
-);
+const margin=24;
+
+if(
+x < box.x-margin ||
+x > box.x+box.w+margin ||
+y < box.y-margin ||
+y > box.y+box.h+margin
+){
+return true;
 }
 
-// ======================
+return false;
+}
+
+// =====================
 function getPos(e){
 
 const rect=canvas.getBoundingClientRect();
@@ -247,7 +262,7 @@ y:(e.clientY-rect.top)*(220/rect.height)
 };
 }
 
-// ======================
+// =====================
 canvas.addEventListener("mousedown",start);
 canvas.addEventListener("mousemove",move);
 canvas.addEventListener("mouseup",end);
@@ -257,7 +272,7 @@ canvas.addEventListener("touchstart",start,{passive:false});
 canvas.addEventListener("touchmove",move,{passive:false});
 canvas.addEventListener("touchend",end,{passive:false});
 
-// ======================
+// =====================
 function start(e){
 
 drawing=true;
@@ -266,6 +281,17 @@ resetBox();
 const p=getPos(e);
 
 updateBox(p.x,p.y);
+
+// 2本目開始時判定
+if(strokeCount===1 && stroke1Box){
+
+secondStartX=p.x;
+secondStartY=p.y;
+
+secondStartedFar=isFarFromGreen(
+stroke1Box,p.x,p.y
+);
+}
 
 ctx.beginPath();
 ctx.arc(p.x,p.y,8,0,Math.PI*2);
@@ -300,7 +326,7 @@ ctx.beginPath();
 ctx.moveTo(p.x,p.y);
 }
 
-// ======================
+// =====================
 async function end(){
 
 if(!drawing)return;
@@ -308,14 +334,14 @@ if(!drawing)return;
 drawing=false;
 ctx.beginPath();
 
-totalStroke++;
+strokeCount++;
 
 const box=expandBox(getRawBox());
 
-// ----------------------
-// 1本目 = 十の位
-// ----------------------
-if(totalStroke===1){
+// -------------------
+// 1本目 十の位
+// -------------------
+if(strokeCount===1){
 
 stroke1Box=box;
 drawBoxes();
@@ -327,16 +353,14 @@ mini.innerHTML="十の位 仮認識 = "+tensDigit;
 return;
 }
 
-// ----------------------
+// -------------------
 // 2本目
-// ★緑枠に入ってなければ十の位確定
-// ----------------------
-if(totalStroke===2){
+// -------------------
+if(strokeCount===2){
 
-if(!startsInsideGreen(stroke1Box,box)){
+if(secondStartedFar){
 
-tensLocked=true; // 十の位確定
-
+// 十の位確定済み
 stroke2Box=box;
 drawBoxes();
 
@@ -345,9 +369,10 @@ onesDigit=await predict(stroke2Box,"ones");
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="十の位確定 / 一の位開始";
 return;
-}
 
-// 緑内なら十の位追記
+}else{
+
+// 十の位追記
 stroke1Box=mergeBox(stroke1Box,box);
 
 drawBoxes();
@@ -358,10 +383,11 @@ result.innerHTML=tensDigit;
 mini.innerHTML="十の位 更新";
 return;
 }
+}
 
-// ----------------------
-// 3本目以降
-// ----------------------
+// -------------------
+// 3本目以降 一の位
+// -------------------
 if(!stroke2Box){
 stroke2Box=box;
 }else{
@@ -374,10 +400,9 @@ onesDigit=await predict(stroke2Box,"ones");
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="確定";
-
 }
 
-// ======================
+// =====================
 function drawBoxes(){
 
 octx.clearRect(0,0,500,220);
@@ -395,10 +420,7 @@ octx.strokeRect(b.x,b.y,b.w,b.h);
 octx.setLineDash([]);
 }
 
-// ======================
-// 既存 preprocess / predict
-// （そのまま流用）
-// ======================
+// =====================
 function preprocess(box,target){
 
 return tf.tidy(()=>{
@@ -499,7 +521,7 @@ output.dispose();
 return idx;
 }
 
-// ======================
+// =====================
 function clearCanvas(){
 
 ctx.fillStyle="white";
@@ -510,7 +532,7 @@ octx.clearRect(0,0,500,220);
 dctxT.clearRect(0,0,28,28);
 dctxO.clearRect(0,0,28,28);
 
-totalStroke=0;
+strokeCount=0;
 
 tensDigit=null;
 onesDigit=null;
@@ -518,7 +540,7 @@ onesDigit=null;
 stroke1Box=null;
 stroke2Box=null;
 
-tensLocked=false;
+secondStartedFar=false;
 
 result.innerHTML="?";
 mini.innerHTML="十の位から書いてください";
