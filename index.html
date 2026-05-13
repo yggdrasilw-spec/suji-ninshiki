@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（高速仮認識版）</title>
+<title>手書き数字認識（近接判定強化版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -16,15 +16,8 @@ padding:20px;
 margin:0;
 }
 
-h1{
-color:#ff7043;
-margin-bottom:5px;
-}
-
-p{
-color:#666;
-margin-top:0;
-}
+h1{color:#ff7043;margin-bottom:5px;}
+p{color:#666;margin-top:0;}
 
 #wrap{
 max-width:520px;
@@ -82,7 +75,7 @@ margin-top:8px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>高速仮認識（十の位先読み）</p>
+<p>近接判定強化版</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -114,8 +107,6 @@ msg.innerHTML="❌ 読み込み失敗";
 loadModel();
 
 // =====================================================
-// キャンバス
-// =====================================================
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
 const msg=document.getElementById("msg");
@@ -129,18 +120,11 @@ let drawing=false;
 
 // =====================================================
 // 状態管理
-//
-// phase0 : 十の位 1画目待ち
-// phase1 : 2本目待ち（十の位2画目 or 一の位1画目）
-// phase2 : 一の位2画目待ち or 完成
-// phase3 : 完成
 // =====================================================
 let phase=0;
-
 let tensDigit=null;
 let onesDigit=null;
 
-// 各ストローク矩形
 let stroke1Box=null;
 let stroke2Box=null;
 
@@ -148,6 +132,7 @@ let stroke2Box=null;
 // 座標取得
 // =====================================================
 function getPos(e){
+
 const rect=canvas.getBoundingClientRect();
 
 if(e.touches){
@@ -164,7 +149,7 @@ y:(e.clientY-rect.top)*(canvas.height/rect.height)
 }
 
 // =====================================================
-// 現在ストロークの矩形
+// ストローク矩形記録
 // =====================================================
 let minX,maxX,minY,maxY;
 
@@ -192,19 +177,74 @@ h:maxY-minY
 }
 
 // =====================================================
-// 矩形接触判定
-// 少し余裕を持たせる
+// 近接判定強化版
+//
+// 以前: 接触のみ
+// 今回: ギリギリ近い場合も同数字扱い
+//
+// 判定内容
+// ① 重なり
+// ② 近接距離
+// ③ 横方向の自然な7のズレ許容
 // =====================================================
 function isTouch(a,b){
 
-const pad=12;
+const overlapPad=12;
 
-return !(
-a.x+a.w+pad < b.x ||
-b.x+b.w+pad < a.x ||
-a.y+a.h+pad < b.y ||
-b.y+b.h+pad < a.y
+// 接触判定
+const overlap = !(
+a.x+a.w+overlapPad < b.x ||
+b.x+b.w+overlapPad < a.x ||
+a.y+a.h+overlapPad < b.y ||
+b.y+b.h+overlapPad < a.y
 );
+
+if(overlap)return true;
+
+// ----------------------------
+// 最短距離計算
+// ----------------------------
+const dx=Math.max(
+a.x-(b.x+b.w),
+b.x-(a.x+a.w),
+0
+);
+
+const dy=Math.max(
+a.y-(b.y+b.h),
+b.y-(a.y+a.h),
+0
+);
+
+const dist=Math.sqrt(dx*dx+dy*dy);
+
+// ----------------------------
+// ギリギリ近い定義
+//
+// 数字サイズに応じて可変
+// 小さい字なら狭く
+// 大きい字なら広く
+// ----------------------------
+const sizeBase=Math.max(a.w,a.h,b.w,b.h);
+const nearLimit=Math.max(18,sizeBase*0.35);
+
+if(dist<=nearLimit)return true;
+
+// ----------------------------
+// 7対策
+// 横ズレ小 + 縦連続なら接触扱い
+// ----------------------------
+const centerAX=a.x+a.w/2;
+const centerBX=b.x+b.w/2;
+const centerAY=a.y+a.h/2;
+const centerBY=b.y+b.h/2;
+
+const cx=Math.abs(centerAX-centerBX);
+const cy=Math.abs(centerAY-centerBY);
+
+if(cx<28 && cy<65)return true;
+
+return false;
 }
 
 // =====================================================
@@ -219,8 +259,6 @@ canvas.addEventListener("touchmove",move);
 canvas.addEventListener("touchend",end);
 
 // =====================================================
-// 開始
-// =====================================================
 function start(e){
 
 if(phase===3)return;
@@ -230,17 +268,11 @@ resetBox();
 draw(e);
 }
 
-// =====================================================
-// 移動
-// =====================================================
 function move(e){
 if(!drawing)return;
 draw(e);
 }
 
-// =====================================================
-// 終了
-// =====================================================
 async function end(){
 
 if(!drawing)return;
@@ -250,9 +282,7 @@ ctx.beginPath();
 
 const box=getCurrentBox();
 
-// -----------------------------------------------
-// 1本目終了 → 即仮認識（十の位）
-// -----------------------------------------------
+// 1本目
 if(phase===0){
 
 stroke1Box=box;
@@ -260,23 +290,19 @@ stroke1Box=box;
 tensDigit=await predict();
 
 result.innerHTML=tensDigit;
-mini.innerHTML="十の位 仮認識 = "+tensDigit+"<br>次の入力待ち";
+mini.innerHTML="十の位 仮認識 = "+tensDigit;
 
 phase=1;
 return;
 }
 
-// -----------------------------------------------
-// 2本目終了
-// 十の位2画目か？ 一の位1画目か？
-// -----------------------------------------------
+// 2本目
 if(phase===1){
 
 stroke2Box=box;
 
 if(isTouch(stroke1Box,stroke2Box)){
 
-// 同じ数字に接触 → 4,5,7等
 tensDigit=await predict();
 
 result.innerHTML=tensDigit;
@@ -286,13 +312,10 @@ phase=2;
 
 }else{
 
-// 離れている → 一の位開始
 onesDigit=await predict();
 
 result.innerHTML=(tensDigit*10)+onesDigit;
-
-mini.innerHTML=
-"十="+tensDigit+" 確定 / 一="+onesDigit+" 仮認識";
+mini.innerHTML="十="+tensDigit+"確定 / 一="+onesDigit+"仮";
 
 phase=2;
 }
@@ -300,25 +323,18 @@ phase=2;
 return;
 }
 
-// -----------------------------------------------
-// 3本目終了
-// 一の位の2画目のみ再認識
-// -----------------------------------------------
+// 3本目
 if(phase===2){
 
 onesDigit=await predict();
 
 result.innerHTML=(tensDigit*10)+onesDigit;
-
-mini.innerHTML=
-"十="+tensDigit+" / 一="+onesDigit+" 確定";
+mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+"確定";
 
 phase=3;
 }
 }
 
-// =====================================================
-// 描画
 // =====================================================
 function draw(e){
 
@@ -339,8 +355,6 @@ ctx.beginPath();
 ctx.moveTo(p.x,p.y);
 }
 
-// =====================================================
-// 消去
 // =====================================================
 function clearCanvas(){
 
