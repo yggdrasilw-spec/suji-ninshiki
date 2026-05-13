@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（判定エリア可視化版）</title>
+<title>手書き数字認識（判定エリア拡張版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -95,7 +95,7 @@ margin-top:8px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>判定エリア可視化版</p>
+<p>判定エリア拡張版</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -116,8 +116,6 @@ margin-top:8px;
 <script>
 let model;
 
-// =====================================================
-// モデル読み込み（既存維持）
 // =====================================================
 async function loadModel(){
 try{
@@ -145,9 +143,6 @@ ctx.fillRect(0,0,canvas.width,canvas.height);
 
 let drawing=false;
 
-// =====================================================
-// 状態管理
-// =====================================================
 let phase=0;
 let tensDigit=null;
 let onesDigit=null;
@@ -181,10 +176,8 @@ y:(e.clientY-rect.top)*(canvas.height/rect.height)
 let minX,maxX,minY,maxY;
 
 function resetBox(){
-minX=9999;
-minY=9999;
-maxX=-1;
-maxY=-1;
+minX=9999; minY=9999;
+maxX=-1; maxY=-1;
 }
 
 function updateBox(x,y){
@@ -204,72 +197,85 @@ h:maxY-minY
 }
 
 // =====================================================
-// 接触判定（既存ロジック維持）
+// 外側へ余白追加
+//
+// 緑枠が文字全体を包むように大きく拡張
 // =====================================================
-function isTouch(a,b){
+function expandBox(box,padX=22,padY=22){
 
-const overlapPad=12;
+let x=box.x-padX;
+let y=box.y-padY;
+let w=box.w+padX*2;
+let h=box.h+padY*2;
 
-const overlap = !(
-a.x+a.w+overlapPad < b.x ||
-b.x+b.w+overlapPad < a.x ||
-a.y+a.h+overlapPad < b.y ||
-b.y+b.h+overlapPad < a.y
-);
+if(x<0)x=0;
+if(y<0)y=0;
+if(x+w>canvas.width)w=canvas.width-x;
+if(y+h>canvas.height)h=canvas.height-y;
 
-if(overlap)return true;
-
-const dx=Math.max(
-a.x-(b.x+b.w),
-b.x-(a.x+a.w),
-0
-);
-
-const dy=Math.max(
-a.y-(b.y+b.h),
-b.y-(a.y+a.h),
-0
-);
-
-const dist=Math.sqrt(dx*dx+dy*dy);
-
-const sizeBase=Math.max(a.w,a.h,b.w,b.h);
-const nearLimit=Math.max(18,sizeBase*0.35);
-
-if(dist<=nearLimit)return true;
-
-const centerAX=a.x+a.w/2;
-const centerBX=b.x+b.w/2;
-const centerAY=a.y+a.h/2;
-const centerBY=b.y+b.h/2;
-
-const cx=Math.abs(centerAX-centerBX);
-const cy=Math.abs(centerAY-centerBY);
-
-if(cx<28 && cy<65)return true;
-
-return false;
+return{x,y,w,h};
 }
 
 // =====================================================
-// 可視化描画
+// 接触判定（既存維持）
+// =====================================================
+function isTouch(a,b){
+
+const pad=14;
+
+return !(
+a.x+a.w+pad < b.x ||
+b.x+b.w+pad < a.x ||
+a.y+a.h+pad < b.y ||
+b.y+b.h+pad < a.y
+);
+}
+
+// =====================================================
+// 可視化
 //
-// 緑 = 十の位
-// 赤 = 一の位
+// 緑 = 十の位認識範囲
+// 赤 = 一の位認識範囲
 // =====================================================
 function drawBoxes(){
 
 octx.clearRect(0,0,overlay.width,overlay.height);
 
+// ----------------------
+// 十の位 緑
+// ----------------------
 if(stroke1Box){
-drawRect(stroke1Box,"#00e676");
+drawRect(expandBox(stroke1Box,24,24),"#00e676");
 }
+
+// ----------------------
+// 一の位 赤
+//
+// stroke2Box があるならそこ優先
+// 無いなら十の位右側余白全体
+// ----------------------
+let redBox=null;
 
 if(stroke2Box){
 
-if(phase===2 && !isTouch(stroke1Box,stroke2Box)){
-drawRect(stroke2Box,"#ff5252");
+redBox=expandBox(stroke2Box,24,24);
+
+}else if(stroke1Box){
+
+const gap=10;
+
+redBox={
+x:stroke1Box.x+stroke1Box.w+gap,
+y:10,
+w:canvas.width-(stroke1Box.x+stroke1Box.w+gap)-10,
+h:canvas.height-20
+};
+
+if(redBox.w<20)redBox=null;
 }
+
+if(redBox){
+drawRect(redBox,"#ff5252");
 }
 }
 
@@ -321,7 +327,8 @@ const box=getCurrentBox();
 // 1本目
 if(phase===0){
 
-stroke1Box=box;
+stroke1Box=expandBox(box,22,22);
+
 drawBoxes();
 
 tensDigit=await predict();
@@ -336,11 +343,10 @@ return;
 // 2本目
 if(phase===1){
 
-stroke2Box=box;
+stroke2Box=expandBox(box,22,22);
 
 if(isTouch(stroke1Box,stroke2Box)){
 
-// 同じ数字扱い → 緑更新
 stroke1Box=mergeBox(stroke1Box,stroke2Box);
 stroke2Box=null;
 
@@ -360,7 +366,7 @@ drawBoxes();
 onesDigit=await predict();
 
 result.innerHTML=(tensDigit*10)+onesDigit;
-mini.innerHTML="十="+tensDigit+"確定 / 一="+onesDigit+"仮";
+mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+" 仮";
 
 phase=2;
 }
@@ -374,14 +380,12 @@ if(phase===2){
 onesDigit=await predict();
 
 result.innerHTML=(tensDigit*10)+onesDigit;
-mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+"確定";
+mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+" 確定";
 
 phase=3;
 }
 }
 
-// =====================================================
-// 矩形統合
 // =====================================================
 function mergeBox(a,b){
 
@@ -391,12 +395,7 @@ const y=Math.min(a.y,b.y);
 const r=Math.max(a.x+a.w,b.x+b.w);
 const bt=Math.max(a.y+a.h,b.y+b.h);
 
-return{
-x:x,
-y:y,
-w:r-x,
-h:bt-y
-};
+return{x,y,w:r-x,h:bt-y};
 }
 
 // =====================================================
