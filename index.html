@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（2桁入力保持版）</title>
+<title>手書き数字認識（高速仮認識版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -54,9 +54,7 @@ border-radius:999px;
 cursor:pointer;
 }
 
-.btn2{
-background:#ddd;
-}
+.btn2{background:#ddd;}
 
 #msg{
 font-weight:bold;
@@ -71,16 +69,11 @@ color:#ff7043;
 margin-top:10px;
 }
 
-#sub{
-font-size:18px;
-color:#666;
-}
-
 #mini{
 font-size:14px;
-color:#888;
-margin-top:8px;
+color:#777;
 line-height:1.6;
+margin-top:8px;
 }
 </style>
 </head>
@@ -89,7 +82,7 @@ line-height:1.6;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>Google Colab 学習モデル版（十の位保持版）</p>
+<p>高速仮認識（十の位先読み）</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -99,7 +92,6 @@ line-height:1.6;
 <button class="btn2" onclick="clearCanvas()">🗑 消す</button>
 </div>
 
-<div id="sub">② 認識結果</div>
 <div id="result">?</div>
 <div id="mini">十の位から書いてください</div>
 
@@ -109,48 +101,53 @@ line-height:1.6;
 let model;
 
 // =====================================================
-// モデル読み込み（既存コード維持）
+// モデル読み込み（既存維持）
 // =====================================================
 async function loadModel(){
 try{
 model=await tf.loadGraphModel("./model/model.json");
-document.getElementById("msg").innerHTML="✅ モデル読み込み成功";
+msg.innerHTML="✅ モデル読み込み成功";
 }catch(e){
-console.error(e);
-document.getElementById("msg").innerHTML="❌ 読み込み失敗<br>"+e.message;
+msg.innerHTML="❌ 読み込み失敗";
 }
 }
 loadModel();
 
 // =====================================================
-// キャンバス設定
+// キャンバス
 // =====================================================
 const canvas=document.getElementById("canvas");
 const ctx=canvas.getContext("2d");
+const msg=document.getElementById("msg");
+const result=document.getElementById("result");
+const mini=document.getElementById("mini");
 
 ctx.fillStyle="black";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 let drawing=false;
-let autoTimer=null;
 
 // =====================================================
 // 状態管理
 //
-// phase0 = 十の位入力
-// phase1 = 一の位入力
-// phase2 = 完成
+// phase0 : 十の位 1画目待ち
+// phase1 : 2本目待ち（十の位2画目 or 一の位1画目）
+// phase2 : 一の位2画目待ち or 完成
+// phase3 : 完成
 // =====================================================
 let phase=0;
 
 let tensDigit=null;
 let onesDigit=null;
 
+// 各ストローク矩形
+let stroke1Box=null;
+let stroke2Box=null;
+
 // =====================================================
 // 座標取得
 // =====================================================
 function getPos(e){
-
 const rect=canvas.getBoundingClientRect();
 
 if(e.touches){
@@ -158,41 +155,83 @@ return{
 x:(e.touches[0].clientX-rect.left)*(canvas.width/rect.width),
 y:(e.touches[0].clientY-rect.top)*(canvas.height/rect.height)
 };
-}else{
+}
+
 return{
 x:(e.clientX-rect.left)*(canvas.width/rect.width),
 y:(e.clientY-rect.top)*(canvas.height/rect.height)
 };
 }
+
+// =====================================================
+// 現在ストロークの矩形
+// =====================================================
+let minX,maxX,minY,maxY;
+
+function resetBox(){
+minX=9999;
+minY=9999;
+maxX=-1;
+maxY=-1;
+}
+
+function updateBox(x,y){
+if(x<minX)minX=x;
+if(y<minY)minY=y;
+if(x>maxX)maxX=x;
+if(y>maxY)maxY=y;
+}
+
+function getCurrentBox(){
+return{
+x:minX,
+y:minY,
+w:maxX-minX,
+h:maxY-minY
+};
 }
 
 // =====================================================
-// イベント登録
+// 矩形接触判定
+// 少し余裕を持たせる
+// =====================================================
+function isTouch(a,b){
+
+const pad=12;
+
+return !(
+a.x+a.w+pad < b.x ||
+b.x+b.w+pad < a.x ||
+a.y+a.h+pad < b.y ||
+b.y+b.h+pad < a.y
+);
+}
+
+// =====================================================
+// イベント
 // =====================================================
 canvas.addEventListener("mousedown",start);
 canvas.addEventListener("mousemove",move);
 canvas.addEventListener("mouseup",end);
-canvas.addEventListener("mouseleave",end);
 
 canvas.addEventListener("touchstart",start);
 canvas.addEventListener("touchmove",move);
 canvas.addEventListener("touchend",end);
 
 // =====================================================
-// 描画開始
+// 開始
 // =====================================================
 function start(e){
 
-if(phase===2)return;
+if(phase===3)return;
 
 drawing=true;
-clearTimeout(autoTimer);
-
+resetBox();
 draw(e);
 }
 
 // =====================================================
-// 描画中
+// 移動
 // =====================================================
 function move(e){
 if(!drawing)return;
@@ -200,28 +239,94 @@ draw(e);
 }
 
 // =====================================================
-// 描画終了
+// 終了
 // =====================================================
-function end(){
+async function end(){
 
 if(!drawing)return;
 
 drawing=false;
 ctx.beginPath();
 
-autoTimer=setTimeout(()=>{
-judgeCurrentInput();
-},500);
+const box=getCurrentBox();
+
+// -----------------------------------------------
+// 1本目終了 → 即仮認識（十の位）
+// -----------------------------------------------
+if(phase===0){
+
+stroke1Box=box;
+
+tensDigit=await predict();
+
+result.innerHTML=tensDigit;
+mini.innerHTML="十の位 仮認識 = "+tensDigit+"<br>次の入力待ち";
+
+phase=1;
+return;
+}
+
+// -----------------------------------------------
+// 2本目終了
+// 十の位2画目か？ 一の位1画目か？
+// -----------------------------------------------
+if(phase===1){
+
+stroke2Box=box;
+
+if(isTouch(stroke1Box,stroke2Box)){
+
+// 同じ数字に接触 → 4,5,7等
+tensDigit=await predict();
+
+result.innerHTML=tensDigit;
+mini.innerHTML="十の位 再認識確定 = "+tensDigit+"<br>一の位を書いてください";
+
+phase=2;
+
+}else{
+
+// 離れている → 一の位開始
+onesDigit=await predict();
+
+result.innerHTML=(tensDigit*10)+onesDigit;
+
+mini.innerHTML=
+"十="+tensDigit+" 確定 / 一="+onesDigit+" 仮認識";
+
+phase=2;
+}
+
+return;
+}
+
+// -----------------------------------------------
+// 3本目終了
+// 一の位の2画目のみ再認識
+// -----------------------------------------------
+if(phase===2){
+
+onesDigit=await predict();
+
+result.innerHTML=(tensDigit*10)+onesDigit;
+
+mini.innerHTML=
+"十="+tensDigit+" / 一="+onesDigit+" 確定";
+
+phase=3;
+}
 }
 
 // =====================================================
-// 描画処理
+// 描画
 // =====================================================
 function draw(e){
 
 e.preventDefault();
 
 const p=getPos(e);
+
+updateBox(p.x,p.y);
 
 ctx.lineWidth=20;
 ctx.lineCap="round";
@@ -235,71 +340,32 @@ ctx.moveTo(p.x,p.y);
 }
 
 // =====================================================
-// 現在の入力段階を判定
-//
-// 十の位はそのまま残す
-// 一の位を書き足して2桁完成
-// =====================================================
-async function judgeCurrentInput(){
-
-if(phase===0){
-
-tensDigit=await predict();
-
-phase=1;
-
-document.getElementById("result").innerHTML=tensDigit;
-document.getElementById("mini").innerHTML=
-"十の位 = "+tensDigit+
-"<br>数字は残したまま、一の位を書いてください";
-
-}else if(phase===1){
-
-onesDigit=await predict();
-
-const finalNumber=(tensDigit*10)+onesDigit;
-
-document.getElementById("result").innerHTML=finalNumber;
-
-document.getElementById("mini").innerHTML=
-"十の位="+tensDigit+
-" / 一の位="+onesDigit+
-"<br>完成！";
-
-phase=2;
-}
-}
-
-// =====================================================
-// 全消去
+// 消去
 // =====================================================
 function clearCanvas(){
-
-clearTimeout(autoTimer);
 
 ctx.fillStyle="black";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
-document.getElementById("result").innerHTML="?";
-document.getElementById("mini").innerHTML="十の位から書いてください";
+result.innerHTML="?";
+mini.innerHTML="十の位から書いてください";
 
 phase=0;
 tensDigit=null;
 onesDigit=null;
+stroke1Box=null;
+stroke2Box=null;
 }
 
 // =====================================================
-// 前処理（既存コード維持）
+// 前処理（既存維持）
 // =====================================================
 function preprocess(){
 return tf.tidy(()=>{
 
 let img=tf.browser.fromPixels(canvas,1);
-
 img=tf.image.resizeBilinear(img,[28,28]);
-
 img=img.toFloat().div(255.0);
-
 img=img.expandDims(0);
 
 return img;
@@ -308,7 +374,7 @@ return img;
 }
 
 // =====================================================
-// 認識（既存コード維持）
+// 認識（既存維持）
 // =====================================================
 async function predict(){
 
