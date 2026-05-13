@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（GraphModel版）</title>
+<title>手書き数字認識（自動認識版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -54,11 +54,6 @@ border-radius:999px;
 cursor:pointer;
 }
 
-.btn1{
-background:#ff7043;
-color:white;
-}
-
 .btn2{
 background:#ddd;
 }
@@ -87,7 +82,7 @@ color:#666;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>Google Colab 学習モデル版</p>
+<p>Google Colab 学習モデル版（自動認識）</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -95,10 +90,9 @@ color:#666;
 
 <div>
 <button class="btn2" onclick="clearCanvas()">🗑 消す</button>
-<button class="btn1" onclick="predict()">🔍 認識する</button>
 </div>
 
-<div id="sub">③ 認識結果</div>
+<div id="sub">② 自動認識結果</div>
 <div id="result">?</div>
 
 </div>
@@ -107,7 +101,7 @@ color:#666;
 let model;
 
 // =====================================================
-// モデル読み込み（GraphModel版）
+// モデル読み込み（既存コード維持）
 // =====================================================
 async function loadModel(){
 try{
@@ -118,11 +112,10 @@ console.error(e);
 document.getElementById("msg").innerHTML="❌ 読み込み失敗<br>"+e.message;
 }
 }
-
 loadModel();
 
 // =====================================================
-// キャンバス描画
+// キャンバス設定
 // =====================================================
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
@@ -132,22 +125,36 @@ ctx.fillRect(0,0,canvas.width,canvas.height);
 
 let drawing=false;
 
+// =====================================================
+// 自動認識タイマー
+// ストローク終了後300msで認識
+// 次の入力が始まればキャンセル
+// =====================================================
+let autoTimer=null;
+
+// =====================================================
+// 座標取得
+// =====================================================
 function getPos(e){
+
 const rect = canvas.getBoundingClientRect();
 
 if(e.touches){
-return {
+return{
 x:(e.touches[0].clientX-rect.left)*(canvas.width/rect.width),
 y:(e.touches[0].clientY-rect.top)*(canvas.height/rect.height)
 };
 }else{
-return {
+return{
 x:(e.clientX-rect.left)*(canvas.width/rect.width),
 y:(e.clientY-rect.top)*(canvas.height/rect.height)
 };
 }
 }
 
+// =====================================================
+// イベント登録
+// =====================================================
 canvas.addEventListener("mousedown",start);
 canvas.addEventListener("mousemove",move);
 canvas.addEventListener("mouseup",end);
@@ -157,22 +164,46 @@ canvas.addEventListener("touchstart",start);
 canvas.addEventListener("touchmove",move);
 canvas.addEventListener("touchend",end);
 
+// =====================================================
+// 描画開始
+// =====================================================
 function start(e){
+
 drawing=true;
+
+// 次の入力が始まったら自動認識キャンセル
+clearTimeout(autoTimer);
+
 draw(e);
 }
 
+// =====================================================
+// 描画中
+// =====================================================
 function move(e){
 if(!drawing)return;
 draw(e);
 }
 
+// =====================================================
+// 描画終了
+// 書き終わって300ms後に自動認識
+// =====================================================
 function end(){
+
 drawing=false;
 ctx.beginPath();
+
+autoTimer=setTimeout(()=>{
+predict();
+},300);
 }
 
+// =====================================================
+// 描画処理
+// =====================================================
 function draw(e){
+
 e.preventDefault();
 
 const p=getPos(e);
@@ -192,13 +223,17 @@ ctx.moveTo(p.x,p.y);
 // 消去
 // =====================================================
 function clearCanvas(){
+
+clearTimeout(autoTimer);
+
 ctx.fillStyle="black";
 ctx.fillRect(0,0,canvas.width,canvas.height);
+
 document.getElementById("result").innerHTML="?";
 }
 
 // =====================================================
-// 前処理
+// 前処理（既存コード維持）
 // =====================================================
 function preprocess(){
 return tf.tidy(()=>{
@@ -217,12 +252,11 @@ return img;
 }
 
 // =====================================================
-// 認識
+// 認識（既存コード維持）
 // =====================================================
 async function predict(){
 
 if(!model){
-alert("モデル未読込");
 return;
 }
 
@@ -249,8 +283,6 @@ document.getElementById("result").innerHTML=idx;
 input.dispose();
 output.dispose();
 }
-
-// =====================================================
 </script>
 
 </body>
