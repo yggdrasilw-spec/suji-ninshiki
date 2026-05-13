@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（軌跡距離判定版）</title>
+<title>手書き数字認識（動的再判定版）</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-
 <style>
 body{
 font-family:sans-serif;
@@ -24,7 +23,6 @@ box-shadow:0 8px 24px rgba(0,0,0,.08);
 }
 h1{margin:0;color:#ff7043;}
 p{margin:6px 0 14px;color:#666;}
-
 #board{
 position:relative;
 width:100%;
@@ -48,7 +46,6 @@ left:0;
 top:0;
 pointer-events:none;
 }
-
 button{
 padding:12px 20px;
 font-size:18px;
@@ -58,7 +55,6 @@ background:#ddd;
 margin-top:12px;
 cursor:pointer;
 }
-
 #msg{font-weight:bold;margin:12px 0;}
 #result{
 font-size:64px;
@@ -71,7 +67,6 @@ color:#666;
 line-height:1.6;
 margin-top:8px;
 }
-
 #debug{
 margin-top:18px;
 display:flex;
@@ -104,7 +99,7 @@ margin-bottom:6px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>軌跡距離判定版</p>
+<p>動的再判定版</p>
 
 <div id="msg">モデル読み込み中...</div>
 
@@ -119,6 +114,7 @@ margin-bottom:6px;
 <div id="mini">十の位から書いてください</div>
 
 <div id="debug">
+
 <div class="debugBox">
 <div class="small">十の位へ送信</div>
 <canvas id="debugTens" width="28" height="28"></canvas>
@@ -128,8 +124,8 @@ margin-bottom:6px;
 <div class="small">一の位へ送信</div>
 <canvas id="debugOnes" width="28" height="28"></canvas>
 </div>
-</div>
 
+</div>
 </div>
 
 <script>
@@ -162,12 +158,12 @@ let onesDigit=null;
 let stroke1Box=null;
 let stroke2Box=null;
 
+let stroke1Points=[];
+let stroke2Points=[];
+
 let secondStartedFar=false;
 
 let minX,maxX,minY,maxY;
-
-// ★1ストローク目の軌跡点
-let stroke1Points=[];
 
 // =====================
 async function loadModel(){
@@ -226,24 +222,42 @@ return{x,y,w:r-x,h:bt-y};
 }
 
 // =====================
-// 軌跡距離判定
+// 軌跡距離
 // =====================
-function isFarFromStroke(x,y){
+function minDistanceToStroke(points,x,y){
 
-if(stroke1Points.length===0)return true;
+let min=99999;
 
-let minDist=99999;
-
-for(let p of stroke1Points){
+for(let p of points){
 
 const dx=x-p.x;
 const dy=y-p.y;
 const d=Math.sqrt(dx*dx+dy*dy);
 
-if(d<minDist)minDist=d;
+if(d<min)min=d;
 }
 
-return minDist>22;
+return min;
+}
+
+// =====================
+// 動的再判定
+// =====================
+function shouldBeOnes(startFar,box2){
+
+if(startFar)return true;
+
+// 2画目中心がかなり右なら一の位
+const centerX=box2.x + box2.w/2;
+
+if(centerX > 290)return true;
+
+// 2画目左端が1画目より十分右
+if(stroke1Box && box2.x > stroke1Box.x + stroke1Box.w*0.65){
+return true;
+}
+
+return false;
 }
 
 // =====================
@@ -284,14 +298,17 @@ const p=getPos(e);
 
 updateBox(p.x,p.y);
 
-// 2本目開始時に軌跡距離判定
 if(strokeCount===1){
-secondStartedFar=isFarFromStroke(p.x,p.y);
+
+const d=minDistanceToStroke(stroke1Points,p.x,p.y);
+secondStartedFar=(d>22);
+stroke2Points=[];
 }
 
-// 1本目なら点保存
 if(strokeCount===0){
 stroke1Points.push({x:p.x,y:p.y});
+}else if(strokeCount>=1){
+stroke2Points.push({x:p.x,y:p.y});
 }
 
 ctx.beginPath();
@@ -316,9 +333,10 @@ const p=getPos(e);
 
 updateBox(p.x,p.y);
 
-// 1本目軌跡保存
 if(strokeCount===0){
 stroke1Points.push({x:p.x,y:p.y});
+}else{
+stroke2Points.push({x:p.x,y:p.y});
 }
 
 ctx.lineWidth=20;
@@ -344,27 +362,28 @@ strokeCount++;
 
 const box=expandBox(getRawBox());
 
-// -------------------
+// --------------------
 // 1本目
-// -------------------
+// --------------------
 if(strokeCount===1){
 
 stroke1Box=box;
+
 drawBoxes();
 
 tensDigit=await predict(stroke1Box,"tens");
 
 result.innerHTML=tensDigit;
-mini.innerHTML="十の位 仮認識 = "+tensDigit;
+mini.innerHTML="十の位 仮認識";
 return;
 }
 
-// -------------------
-// 2本目
-// -------------------
+// --------------------
+// 2本目 動的再判定
+// --------------------
 if(strokeCount===2){
 
-if(secondStartedFar){
+if(shouldBeOnes(secondStartedFar,box)){
 
 stroke2Box=box;
 
@@ -373,7 +392,7 @@ drawBoxes();
 onesDigit=await predict(stroke2Box,"ones");
 
 result.innerHTML=(tensDigit*10)+onesDigit;
-mini.innerHTML="十の位確定 / 一の位開始";
+mini.innerHTML="一の位判定";
 return;
 
 }else{
@@ -385,14 +404,14 @@ drawBoxes();
 tensDigit=await predict(stroke1Box,"tens");
 
 result.innerHTML=tensDigit;
-mini.innerHTML="十の位 更新";
+mini.innerHTML="十の位追記";
 return;
 }
 }
 
-// -------------------
+// --------------------
 // 3本目以降
-// -------------------
+// --------------------
 if(!stroke2Box){
 stroke2Box=box;
 }else{
@@ -546,6 +565,7 @@ stroke1Box=null;
 stroke2Box=null;
 
 stroke1Points=[];
+stroke2Points=[];
 
 result.innerHTML="?";
 mini.innerHTML="十の位から書いてください";
