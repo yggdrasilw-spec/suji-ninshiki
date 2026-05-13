@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（最終精度改善版）</title>
+<title>手書き数字認識（不具合修正版）</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
 <style>
@@ -93,7 +93,7 @@ margin-top:8px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>最終精度改善版</p>
+<p>不具合修正版</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -119,31 +119,31 @@ let model;
 // =====================================================
 async function loadModel(){
 try{
-model=await tf.loadGraphModel("./model/model.json");
-msg.innerHTML="✅ モデル読み込み成功";
+model = await tf.loadGraphModel("./model/model.json");
+msg.innerHTML = "✅ モデル読み込み成功";
 }catch(e){
-msg.innerHTML="❌ 読み込み失敗";
+msg.innerHTML = "❌ 読み込み失敗";
 }
 }
 loadModel();
 
 // =====================================================
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
-const overlay=document.getElementById("overlay");
-const octx=overlay.getContext("2d");
+const overlay = document.getElementById("overlay");
+const octx = overlay.getContext("2d");
 
-const msg=document.getElementById("msg");
-const result=document.getElementById("result");
-const mini=document.getElementById("mini");
+const msg = document.getElementById("msg");
+const result = document.getElementById("result");
+const mini = document.getElementById("mini");
 
 // 白背景
 ctx.fillStyle="white";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 // =====================================================
-// 状態管理
+// 状態
 // =====================================================
 let drawing=false;
 let phase=0;
@@ -203,14 +203,14 @@ h:maxY-minY
 }
 
 // =====================================================
-// 拡張矩形
+// 余白付き矩形
 // =====================================================
-function expandBox(box,padX=22,padY=22){
+function expandBox(box,pad=20){
 
-let x=box.x-padX;
-let y=box.y-padY;
-let w=box.w+padX*2;
-let h=box.h+padY*2;
+let x=box.x-pad;
+let y=box.y-pad;
+let w=box.w+pad*2;
+let h=box.h+pad*2;
 
 if(x<0)x=0;
 if(y<0)y=0;
@@ -236,22 +236,43 @@ b.y+b.h+pad < a.y
 }
 
 // =====================================================
+// 一の位候補枠
+// =====================================================
+function getOnesArea(){
+
+if(stroke2Box)return stroke2Box;
+
+if(!stroke1Box)return null;
+
+let x=stroke1Box.x+stroke1Box.w+10;
+let w=canvas.width-x-10;
+
+if(w<20)return null;
+
+return{
+x:x,
+y:10,
+w:w,
+h:canvas.height-20
+};
+}
+
+// =====================================================
 // 枠描画
 // =====================================================
 function drawBoxes(){
 
 octx.clearRect(0,0,overlay.width,overlay.height);
 
-// 緑
+// 緑枠
 if(stroke1Box){
 drawRect(stroke1Box,"#00e676");
 }
 
-// 赤
-let redBox=getOnesArea();
-
-if(redBox){
-drawRect(redBox,"#ff5252");
+// 赤枠
+const red=getOnesArea();
+if(red){
+drawRect(red,"#ff5252");
 }
 }
 
@@ -262,29 +283,6 @@ octx.lineWidth=2;
 octx.setLineDash([8,5]);
 octx.strokeRect(box.x,box.y,box.w,box.h);
 octx.setLineDash([]);
-}
-
-// =====================================================
-// 一の位領域
-// =====================================================
-function getOnesArea(){
-
-if(stroke2Box)return stroke2Box;
-
-if(!stroke1Box)return null;
-
-const gap=10;
-
-let box={
-x:stroke1Box.x+stroke1Box.w+gap,
-y:10,
-w:canvas.width-(stroke1Box.x+stroke1Box.w+gap)-10,
-h:canvas.height-20
-};
-
-if(box.w<20)return null;
-
-return box;
 }
 
 // =====================================================
@@ -320,11 +318,15 @@ if(!drawing)return;
 drawing=false;
 ctx.beginPath();
 
-const box=expandBox(getCurrentBox(),22,22);
+const raw=getCurrentBox();
 
-// --------------------------------
+if(raw.w<=0 || raw.h<=0)return;
+
+const box=expandBox(raw,20);
+
+// -------------------------
 // 1本目
-// --------------------------------
+// -------------------------
 if(phase===0){
 
 stroke1Box=box;
@@ -339,9 +341,9 @@ phase=1;
 return;
 }
 
-// --------------------------------
+// -------------------------
 // 2本目
-// --------------------------------
+// -------------------------
 if(phase===1){
 
 stroke2Box=box;
@@ -375,9 +377,9 @@ phase=2;
 return;
 }
 
-// --------------------------------
+// -------------------------
 // 3本目
-// --------------------------------
+// -------------------------
 if(phase===2){
 
 stroke2Box=mergeBox(stroke2Box,box);
@@ -453,13 +455,11 @@ stroke2Box=null;
 }
 
 // =====================================================
-// ★ 最終精度改善 preprocess
+// 安定版 preprocess
 //
-// box領域切り出し
+// box切り出し
 // ↓
-// 正方形キャンバス中央配置
-// ↓
-// 外周10%余白
+// resizeWithPadで正方形化
 // ↓
 // 28x28
 // ↓
@@ -469,75 +469,25 @@ function preprocess(box){
 
 return tf.tidy(()=>{
 
-// ------------------------------
-// 元キャンバス取得
-// ------------------------------
 let img=tf.browser.fromPixels(canvas,1);
 
-// ------------------------------
-// box切り出し
-// ------------------------------
+// 切り出し
 img=tf.slice(
 img,
 [Math.floor(box.y),Math.floor(box.x),0],
 [Math.floor(box.h),Math.floor(box.w),1]
 );
 
-// ------------------------------
-// 正方形サイズ決定
-// ------------------------------
-const side=Math.max(box.w,box.h);
+// 正方形化（40x40で余白付き）
+img=tf.image.resizeWithPad(img,40,40);
 
-// 外周10%余白
-const pad=Math.floor(side*0.10);
-
-const square=side+pad*2;
-
-// ------------------------------
-// 中央配置用リサイズ
-// ------------------------------
-let resized=tf.image.resizeBilinear(
-img,
-[Math.floor(box.h),Math.floor(box.w)]
-);
-
-// ------------------------------
-// 白背景square作成
-// ------------------------------
-let bg=tf.ones([square,square,1]).mul(255);
-
-// ------------------------------
-// 貼り付け位置（中央）
-// ------------------------------
-const offsetY=Math.floor((square-box.h)/2);
-const offsetX=Math.floor((square-box.w)/2);
-
-// ------------------------------
-// Tensor配列化して合成
-// （簡易方式）
-// ------------------------------
-const bgArr=bg.arraySync();
-const fgArr=resized.arraySync();
-
-for(let y=0;y<box.h;y++){
-for(let x=0;x<box.w;x++){
-bgArr[y+offsetY][x+offsetX][0]=fgArr[y][x][0];
-}
-}
-
-img=tf.tensor(bgArr);
-
-// ------------------------------
-// 28x28縮小
-// ------------------------------
+// 28x28へ
 img=tf.image.resizeBilinear(img,[28,28]);
 
-// ------------------------------
 // 白黒反転
-// ------------------------------
 img=tf.sub(255,img);
 
-// 0〜1
+// 正規化
 img=img.toFloat().div(255.0);
 
 // batch
