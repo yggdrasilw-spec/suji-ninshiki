@@ -31,7 +31,7 @@ h1{
 #board{
   position:relative;
   width:100%;
-  max-width:500px;
+  max-width:560px;
   margin:auto;
 }
 
@@ -41,7 +41,8 @@ canvas{
 
 #canvas{
   width:100%;
-  height:240px;
+  height:auto;
+  aspect-ratio:500 / 240;
   background:white;
   border:3px solid #ddd;
   border-radius:14px;
@@ -124,7 +125,7 @@ textarea{
 </p>
 
 <div id="board">
-  <canvas id="canvas" width="500" height="240"></canvas>
+  <canvas id="canvas" width="560" height="280"></canvas>
 </div>
 
 <div>
@@ -139,6 +140,14 @@ textarea{
 
 <div id="info">
   描いた数字の正解ラベルを押してください
+</div>
+
+<div style="margin-top:12px;font-size:28px;font-weight:bold;">
+  AI認識結果: <span id="prediction">?</span>
+</div>
+
+<div style="margin-top:6px;color:#666;">
+  信頼度: <span id="confidence">-</span>
 </div>
 
 <div class="digits">
@@ -167,6 +176,17 @@ textarea{
 </div>
 
 <script>
+
+async function loadModel(){
+  try{
+    model = await tf.loadGraphModel("./model/model.json");
+    console.log("model loaded");
+  }catch(e){
+    console.error(e);
+  }
+}
+
+loadModel();
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
@@ -177,12 +197,15 @@ const logArea = document.getElementById("log");
 const countEl = document.getElementById("count");
 
 ctx.fillStyle = "white";
-ctx.fillRect(0,0,500,240);
+ctx.fillRect(0,0,560,280);
 
 let drawing = false;
 let minX,maxX,minY,maxY;
 
 let currentPixels = null;
+let predictedDigit = null;
+let predictedConfidence = null;
+let model = null;
 
 let dataset = [];
 
@@ -206,14 +229,14 @@ function getPos(e){
 
   if(e.touches && e.touches.length){
     return {
-      x:(e.touches[0].clientX - rect.left) * (500/rect.width),
-      y:(e.touches[0].clientY - rect.top) * (240/rect.height)
+      x:(e.touches[0].clientX - rect.left) * (560/rect.width),
+      y:(e.touches[0].clientY - rect.top) * (280/rect.height)
     };
   }
 
   return {
-    x:(e.clientX - rect.left) * (500/rect.width),
-    y:(e.clientY - rect.top) * (240/rect.height)
+    x:(e.clientX - rect.left) * (560/rect.width),
+    y:(e.clientY - rect.top) * (280/rect.height)
   };
 }
 
@@ -281,8 +304,8 @@ function getBox(){
   x = Math.max(0,x);
   y = Math.max(0,y);
 
-  if(x+w > 500) w = 500 - x;
-  if(y+h > 240) h = 240 - y;
+  if(x+w > 560) w = 560 - x;
+  if(y+h > 280) h = 280 - y;
 
   return {x,y,w,h};
 }
@@ -360,6 +383,37 @@ async function prepareSample(){
 
   currentPixels = arr;
 
+  if(model){
+
+    const input = tensor.expandDims(0);
+
+    let output = model.predict ?
+      model.predict(input) :
+      model.execute(input);
+
+    const data = await output.data();
+
+    let max = data[0];
+    let idx = 0;
+
+    for(let i=1;i<10;i++){
+      if(data[i] > max){
+        max = data[i];
+        idx = i;
+      }
+    }
+
+    predictedDigit = idx;
+    predictedConfidence = max;
+
+    document.getElementById("prediction").innerHTML = idx;
+    document.getElementById("confidence").innerHTML =
+      (max * 100).toFixed(1) + "%";
+
+    input.dispose();
+    output.dispose();
+  }
+
   tensor.dispose();
 
   document.getElementById("info").innerHTML =
@@ -375,6 +429,9 @@ function saveLabel(label){
 
   const sample = {
     label:label,
+    predicted:predictedDigit,
+    confidence:predictedConfidence,
+    hardExample:(predictedDigit !== label),
     pixels:currentPixels,
     timestamp:Date.now()
   };
@@ -422,9 +479,16 @@ function downloadJSONL(){
 function clearCanvas(){
 
   ctx.fillStyle = "white";
-  ctx.fillRect(0,0,500,240);
+  ctx.fillRect(0,0,560,280);
 
   dctx.clearRect(0,0,28,28);
+
+  document.getElementById("prediction").innerHTML = "?";
+  document.getElementById("confidence").innerHTML = "-";
+
+  currentPixels = null;
+  predictedDigit = null;
+  predictedConfidence = null;
 
   resetBox();
 }
