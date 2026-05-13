@@ -202,6 +202,9 @@ ctx.fillRect(0,0,560,280);
 let drawing = false;
 let minX,maxX,minY,maxY;
 
+// 全ストローク共通bbox
+let globalMinX, globalMaxX, globalMinY, globalMaxY;
+
 let currentPixels = null;
 let predictedDigit = null;
 let predictedConfidence = null;
@@ -209,7 +212,23 @@ let model = null;
 
 let dataset = [];
 
+resetGlobalBox();
+
 // =====================
+function resetGlobalBox(){
+  globalMinX = 9999;
+  globalMinY = 9999;
+  globalMaxX = -1;
+  globalMaxY = -1;
+}
+
+function updateGlobalBox(x,y){
+  if(x < globalMinX) globalMinX = x;
+  if(y < globalMinY) globalMinY = y;
+  if(x > globalMaxX) globalMaxX = x;
+  if(y > globalMaxY) globalMaxY = y;
+}
+
 function resetBox(){
   minX = 9999;
   minY = 9999;
@@ -252,10 +271,12 @@ canvas.addEventListener("touchend",end,{passive:false});
 function start(e){
   drawing = true;
   resetBox();
+  resetGlobalBox();
 
   const p = getPos(e);
 
   updateBox(p.x,p.y);
+  updateGlobalBox(p.x,p.y);
 
   ctx.beginPath();
   ctx.arc(p.x,p.y,8,0,Math.PI*2);
@@ -274,6 +295,7 @@ function move(e){
   const p = getPos(e);
 
   updateBox(p.x,p.y);
+  updateGlobalBox(p.x,p.y);
 
   ctx.lineWidth = 20;
   ctx.lineCap = "round";
@@ -296,10 +318,11 @@ function end(){
 function getBox(){
   const p = 14;
 
-  let x = minX - p;
-  let y = minY - p;
-  let w = (maxX - minX) + p*2;
-  let h = (maxY - minY) + p*2;
+  // 全ストロークをまとめたbboxを使う
+  let x = globalMinX - p;
+  let y = globalMinY - p;
+  let w = (globalMaxX - globalMinX) + p*2;
+  let h = (globalMaxY - globalMinY) + p*2;
 
   x = Math.max(0,x);
   y = Math.max(0,y);
@@ -448,6 +471,8 @@ function saveLabel(label){
 
   document.getElementById("info").innerHTML =
     `保存完了 → ラベル ${label}`;
+
+  resetGlobalBox();
 }
 
 function downloadJSONL(){
