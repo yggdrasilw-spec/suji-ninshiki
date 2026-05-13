@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（2桁入力版）</title>
+<title>手書き数字認識（2桁入力保持版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -89,7 +89,7 @@ line-height:1.6;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>Google Colab 学習モデル版（2桁入力）</p>
+<p>Google Colab 学習モデル版（十の位保持版）</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -135,10 +135,11 @@ let drawing=false;
 let autoTimer=null;
 
 // =====================================================
-// 2桁入力状態管理
+// 状態管理
 //
-// phase=0 → 十の位待ち
-// phase=1 → 一の位待ち
+// phase0 = 十の位入力
+// phase1 = 一の位入力
+// phase2 = 完成
 // =====================================================
 let phase=0;
 
@@ -182,8 +183,11 @@ canvas.addEventListener("touchend",end);
 // =====================================================
 function start(e){
 
+if(phase===2)return;
+
 drawing=true;
 clearTimeout(autoTimer);
+
 draw(e);
 }
 
@@ -197,8 +201,6 @@ draw(e);
 
 // =====================================================
 // 描画終了
-//
-// ストローク終了後500ms待って認識
 // =====================================================
 function end(){
 
@@ -233,24 +235,25 @@ ctx.moveTo(p.x,p.y);
 }
 
 // =====================================================
-// 現在の段階に応じて認識
-// phase0=十の位
-// phase1=一の位
+// 現在の入力段階を判定
+//
+// 十の位はそのまま残す
+// 一の位を書き足して2桁完成
 // =====================================================
 async function judgeCurrentInput(){
 
 if(phase===0){
 
 tensDigit=await predict();
+
 phase=1;
 
+document.getElementById("result").innerHTML=tensDigit;
 document.getElementById("mini").innerHTML=
 "十の位 = "+tensDigit+
-"<br>次は一の位を書いてください";
+"<br>数字は残したまま、一の位を書いてください";
 
-clearCanvasOnly();
-
-}else{
+}else if(phase===1){
 
 onesDigit=await predict();
 
@@ -265,16 +268,6 @@ document.getElementById("mini").innerHTML=
 
 phase=2;
 }
-}
-
-// =====================================================
-// キャンバスだけ消去
-// 認識結果は残す
-// =====================================================
-function clearCanvasOnly(){
-
-ctx.fillStyle="black";
-ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 
 // =====================================================
@@ -316,7 +309,6 @@ return img;
 
 // =====================================================
 // 認識（既存コード維持）
-// 戻り値で数字返却
 // =====================================================
 async function predict(){
 
