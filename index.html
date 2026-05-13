@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（自動認識版）</title>
+<title>手書き数字認識（複数ストローク対応版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -75,6 +75,12 @@ margin-top:10px;
 font-size:18px;
 color:#666;
 }
+
+#mini{
+font-size:14px;
+color:#888;
+margin-top:8px;
+}
 </style>
 </head>
 <body>
@@ -82,7 +88,7 @@ color:#666;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>Google Colab 学習モデル版（自動認識）</p>
+<p>Google Colab 学習モデル版（複数ストローク対応）</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -92,8 +98,9 @@ color:#666;
 <button class="btn2" onclick="clearCanvas()">🗑 消す</button>
 </div>
 
-<div id="sub">② 自動認識結果</div>
+<div id="sub">② 認識結果</div>
 <div id="result">?</div>
+<div id="mini">入力待機中</div>
 
 </div>
 
@@ -117,8 +124,8 @@ loadModel();
 // =====================================================
 // キャンバス設定
 // =====================================================
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
 
 ctx.fillStyle="black";
 ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -126,18 +133,21 @@ ctx.fillRect(0,0,canvas.width,canvas.height);
 let drawing=false;
 
 // =====================================================
-// 自動認識タイマー
-// ストローク終了後300msで認識
-// 次の入力が始まればキャンセル
+// 複数ストローク対応タイマー
+//
+// ストローク終了ごとに仮認識する。
+// 次のストロークが来たら再認識待ち。
+// 最後の入力から500ms止まれば確定。
 // =====================================================
 let autoTimer=null;
+let strokeCount=0;
 
 // =====================================================
 // 座標取得
 // =====================================================
 function getPos(e){
 
-const rect = canvas.getBoundingClientRect();
+const rect=canvas.getBoundingClientRect();
 
 if(e.touches){
 return{
@@ -166,12 +176,11 @@ canvas.addEventListener("touchend",end);
 
 // =====================================================
 // 描画開始
+// 次ストローク開始時は確定待ちキャンセル
 // =====================================================
 function start(e){
 
 drawing=true;
-
-// 次の入力が始まったら自動認識キャンセル
 clearTimeout(autoTimer);
 
 draw(e);
@@ -187,16 +196,29 @@ draw(e);
 
 // =====================================================
 // 描画終了
-// 書き終わって300ms後に自動認識
+//
+// 1回ストロークが終わるたびに仮認識
+// その後500ms追加入力なければ確定
 // =====================================================
 function end(){
+
+if(!drawing)return;
 
 drawing=false;
 ctx.beginPath();
 
+strokeCount++;
+
+document.getElementById("mini").innerHTML=
+strokeCount+"ストローク入力 → 仮判定中";
+
+predict("仮判定");
+
 autoTimer=setTimeout(()=>{
-predict();
-},300);
+document.getElementById("mini").innerHTML=
+strokeCount+"ストロークで確定";
+predict("確定");
+},500);
 }
 
 // =====================================================
@@ -230,6 +252,9 @@ ctx.fillStyle="black";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 document.getElementById("result").innerHTML="?";
+document.getElementById("mini").innerHTML="入力待機中";
+
+strokeCount=0;
 }
 
 // =====================================================
@@ -253,12 +278,11 @@ return img;
 
 // =====================================================
 // 認識（既存コード維持）
+// mode文字だけ追加
 // =====================================================
-async function predict(){
+async function predict(mode=""){
 
-if(!model){
-return;
-}
+if(!model)return;
 
 const input=preprocess();
 
@@ -279,6 +303,11 @@ idx=i;
 }
 
 document.getElementById("result").innerHTML=idx;
+
+if(mode){
+document.getElementById("mini").innerHTML=
+mode+" → "+idx;
+}
 
 input.dispose();
 output.dispose();
