@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（開始点判定版）</title>
+<title>手書き数字認識（軌跡距離判定版）</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
 <style>
@@ -104,7 +104,7 @@ margin-bottom:6px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>開始点判定版</p>
+<p>軌跡距離判定版</p>
 
 <div id="msg">モデル読み込み中...</div>
 
@@ -119,7 +119,6 @@ margin-bottom:6px;
 <div id="mini">十の位から書いてください</div>
 
 <div id="debug">
-
 <div class="debugBox">
 <div class="small">十の位へ送信</div>
 <canvas id="debugTens" width="28" height="28"></canvas>
@@ -129,8 +128,8 @@ margin-bottom:6px;
 <div class="small">一の位へ送信</div>
 <canvas id="debugOnes" width="28" height="28"></canvas>
 </div>
-
 </div>
+
 </div>
 
 <script>
@@ -164,10 +163,11 @@ let stroke1Box=null;
 let stroke2Box=null;
 
 let secondStartedFar=false;
-let secondStartX=0;
-let secondStartY=0;
 
 let minX,maxX,minY,maxY;
+
+// ★1ストローク目の軌跡点
+let stroke1Points=[];
 
 // =====================
 async function loadModel(){
@@ -226,22 +226,24 @@ return{x,y,w:r-x,h:bt-y};
 }
 
 // =====================
-// 緑枠から十分離れた開始点か
+// 軌跡距離判定
 // =====================
-function isFarFromGreen(box,x,y){
+function isFarFromStroke(x,y){
 
-const margin=24;
+if(stroke1Points.length===0)return true;
 
-if(
-x < box.x-margin ||
-x > box.x+box.w+margin ||
-y < box.y-margin ||
-y > box.y+box.h+margin
-){
-return true;
+let minDist=99999;
+
+for(let p of stroke1Points){
+
+const dx=x-p.x;
+const dy=y-p.y;
+const d=Math.sqrt(dx*dx+dy*dy);
+
+if(d<minDist)minDist=d;
 }
 
-return false;
+return minDist>22;
 }
 
 // =====================
@@ -282,15 +284,14 @@ const p=getPos(e);
 
 updateBox(p.x,p.y);
 
-// 2本目開始時判定
-if(strokeCount===1 && stroke1Box){
+// 2本目開始時に軌跡距離判定
+if(strokeCount===1){
+secondStartedFar=isFarFromStroke(p.x,p.y);
+}
 
-secondStartX=p.x;
-secondStartY=p.y;
-
-secondStartedFar=isFarFromGreen(
-stroke1Box,p.x,p.y
-);
+// 1本目なら点保存
+if(strokeCount===0){
+stroke1Points.push({x:p.x,y:p.y});
 }
 
 ctx.beginPath();
@@ -314,6 +315,11 @@ e.preventDefault();
 const p=getPos(e);
 
 updateBox(p.x,p.y);
+
+// 1本目軌跡保存
+if(strokeCount===0){
+stroke1Points.push({x:p.x,y:p.y});
+}
 
 ctx.lineWidth=20;
 ctx.lineCap="round";
@@ -339,7 +345,7 @@ strokeCount++;
 const box=expandBox(getRawBox());
 
 // -------------------
-// 1本目 十の位
+// 1本目
 // -------------------
 if(strokeCount===1){
 
@@ -360,8 +366,8 @@ if(strokeCount===2){
 
 if(secondStartedFar){
 
-// 十の位確定済み
 stroke2Box=box;
+
 drawBoxes();
 
 onesDigit=await predict(stroke2Box,"ones");
@@ -372,7 +378,6 @@ return;
 
 }else{
 
-// 十の位追記
 stroke1Box=mergeBox(stroke1Box,box);
 
 drawBoxes();
@@ -386,7 +391,7 @@ return;
 }
 
 // -------------------
-// 3本目以降 一の位
+// 3本目以降
 // -------------------
 if(!stroke2Box){
 stroke2Box=box;
@@ -407,8 +412,8 @@ function drawBoxes(){
 
 octx.clearRect(0,0,500,220);
 
-if(stroke1Box) rect(stroke1Box,"#00e676");
-if(stroke2Box) rect(stroke2Box,"#ff5252");
+if(stroke1Box)rect(stroke1Box,"#00e676");
+if(stroke2Box)rect(stroke2Box,"#ff5252");
 }
 
 function rect(b,c){
@@ -540,7 +545,7 @@ onesDigit=null;
 stroke1Box=null;
 stroke2Box=null;
 
-secondStartedFar=false;
+stroke1Points=[];
 
 result.innerHTML="?";
 mini.innerHTML="十の位から書いてください";
