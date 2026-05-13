@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識 完成版</title>
+<title>手書き数字認識 完全統合版</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+
 <style>
 body{
 font-family:sans-serif;
@@ -23,6 +24,7 @@ box-shadow:0 8px 24px rgba(0,0,0,.08);
 }
 h1{margin:0;color:#ff7043;}
 p{margin:6px 0 14px;color:#666;}
+
 #board{
 position:relative;
 width:100%;
@@ -42,9 +44,11 @@ border:3px solid #ffccbc;
 }
 #overlay{
 position:absolute;
-left:0;top:0;
+left:0;
+top:0;
 pointer-events:none;
 }
+
 button{
 padding:12px 20px;
 font-size:18px;
@@ -54,6 +58,7 @@ background:#ddd;
 margin-top:12px;
 cursor:pointer;
 }
+
 #msg{font-weight:bold;margin:12px 0;}
 #result{
 font-size:64px;
@@ -66,13 +71,40 @@ color:#666;
 line-height:1.6;
 margin-top:8px;
 }
+
+#debug{
+margin-top:18px;
+display:flex;
+gap:16px;
+justify-content:center;
+flex-wrap:wrap;
+}
+.debugBox{
+background:#fafafa;
+padding:10px;
+border-radius:12px;
+border:1px solid #eee;
+}
+.debugBox canvas{
+width:96px;
+height:96px;
+image-rendering:pixelated;
+border:1px solid #ccc;
+background:#fff;
+}
+.small{
+font-size:13px;
+color:#666;
+margin-bottom:6px;
+}
 </style>
 </head>
 <body>
 
 <div id="wrap">
+
 <h1>✏️ 手書き数字認識</h1>
-<p>完成版（高速入力対応・4ストローク対応）</p>
+<p>完全統合版</p>
 
 <div id="msg">モデル読み込み中...</div>
 
@@ -85,6 +117,21 @@ margin-top:8px;
 
 <div id="result">?</div>
 <div id="mini">十の位から書いてください</div>
+
+<div id="debug">
+
+<div class="debugBox">
+<div class="small">十の位へ送信</div>
+<canvas id="debugTens" width="28" height="28"></canvas>
+</div>
+
+<div class="debugBox">
+<div class="small">一の位へ送信</div>
+<canvas id="debugOnes" width="28" height="28"></canvas>
+</div>
+
+</div>
+
 </div>
 
 <script>
@@ -100,12 +147,15 @@ const msg=document.getElementById("msg");
 const result=document.getElementById("result");
 const mini=document.getElementById("mini");
 
+const debugTens=document.getElementById("debugTens");
+const debugOnes=document.getElementById("debugOnes");
+const dctxT=debugTens.getContext("2d");
+const dctxO=debugOnes.getContext("2d");
+
 ctx.fillStyle="white";
 ctx.fillRect(0,0,500,220);
 
 let drawing=false;
-
-let phase=0;
 let totalStroke=0;
 
 let tensDigit=null;
@@ -116,7 +166,7 @@ let stroke2Box=null;
 
 let minX,maxX,minY,maxY;
 
-// ===============================
+// ======================
 async function loadModel(){
 try{
 model=await tf.loadGraphModel("./model/model.json");
@@ -127,7 +177,7 @@ msg.innerHTML="❌ モデル読み込み失敗";
 }
 loadModel();
 
-// ===============================
+// ======================
 function resetBox(){
 minX=9999;minY=9999;
 maxX=-1;maxY=-1;
@@ -140,7 +190,7 @@ if(x>maxX)maxX=x;
 if(y>maxY)maxY=y;
 }
 
-function getBox(){
+function getRawBox(){
 return{
 x:minX,
 y:minY,
@@ -149,7 +199,8 @@ h:Math.max(8,maxY-minY)
 };
 }
 
-function expandBox(b,p=18){
+function expandBox(b,p=14){
+
 let x=b.x-p;
 let y=b.y-p;
 let w=b.w+p*2;
@@ -171,12 +222,12 @@ const bt=Math.max(a.y+a.h,b.y+b.h);
 return{x,y,w:r-x,h:bt-y};
 }
 
-// ===============================
-// 接触判定（かなり厳しく）
-// ===============================
+// ======================
+// 超厳格接触判定
+// ======================
 function isTouch(a,b){
 
-const pad=3;
+const pad=-4;
 
 return !(
 a.x+a.w+pad < b.x ||
@@ -186,7 +237,7 @@ b.y+b.h+pad < a.y
 );
 }
 
-// ===============================
+// ======================
 function getPos(e){
 
 const rect=canvas.getBoundingClientRect();
@@ -204,7 +255,7 @@ y:(e.clientY-rect.top)*(220/rect.height)
 };
 }
 
-// ===============================
+// ======================
 canvas.addEventListener("mousedown",start);
 canvas.addEventListener("mousemove",move);
 canvas.addEventListener("mouseup",end);
@@ -214,7 +265,7 @@ canvas.addEventListener("touchstart",start,{passive:false});
 canvas.addEventListener("touchmove",move,{passive:false});
 canvas.addEventListener("touchend",end,{passive:false});
 
-// ===============================
+// ======================
 function start(e){
 
 drawing=true;
@@ -222,7 +273,7 @@ resetBox();
 
 const p=getPos(e);
 
-// 高速入力対策：開始点を即描画
+// 高速入力対策
 updateBox(p.x,p.y);
 
 ctx.beginPath();
@@ -234,7 +285,6 @@ ctx.beginPath();
 ctx.moveTo(p.x,p.y);
 }
 
-// ===============================
 function move(e){
 if(!drawing)return;
 draw(e);
@@ -259,7 +309,7 @@ ctx.beginPath();
 ctx.moveTo(p.x,p.y);
 }
 
-// ===============================
+// ======================
 async function end(){
 
 if(!drawing)return;
@@ -269,27 +319,26 @@ ctx.beginPath();
 
 totalStroke++;
 
-const box=expandBox(getBox());
+const box=expandBox(getRawBox());
 
-// --------------------
-// 1本目 = 十の位開始
-// --------------------
+// ----------------------
+// 1本目
+// ----------------------
 if(totalStroke===1){
 
 stroke1Box=box;
-
 drawBoxes();
 
-tensDigit=await predict(stroke1Box);
+tensDigit=await predict(stroke1Box,"tens");
 
 result.innerHTML=tensDigit;
 mini.innerHTML="十の位 仮認識 = "+tensDigit;
 return;
 }
 
-// --------------------
+// ----------------------
 // 2本目
-// --------------------
+// ----------------------
 if(totalStroke===2){
 
 if(isTouch(stroke1Box,box)){
@@ -298,88 +347,77 @@ stroke1Box=mergeBox(stroke1Box,box);
 
 drawBoxes();
 
-tensDigit=await predict(stroke1Box);
+tensDigit=await predict(stroke1Box,"tens");
 
 result.innerHTML=tensDigit;
 mini.innerHTML="十の位 更新 = "+tensDigit;
-return;
 
 }else{
 
 stroke2Box=box;
-
 drawBoxes();
 
-onesDigit=await predict(stroke2Box);
+onesDigit=await predict(stroke2Box,"ones");
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="一の位 開始";
+}
+
 return;
 }
-}
 
-// --------------------
+// ----------------------
 // 3本目
-// --------------------
+// ----------------------
 if(totalStroke===3){
 
-// まだ一の位が無い場合
 if(!stroke2Box){
 
 stroke2Box=box;
-drawBoxes();
 
-onesDigit=await predict(stroke2Box);
-result.innerHTML=(tensDigit*10)+onesDigit;
-mini.innerHTML="一の位 認識";
-return;
-}
-
-// 4,5,7なら4本目許可
-if([4,5,7].includes(tensDigit) && isTouch(stroke1Box,box)){
+}else if([4,5,7].includes(tensDigit) && isTouch(stroke1Box,box)){
 
 stroke1Box=mergeBox(stroke1Box,box);
 
 drawBoxes();
 
-tensDigit=await predict(stroke1Box);
+tensDigit=await predict(stroke1Box,"tens");
 
-result.innerHTML=(tensDigit*10)+onesDigit;
+result.innerHTML=(tensDigit*10)+(onesDigit||0);
 mini.innerHTML="十の位 最終追記";
 return;
-}
 
-// 通常は一の位確定
+}else{
+
 stroke2Box=mergeBox(stroke2Box,box);
+}
 
 drawBoxes();
 
-onesDigit=await predict(stroke2Box);
+onesDigit=await predict(stroke2Box,"ones");
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="確定";
 return;
 }
 
-// --------------------
+// ----------------------
 // 4本目
-// --------------------
+// ----------------------
 if(totalStroke===4){
 
-if(stroke2Box){
 stroke2Box=mergeBox(stroke2Box,box);
 
 drawBoxes();
 
-onesDigit=await predict(stroke2Box);
+onesDigit=await predict(stroke2Box,"ones");
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="確定";
 }
 }
-}
 
-// ===============================
+// ======================
 function drawBoxes(){
 
 octx.clearRect(0,0,500,220);
@@ -389,6 +427,7 @@ if(stroke2Box) rect(stroke2Box,"#ff5252");
 }
 
 function rect(b,c){
+
 octx.strokeStyle=c;
 octx.lineWidth=2;
 octx.setLineDash([8,5]);
@@ -396,10 +435,60 @@ octx.strokeRect(b.x,b.y,b.w,b.h);
 octx.setLineDash([]);
 }
 
-// ===============================
-function preprocess(box){
+// ======================
+// 黒画素ぴったりbox補正
+// ======================
+function tightenBox(box){
+
+const x0=Math.floor(box.x);
+const y0=Math.floor(box.y);
+const w=Math.floor(box.w);
+const h=Math.floor(box.h);
+
+const img=ctx.getImageData(x0,y0,w,h).data;
+
+let minx=9999,miny=9999,maxx=-1,maxy=-1;
+
+for(let y=0;y<h;y++){
+for(let x=0;x<w;x++){
+
+const i=(y*w+x)*4;
+
+const avg=(img[i]+img[i+1]+img[i+2])/3;
+
+if(avg<245){
+
+if(x<minx)minx=x;
+if(y<miny)miny=y;
+if(x>maxx)maxx=x;
+if(y>maxy)maxy=y;
+}
+}
+}
+
+if(maxx<0)return box;
+
+const pad=4;
+
+let nx=x0+minx-pad;
+let ny=y0+miny-pad;
+let nw=(maxx-minx+1)+pad*2;
+let nh=(maxy-miny+1)+pad*2;
+
+if(nx<0)nx=0;
+if(ny<0)ny=0;
+if(nx+nw>500)nw=500-nx;
+if(ny+nh>220)nh=220-ny;
+
+return{x:nx,y:ny,w:nw,h:nh};
+}
+
+// ======================
+function preprocess(box,target){
 
 return tf.tidy(()=>{
+
+box=tightenBox(box);
 
 let img=tf.browser.fromPixels(canvas,1);
 
@@ -407,8 +496,8 @@ img=tf.slice(
 img,
 [Math.floor(box.y),Math.floor(box.x),0],
 [
-Math.floor(box.h),
-Math.floor(box.w),
+Math.max(1,Math.floor(box.h)),
+Math.max(1,Math.floor(box.w)),
 1
 ]
 );
@@ -417,11 +506,10 @@ const h=img.shape[0];
 const w=img.shape[1];
 
 const side=Math.max(h,w);
-const pad=Math.floor(side*0.1);
+const pad=Math.floor(side*0.10);
 const full=side+pad*2;
 
 let bg=tf.fill([full,full,1],255).bufferSync();
-
 const src=img.arraySync();
 
 const top=Math.floor((full-h)/2);
@@ -441,18 +529,43 @@ img=tf.sub(255,img);
 
 img=img.toFloat().div(255);
 
+// debug
+drawDebug(img,target);
+
 img=img.expandDims(0);
 
 return img;
 });
 }
 
-// ===============================
-async function predict(box){
+// ======================
+function drawDebug(t,target){
+
+const ctx2=(target==="ones")?dctxO:dctxT;
+
+const data=t.dataSync();
+
+const imageData=ctx2.createImageData(28,28);
+
+for(let i=0;i<28*28;i++){
+
+const v=Math.floor(data[i]*255);
+
+imageData.data[i*4+0]=v;
+imageData.data[i*4+1]=v;
+imageData.data[i*4+2]=v;
+imageData.data[i*4+3]=255;
+}
+
+ctx2.putImageData(imageData,0,0);
+}
+
+// ======================
+async function predict(box,target){
 
 if(!model)return 0;
 
-const input=preprocess(box);
+const input=preprocess(box,target);
 
 let output=model.predict?
 model.predict(input):
@@ -476,7 +589,7 @@ output.dispose();
 return idx;
 }
 
-// ===============================
+// ======================
 function clearCanvas(){
 
 ctx.fillStyle="white";
@@ -484,7 +597,9 @@ ctx.fillRect(0,0,500,220);
 
 octx.clearRect(0,0,500,220);
 
-phase=0;
+dctxT.clearRect(0,0,28,28);
+dctxO.clearRect(0,0,28,28);
+
 totalStroke=0;
 
 tensDigit=null;
