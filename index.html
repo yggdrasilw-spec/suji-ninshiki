@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（白背景・黒文字版）</title>
-
+<title>手書き数字認識（最終精度改善版）</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
 <style>
@@ -15,7 +14,6 @@ text-align:center;
 padding:20px;
 margin:0;
 }
-
 h1{color:#ff7043;margin-bottom:5px;}
 p{color:#666;margin-top:0;}
 
@@ -95,7 +93,7 @@ margin-top:8px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>白背景・黒文字入力版</p>
+<p>最終精度改善版</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -117,7 +115,7 @@ margin-top:8px;
 let model;
 
 // =====================================================
-// モデル読み込み（既存維持）
+// モデル読み込み
 // =====================================================
 async function loadModel(){
 try{
@@ -140,15 +138,16 @@ const msg=document.getElementById("msg");
 const result=document.getElementById("result");
 const mini=document.getElementById("mini");
 
-// =====================================================
-// 初期背景 = 白
-// =====================================================
+// 白背景
 ctx.fillStyle="white";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
+// =====================================================
+// 状態管理
+// =====================================================
 let drawing=false;
-
 let phase=0;
+
 let tensDigit=null;
 let onesDigit=null;
 
@@ -181,8 +180,10 @@ y:(e.clientY-rect.top)*(canvas.height/rect.height)
 let minX,maxX,minY,maxY;
 
 function resetBox(){
-minX=9999; minY=9999;
-maxX=-1; maxY=-1;
+minX=9999;
+minY=9999;
+maxX=-1;
+maxY=-1;
 }
 
 function updateBox(x,y){
@@ -202,7 +203,7 @@ h:maxY-minY
 }
 
 // =====================================================
-// 余白付き拡張
+// 拡張矩形
 // =====================================================
 function expandBox(box,padX=22,padY=22){
 
@@ -235,43 +236,25 @@ b.y+b.h+pad < a.y
 }
 
 // =====================================================
-// 可視化
+// 枠描画
 // =====================================================
 function drawBoxes(){
 
 octx.clearRect(0,0,overlay.width,overlay.height);
 
-// 緑枠
+// 緑
 if(stroke1Box){
-drawRect(expandBox(stroke1Box,10,10),"#00e676");
+drawRect(stroke1Box,"#00e676");
 }
 
-// 赤枠
-let redBox=null;
-
-if(stroke2Box){
-redBox=expandBox(stroke2Box,10,10);
-
-}else if(stroke1Box){
-
-const gap=10;
-
-redBox={
-x:stroke1Box.x+stroke1Box.w+gap,
-y:10,
-w:canvas.width-(stroke1Box.x+stroke1Box.w+gap)-10,
-h:canvas.height-20
-};
-
-if(redBox.w<20)redBox=null;
-}
+// 赤
+let redBox=getOnesArea();
 
 if(redBox){
 drawRect(redBox,"#ff5252");
 }
 }
 
-// =====================================================
 function drawRect(box,color){
 
 octx.strokeStyle=color;
@@ -279,6 +262,29 @@ octx.lineWidth=2;
 octx.setLineDash([8,5]);
 octx.strokeRect(box.x,box.y,box.w,box.h);
 octx.setLineDash([]);
+}
+
+// =====================================================
+// 一の位領域
+// =====================================================
+function getOnesArea(){
+
+if(stroke2Box)return stroke2Box;
+
+if(!stroke1Box)return null;
+
+const gap=10;
+
+let box={
+x:stroke1Box.x+stroke1Box.w+gap,
+y:10,
+w:canvas.width-(stroke1Box.x+stroke1Box.w+gap)-10,
+h:canvas.height-20
+};
+
+if(box.w<20)return null;
+
+return box;
 }
 
 // =====================================================
@@ -314,16 +320,17 @@ if(!drawing)return;
 drawing=false;
 ctx.beginPath();
 
-const box=getCurrentBox();
+const box=expandBox(getCurrentBox(),22,22);
 
+// --------------------------------
 // 1本目
+// --------------------------------
 if(phase===0){
 
-stroke1Box=expandBox(box,22,22);
-
+stroke1Box=box;
 drawBoxes();
 
-tensDigit=await predict();
+tensDigit=await predict(stroke1Box);
 
 result.innerHTML=tensDigit;
 mini.innerHTML="十の位 仮認識 = "+tensDigit;
@@ -332,10 +339,12 @@ phase=1;
 return;
 }
 
+// --------------------------------
 // 2本目
+// --------------------------------
 if(phase===1){
 
-stroke2Box=expandBox(box,22,22);
+stroke2Box=box;
 
 if(isTouch(stroke1Box,stroke2Box)){
 
@@ -344,7 +353,7 @@ stroke2Box=null;
 
 drawBoxes();
 
-tensDigit=await predict();
+tensDigit=await predict(stroke1Box);
 
 result.innerHTML=tensDigit;
 mini.innerHTML="十の位 再認識確定 = "+tensDigit+"<br>一の位を書いてください";
@@ -355,7 +364,7 @@ phase=2;
 
 drawBoxes();
 
-onesDigit=await predict();
+onesDigit=await predict(stroke2Box);
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+" 仮";
@@ -366,10 +375,16 @@ phase=2;
 return;
 }
 
+// --------------------------------
 // 3本目
+// --------------------------------
 if(phase===2){
 
-onesDigit=await predict();
+stroke2Box=mergeBox(stroke2Box,box);
+
+drawBoxes();
+
+onesDigit=await predict(stroke2Box);
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="十="+tensDigit+" / 一="+onesDigit+" 確定";
@@ -387,11 +402,16 @@ const y=Math.min(a.y,b.y);
 const r=Math.max(a.x+a.w,b.x+b.w);
 const bt=Math.max(a.y+a.h,b.y+b.h);
 
-return{x,y,w:r-x,h:bt-y};
+return{
+x:x,
+y:y,
+w:r-x,
+h:bt-y
+};
 }
 
 // =====================================================
-// 描画（黒文字）
+// 描画
 // =====================================================
 function draw(e){
 
@@ -413,7 +433,7 @@ ctx.moveTo(p.x,p.y);
 }
 
 // =====================================================
-// 消去（白背景）
+// 消去
 // =====================================================
 function clearCanvas(){
 
@@ -433,22 +453,94 @@ stroke2Box=null;
 }
 
 // =====================================================
-// 前処理
+// ★ 最終精度改善 preprocess
 //
-// 白背景黒文字 → 内部で反転して
-// 黒背景白文字に変換
+// box領域切り出し
+// ↓
+// 正方形キャンバス中央配置
+// ↓
+// 外周10%余白
+// ↓
+// 28x28
+// ↓
+// 白黒反転
 // =====================================================
-function preprocess(){
+function preprocess(box){
+
 return tf.tidy(()=>{
 
+// ------------------------------
+// 元キャンバス取得
+// ------------------------------
 let img=tf.browser.fromPixels(canvas,1);
 
-img=tf.sub(255,img);   // 白黒反転
+// ------------------------------
+// box切り出し
+// ------------------------------
+img=tf.slice(
+img,
+[Math.floor(box.y),Math.floor(box.x),0],
+[Math.floor(box.h),Math.floor(box.w),1]
+);
 
+// ------------------------------
+// 正方形サイズ決定
+// ------------------------------
+const side=Math.max(box.w,box.h);
+
+// 外周10%余白
+const pad=Math.floor(side*0.10);
+
+const square=side+pad*2;
+
+// ------------------------------
+// 中央配置用リサイズ
+// ------------------------------
+let resized=tf.image.resizeBilinear(
+img,
+[Math.floor(box.h),Math.floor(box.w)]
+);
+
+// ------------------------------
+// 白背景square作成
+// ------------------------------
+let bg=tf.ones([square,square,1]).mul(255);
+
+// ------------------------------
+// 貼り付け位置（中央）
+// ------------------------------
+const offsetY=Math.floor((square-box.h)/2);
+const offsetX=Math.floor((square-box.w)/2);
+
+// ------------------------------
+// Tensor配列化して合成
+// （簡易方式）
+// ------------------------------
+const bgArr=bg.arraySync();
+const fgArr=resized.arraySync();
+
+for(let y=0;y<box.h;y++){
+for(let x=0;x<box.w;x++){
+bgArr[y+offsetY][x+offsetX][0]=fgArr[y][x][0];
+}
+}
+
+img=tf.tensor(bgArr);
+
+// ------------------------------
+// 28x28縮小
+// ------------------------------
 img=tf.image.resizeBilinear(img,[28,28]);
 
+// ------------------------------
+// 白黒反転
+// ------------------------------
+img=tf.sub(255,img);
+
+// 0〜1
 img=img.toFloat().div(255.0);
 
+// batch
 img=img.expandDims(0);
 
 return img;
@@ -457,13 +549,13 @@ return img;
 }
 
 // =====================================================
-// 認識（既存維持）
+// 認識
 // =====================================================
-async function predict(){
+async function predict(box){
 
 if(!model)return 0;
 
-const input=preprocess();
+const input=preprocess(box);
 
 let output=model.predict ?
 model.predict(input) :
