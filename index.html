@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（複数ストローク対応版）</title>
+<title>手書き数字認識（2桁入力版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -80,6 +80,7 @@ color:#666;
 font-size:14px;
 color:#888;
 margin-top:8px;
+line-height:1.6;
 }
 </style>
 </head>
@@ -88,7 +89,7 @@ margin-top:8px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>Google Colab 学習モデル版（複数ストローク対応）</p>
+<p>Google Colab 学習モデル版（2桁入力）</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -100,7 +101,7 @@ margin-top:8px;
 
 <div id="sub">② 認識結果</div>
 <div id="result">?</div>
-<div id="mini">入力待機中</div>
+<div id="mini">十の位から書いてください</div>
 
 </div>
 
@@ -112,7 +113,7 @@ let model;
 // =====================================================
 async function loadModel(){
 try{
-model = await tf.loadGraphModel("./model/model.json");
+model=await tf.loadGraphModel("./model/model.json");
 document.getElementById("msg").innerHTML="✅ モデル読み込み成功";
 }catch(e){
 console.error(e);
@@ -131,16 +132,18 @@ ctx.fillStyle="black";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 let drawing=false;
+let autoTimer=null;
 
 // =====================================================
-// 複数ストローク対応タイマー
+// 2桁入力状態管理
 //
-// ストローク終了ごとに仮認識する。
-// 次のストロークが来たら再認識待ち。
-// 最後の入力から500ms止まれば確定。
+// phase=0 → 十の位待ち
+// phase=1 → 一の位待ち
 // =====================================================
-let autoTimer=null;
-let strokeCount=0;
+let phase=0;
+
+let tensDigit=null;
+let onesDigit=null;
 
 // =====================================================
 // 座標取得
@@ -176,13 +179,11 @@ canvas.addEventListener("touchend",end);
 
 // =====================================================
 // 描画開始
-// 次ストローク開始時は確定待ちキャンセル
 // =====================================================
 function start(e){
 
 drawing=true;
 clearTimeout(autoTimer);
-
 draw(e);
 }
 
@@ -197,8 +198,7 @@ draw(e);
 // =====================================================
 // 描画終了
 //
-// 1回ストロークが終わるたびに仮認識
-// その後500ms追加入力なければ確定
+// ストローク終了後500ms待って認識
 // =====================================================
 function end(){
 
@@ -207,17 +207,8 @@ if(!drawing)return;
 drawing=false;
 ctx.beginPath();
 
-strokeCount++;
-
-document.getElementById("mini").innerHTML=
-strokeCount+"ストローク入力 → 仮判定中";
-
-predict("仮判定");
-
 autoTimer=setTimeout(()=>{
-document.getElementById("mini").innerHTML=
-strokeCount+"ストロークで確定";
-predict("確定");
+judgeCurrentInput();
 },500);
 }
 
@@ -242,7 +233,52 @@ ctx.moveTo(p.x,p.y);
 }
 
 // =====================================================
-// 消去
+// 現在の段階に応じて認識
+// phase0=十の位
+// phase1=一の位
+// =====================================================
+async function judgeCurrentInput(){
+
+if(phase===0){
+
+tensDigit=await predict();
+phase=1;
+
+document.getElementById("mini").innerHTML=
+"十の位 = "+tensDigit+
+"<br>次は一の位を書いてください";
+
+clearCanvasOnly();
+
+}else{
+
+onesDigit=await predict();
+
+const finalNumber=(tensDigit*10)+onesDigit;
+
+document.getElementById("result").innerHTML=finalNumber;
+
+document.getElementById("mini").innerHTML=
+"十の位="+tensDigit+
+" / 一の位="+onesDigit+
+"<br>完成！";
+
+phase=2;
+}
+}
+
+// =====================================================
+// キャンバスだけ消去
+// 認識結果は残す
+// =====================================================
+function clearCanvasOnly(){
+
+ctx.fillStyle="black";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+// =====================================================
+// 全消去
 // =====================================================
 function clearCanvas(){
 
@@ -252,9 +288,11 @@ ctx.fillStyle="black";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 document.getElementById("result").innerHTML="?";
-document.getElementById("mini").innerHTML="入力待機中";
+document.getElementById("mini").innerHTML="十の位から書いてください";
 
-strokeCount=0;
+phase=0;
+tensDigit=null;
+onesDigit=null;
 }
 
 // =====================================================
@@ -278,11 +316,11 @@ return img;
 
 // =====================================================
 // 認識（既存コード維持）
-// mode文字だけ追加
+// 戻り値で数字返却
 // =====================================================
-async function predict(mode=""){
+async function predict(){
 
-if(!model)return;
+if(!model)return 0;
 
 const input=preprocess();
 
@@ -302,15 +340,10 @@ idx=i;
 }
 }
 
-document.getElementById("result").innerHTML=idx;
-
-if(mode){
-document.getElementById("mini").innerHTML=
-mode+" → "+idx;
-}
-
 input.dispose();
 output.dispose();
+
+return idx;
 }
 </script>
 
