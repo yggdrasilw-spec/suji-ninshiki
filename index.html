@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（判定エリア拡張版）</title>
+<title>手書き数字認識（白背景・黒文字版）</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
@@ -44,7 +44,7 @@ display:block;
 }
 
 #canvas{
-background:black;
+background:white;
 border:3px solid #ffccbc;
 position:relative;
 z-index:1;
@@ -95,7 +95,7 @@ margin-top:8px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>判定エリア拡張版</p>
+<p>白背景・黒文字入力版</p>
 
 <div id="msg">① モデル読み込み中...</div>
 
@@ -116,6 +116,8 @@ margin-top:8px;
 <script>
 let model;
 
+// =====================================================
+// モデル読み込み（既存維持）
 // =====================================================
 async function loadModel(){
 try{
@@ -138,7 +140,10 @@ const msg=document.getElementById("msg");
 const result=document.getElementById("result");
 const mini=document.getElementById("mini");
 
-ctx.fillStyle="black";
+// =====================================================
+// 初期背景 = 白
+// =====================================================
+ctx.fillStyle="white";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 let drawing=false;
@@ -197,9 +202,7 @@ h:maxY-minY
 }
 
 // =====================================================
-// 外側へ余白追加
-//
-// 緑枠が文字全体を包むように大きく拡張
+// 余白付き拡張
 // =====================================================
 function expandBox(box,padX=22,padY=22){
 
@@ -217,7 +220,7 @@ return{x,y,w,h};
 }
 
 // =====================================================
-// 接触判定（既存維持）
+// 接触判定
 // =====================================================
 function isTouch(a,b){
 
@@ -233,32 +236,21 @@ b.y+b.h+pad < a.y
 
 // =====================================================
 // 可視化
-//
-// 緑 = 十の位認識範囲
-// 赤 = 一の位認識範囲
 // =====================================================
 function drawBoxes(){
 
 octx.clearRect(0,0,overlay.width,overlay.height);
 
-// ----------------------
-// 十の位 緑
-// ----------------------
+// 緑枠
 if(stroke1Box){
-drawRect(expandBox(stroke1Box,24,24),"#00e676");
+drawRect(expandBox(stroke1Box,10,10),"#00e676");
 }
 
-// ----------------------
-// 一の位 赤
-//
-// stroke2Box があるならそこ優先
-// 無いなら十の位右側余白全体
-// ----------------------
+// 赤枠
 let redBox=null;
 
 if(stroke2Box){
-
-redBox=expandBox(stroke2Box,24,24);
+redBox=expandBox(stroke2Box,10,10);
 
 }else if(stroke1Box){
 
@@ -399,6 +391,8 @@ return{x,y,w:r-x,h:bt-y};
 }
 
 // =====================================================
+// 描画（黒文字）
+// =====================================================
 function draw(e){
 
 e.preventDefault();
@@ -409,7 +403,7 @@ updateBox(p.x,p.y);
 
 ctx.lineWidth=20;
 ctx.lineCap="round";
-ctx.strokeStyle="white";
+ctx.strokeStyle="black";
 
 ctx.lineTo(p.x,p.y);
 ctx.stroke();
@@ -419,9 +413,11 @@ ctx.moveTo(p.x,p.y);
 }
 
 // =====================================================
+// 消去（白背景）
+// =====================================================
 function clearCanvas(){
 
-ctx.fillStyle="black";
+ctx.fillStyle="white";
 ctx.fillRect(0,0,canvas.width,canvas.height);
 
 octx.clearRect(0,0,overlay.width,overlay.height);
@@ -437,14 +433,22 @@ stroke2Box=null;
 }
 
 // =====================================================
-// 前処理（既存維持）
+// 前処理
+//
+// 白背景黒文字 → 内部で反転して
+// 黒背景白文字に変換
 // =====================================================
 function preprocess(){
 return tf.tidy(()=>{
 
 let img=tf.browser.fromPixels(canvas,1);
+
+img=tf.sub(255,img);   // 白黒反転
+
 img=tf.image.resizeBilinear(img,[28,28]);
+
 img=img.toFloat().div(255.0);
+
 img=img.expandDims(0);
 
 return img;
