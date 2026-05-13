@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識（動的再判定版）</title>
+<title>手書き数字認識（スコア比較型）</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <style>
 body{
@@ -42,8 +42,7 @@ border:3px solid #ffccbc;
 }
 #overlay{
 position:absolute;
-left:0;
-top:0;
+left:0;top:0;
 pointer-events:none;
 }
 button{
@@ -99,7 +98,7 @@ margin-bottom:6px;
 <div id="wrap">
 
 <h1>✏️ 手書き数字認識</h1>
-<p>動的再判定版</p>
+<p>スコア比較型</p>
 
 <div id="msg">モデル読み込み中...</div>
 
@@ -116,12 +115,12 @@ margin-bottom:6px;
 <div id="debug">
 
 <div class="debugBox">
-<div class="small">十の位へ送信</div>
+<div class="small">十の位</div>
 <canvas id="debugTens" width="28" height="28"></canvas>
 </div>
 
 <div class="debugBox">
-<div class="small">一の位へ送信</div>
+<div class="small">一の位</div>
 <canvas id="debugOnes" width="28" height="28"></canvas>
 </div>
 
@@ -158,14 +157,9 @@ let onesDigit=null;
 let stroke1Box=null;
 let stroke2Box=null;
 
-let stroke1Points=[];
-let stroke2Points=[];
-
-let secondStartedFar=false;
-
 let minX,maxX,minY,maxY;
 
-// =====================
+// ======================
 async function loadModel(){
 try{
 model=await tf.loadGraphModel("./model/model.json");
@@ -176,7 +170,7 @@ msg.innerHTML="❌ モデル読み込み失敗";
 }
 loadModel();
 
-// =====================
+// ======================
 function resetBox(){
 minX=9999;minY=9999;
 maxX=-1;maxY=-1;
@@ -189,7 +183,7 @@ if(x>maxX)maxX=x;
 if(y>maxY)maxY=y;
 }
 
-function getRawBox(){
+function getBox(){
 return{
 x:minX,
 y:minY,
@@ -221,46 +215,7 @@ const bt=Math.max(a.y+a.h,b.y+b.h);
 return{x,y,w:r-x,h:bt-y};
 }
 
-// =====================
-// 軌跡距離
-// =====================
-function minDistanceToStroke(points,x,y){
-
-let min=99999;
-
-for(let p of points){
-
-const dx=x-p.x;
-const dy=y-p.y;
-const d=Math.sqrt(dx*dx+dy*dy);
-
-if(d<min)min=d;
-}
-
-return min;
-}
-
-// =====================
-// 動的再判定
-// =====================
-function shouldBeOnes(startFar,box2){
-
-if(startFar)return true;
-
-// 2画目中心がかなり右なら一の位
-const centerX=box2.x + box2.w/2;
-
-if(centerX > 290)return true;
-
-// 2画目左端が1画目より十分右
-if(stroke1Box && box2.x > stroke1Box.x + stroke1Box.w*0.65){
-return true;
-}
-
-return false;
-}
-
-// =====================
+// ======================
 function getPos(e){
 
 const rect=canvas.getBoundingClientRect();
@@ -278,7 +233,7 @@ y:(e.clientY-rect.top)*(220/rect.height)
 };
 }
 
-// =====================
+// ======================
 canvas.addEventListener("mousedown",start);
 canvas.addEventListener("mousemove",move);
 canvas.addEventListener("mouseup",end);
@@ -288,7 +243,7 @@ canvas.addEventListener("touchstart",start,{passive:false});
 canvas.addEventListener("touchmove",move,{passive:false});
 canvas.addEventListener("touchend",end,{passive:false});
 
-// =====================
+// ======================
 function start(e){
 
 drawing=true;
@@ -297,19 +252,6 @@ resetBox();
 const p=getPos(e);
 
 updateBox(p.x,p.y);
-
-if(strokeCount===1){
-
-const d=minDistanceToStroke(stroke1Points,p.x,p.y);
-secondStartedFar=(d>22);
-stroke2Points=[];
-}
-
-if(strokeCount===0){
-stroke1Points.push({x:p.x,y:p.y});
-}else if(strokeCount>=1){
-stroke2Points.push({x:p.x,y:p.y});
-}
 
 ctx.beginPath();
 ctx.arc(p.x,p.y,8,0,Math.PI*2);
@@ -333,12 +275,6 @@ const p=getPos(e);
 
 updateBox(p.x,p.y);
 
-if(strokeCount===0){
-stroke1Points.push({x:p.x,y:p.y});
-}else{
-stroke2Points.push({x:p.x,y:p.y});
-}
-
 ctx.lineWidth=20;
 ctx.lineCap="round";
 ctx.strokeStyle="black";
@@ -350,7 +286,7 @@ ctx.beginPath();
 ctx.moveTo(p.x,p.y);
 }
 
-// =====================
+// ======================
 async function end(){
 
 if(!drawing)return;
@@ -360,58 +296,67 @@ ctx.beginPath();
 
 strokeCount++;
 
-const box=expandBox(getRawBox());
+const box=expandBox(getBox());
 
-// --------------------
+// -------------------
 // 1本目
-// --------------------
+// -------------------
 if(strokeCount===1){
 
 stroke1Box=box;
 
 drawBoxes();
 
-tensDigit=await predict(stroke1Box,"tens");
+const r=await predictWithScore(stroke1Box,"tens");
+
+tensDigit=r.idx;
 
 result.innerHTML=tensDigit;
 mini.innerHTML="十の位 仮認識";
 return;
 }
 
-// --------------------
-// 2本目 動的再判定
-// --------------------
+// -------------------
+// 2本目 スコア比較
+// -------------------
 if(strokeCount===2){
 
-if(shouldBeOnes(secondStartedFar,box)){
+const merged=mergeBox(stroke1Box,box);
 
-stroke2Box=box;
+// A: 十の位追記
+const A=await predictWithScore(merged,"tens");
 
-drawBoxes();
+// B: 一の位単独
+const B=await predictWithScore(box,"ones");
 
-onesDigit=await predict(stroke2Box,"ones");
+// 判定補正
+if(A.score > B.score + 0.08){
 
-result.innerHTML=(tensDigit*10)+onesDigit;
-mini.innerHTML="一の位判定";
-return;
-
-}else{
-
-stroke1Box=mergeBox(stroke1Box,box);
+stroke1Box=merged;
+tensDigit=A.idx;
 
 drawBoxes();
-
-tensDigit=await predict(stroke1Box,"tens");
 
 result.innerHTML=tensDigit;
 mini.innerHTML="十の位追記";
 return;
+
+}else{
+
+stroke2Box=box;
+onesDigit=B.idx;
+
+drawBoxes();
+
+result.innerHTML=(tensDigit*10)+onesDigit;
+mini.innerHTML="一の位判定";
+return;
 }
 }
 
-// --------------------
+// -------------------
 // 3本目以降
-// --------------------
+// -------------------
 if(!stroke2Box){
 stroke2Box=box;
 }else{
@@ -420,13 +365,15 @@ stroke2Box=mergeBox(stroke2Box,box);
 
 drawBoxes();
 
-onesDigit=await predict(stroke2Box,"ones");
+const r=await predictWithScore(stroke2Box,"ones");
+
+onesDigit=r.idx;
 
 result.innerHTML=(tensDigit*10)+onesDigit;
 mini.innerHTML="確定";
 }
 
-// =====================
+// ======================
 function drawBoxes(){
 
 octx.clearRect(0,0,500,220);
@@ -444,7 +391,7 @@ octx.strokeRect(b.x,b.y,b.w,b.h);
 octx.setLineDash([]);
 }
 
-// =====================
+// ======================
 function preprocess(box,target){
 
 return tf.tidy(()=>{
@@ -517,9 +464,10 @@ imageData.data[i*4+3]=255;
 ctx2.putImageData(imageData,0,0);
 }
 
-async function predict(box,target){
+// ======================
+async function predictWithScore(box,target){
 
-if(!model)return 0;
+if(!model)return {idx:0,score:0};
 
 const input=preprocess(box,target);
 
@@ -542,10 +490,13 @@ idx=i;
 input.dispose();
 output.dispose();
 
-return idx;
+return{
+idx:idx,
+score:max
+};
 }
 
-// =====================
+// ======================
 function clearCanvas(){
 
 ctx.fillStyle="white";
@@ -563,9 +514,6 @@ onesDigit=null;
 
 stroke1Box=null;
 stroke2Box=null;
-
-stroke1Points=[];
-stroke2Points=[];
 
 result.innerHTML="?";
 mini.innerHTML="十の位から書いてください";
