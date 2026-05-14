@@ -3,212 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>手書き数字認識</title>
-
+<title>手書き数字認識（軌跡同士の接触判定版）</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 
 <style>
 body{
-  font-family:sans-serif;
-  background:#f5f5f5;
-  margin:0;
-  padding:20px;
-  text-align:center;
+font-family:sans-serif;
+background:#f7f7f7;
+text-align:center;
+padding:20px;
+margin:0;
 }
-
-#wrapper{
-  max-width:560px;
-  margin:auto;
-  background:white;
-  padding:20px;
-  border-radius:16px;
-  box-shadow:0 4px 20px rgba(0,0,0,.08);
+#wrap{
+max-width:560px;
+margin:auto;
+background:#fff;
+padding:20px;
+border-radius:18px;
+box-shadow:0 8px 24px rgba(0,0,0,.08);
 }
+h1{margin:0;color:#ff7043;}
+p{margin:6px 0 14px;color:#666;}
 
 #board{
-  position:relative;
-  width:100%;
-  max-width:500px;
-  margin:auto;
+position:relative;
+width:100%;
+max-width:500px;
+margin:auto;
 }
-
 canvas{
-  touch-action:none;
+touch-action:none;
+width:100%;
+height:220px;
+display:block;
+border-radius:12px;
 }
-
-#canvas,
-#overlay{
-  width:100%;
-  height:220px;
-  border-radius:12px;
-}
-
 #canvas{
-  background:white;
-  border:3px solid #ffccbc;
+background:#fff;
+border:3px solid #ffccbc;
 }
-
 #overlay{
-  position:absolute;
-  left:0;
-  top:0;
-  pointer-events:none;
+position:absolute;
+left:0;
+top:0;
+pointer-events:none;
 }
 
 button{
-  margin-top:14px;
-  padding:12px 24px;
-  border:none;
-  border-radius:999px;
-  font-size:18px;
-  cursor:pointer;
+padding:12px 20px;
+font-size:18px;
+border:none;
+border-radius:999px;
+background:#ddd;
+margin-top:12px;
+cursor:pointer;
 }
 
+#msg{font-weight:bold;margin:12px 0;}
 #result{
-  font-size:64px;
-  font-weight:bold;
-  margin-top:12px;
-  color:#ff7043;
+font-size:64px;
+font-weight:bold;
+color:#ff7043;
 }
-
-#msg{
-  margin:12px 0;
-  font-weight:bold;
+#mini{
+font-size:14px;
+color:#666;
+line-height:1.6;
+margin-top:8px;
 }
 
 #debug{
-  display:flex;
-  justify-content:center;
-  gap:16px;
-  margin-top:20px;
-  flex-wrap:wrap;
+margin-top:18px;
+display:flex;
+gap:16px;
+justify-content:center;
+flex-wrap:wrap;
 }
-
 .debugBox{
-  background:#fafafa;
-  border:1px solid #ddd;
-  border-radius:12px;
-  padding:10px;
+background:#fafafa;
+padding:10px;
+border-radius:12px;
+border:1px solid #eee;
 }
-
 .debugBox canvas{
-  width:96px;
-  height:96px;
-  image-rendering:pixelated;
-  background:white;
-  border:1px solid #ccc;
+width:96px;
+height:96px;
+image-rendering:pixelated;
+border:1px solid #ccc;
+background:#fff;
 }
-
 .small{
-  font-size:12px;
-  color:#666;
-  margin-bottom:6px;
+font-size:13px;
+color:#666;
+margin-bottom:6px;
 }
 </style>
 </head>
-
 <body>
 
-<div id="wrapper">
+<div id="wrap">
 
-<h2>✏️ 手書き数字認識</h2>
+<h1>✏️ 手書き数字認識</h1>
+<p>軌跡同士の接触判定版</p>
 
-<div id="msg">
-モデル読み込み中...
-</div>
+<div id="msg">モデル読み込み中...</div>
 
 <div id="board">
 <canvas id="canvas" width="500" height="220"></canvas>
 <canvas id="overlay" width="500" height="220"></canvas>
 </div>
 
-<button onclick="clearCanvas()">
-🗑 消す
-</button>
+<button onclick="clearCanvas()">🗑 消す</button>
 
 <div id="result">?</div>
+<div id="mini">十の位から書いてください</div>
 
 <div id="debug">
-
 <div class="debugBox">
-<div class="small">十の位</div>
+<div class="small">十の位へ送信</div>
 <canvas id="debugTens" width="28" height="28"></canvas>
 </div>
 
 <div class="debugBox">
-<div class="small">一の位</div>
+<div class="small">一の位へ送信</div>
 <canvas id="debugOnes" width="28" height="28"></canvas>
 </div>
-
 </div>
 
 </div>
 
 <script>
-
-// ======================
-// model
-// ======================
 let model;
 
-// ======================
-// canvas
-// ======================
-const canvas =
-  document.getElementById("canvas");
+const canvas  = document.getElementById("canvas");
+const ctx     = canvas.getContext("2d");
 
-const ctx =
-  canvas.getContext("2d");
+const overlay = document.getElementById("overlay");
+const octx    = overlay.getContext("2d");
 
-const overlay =
-  document.getElementById("overlay");
+const msg    = document.getElementById("msg");
+const result = document.getElementById("result");
+const mini   = document.getElementById("mini");
 
-const octx =
-  overlay.getContext("2d");
+const debugTens = document.getElementById("debugTens");
+const debugOnes = document.getElementById("debugOnes");
+const dctxT = debugTens.getContext("2d");
+const dctxO = debugOnes.getContext("2d");
 
-// ======================
-// debug
-// ======================
-const debugTens =
-  document.getElementById("debugTens");
-
-const debugOnes =
-  document.getElementById("debugOnes");
-
-const dctxT =
-  debugTens.getContext("2d");
-
-const dctxO =
-  debugOnes.getContext("2d");
-
-// ======================
-const msg =
-  document.getElementById("msg");
-
-const result =
-  document.getElementById("result");
-
-// ======================
-// mask canvas
-// ======================
-const maskCanvas =
-  document.createElement("canvas");
-
-maskCanvas.width = 500;
-maskCanvas.height = 220;
-
-const maskCtx =
-  maskCanvas.getContext("2d");
-
-// ======================
 ctx.fillStyle = "white";
-ctx.fillRect(0,0,500,220);
+ctx.fillRect(0, 0, 500, 220);
 
-// ======================
-let drawing = false;
-
-let minX,minY,maxX,maxY;
-
+let drawing     = false;
 let strokeCount = 0;
 
 let tensDigit = null;
@@ -217,815 +162,336 @@ let onesDigit = null;
 let stroke1Box = null;
 let stroke2Box = null;
 
-// ======================
-// 全stroke保持
-// ======================
-let allStrokes = [];
+// 各ストロークの軌跡点
+let stroke1Points = [];
+let stroke2Points = [];
 
-let currentStroke = [];
+let minX, maxX, minY, maxY;
 
-// ======================
-// 十の位stroke
-// ======================
-let tensStrokeSets = [];
-
-// ======================
+// =====================
+// 接触判定の閾値（px）
+// 4・5・7の横棒は縦棒に触れるので小さい値でも検出できる
+// 別の数字は離れているので超えられない
 const TOUCH_THRESHOLD = 20;
 
-// ======================
+// =====================
 async function loadModel(){
-
   try{
-
-    model =
-      await tf.loadGraphModel(
-        "./model/model.json"
-      );
-
-    msg.innerHTML =
-      "✅ モデル読み込み成功";
-
+    model = await tf.loadGraphModel("./model/model.json");
+    msg.innerHTML = "✅ モデル読み込み成功";
   }catch(e){
-
-    console.error(e);
-
-    msg.innerHTML =
-      "❌ モデル読み込み失敗";
+    msg.innerHTML = "❌ モデル読み込み失敗";
   }
 }
-
 loadModel();
 
-// ======================
+// =====================
 function resetBox(){
-
-  minX = 9999;
-  minY = 9999;
-
-  maxX = -1;
-  maxY = -1;
+  minX = 9999; minY = 9999;
+  maxX = -1;   maxY = -1;
 }
 
-// ======================
-function updateBox(x,y){
-
+function updateBox(x, y){
   if(x < minX) minX = x;
   if(y < minY) minY = y;
-
   if(x > maxX) maxX = x;
   if(y > maxY) maxY = y;
 }
 
-// ======================
 function getRawBox(){
-
   return{
-
-    x:minX,
-    y:minY,
-
-    w:Math.max(
-      8,
-      maxX - minX
-    ),
-
-    h:Math.max(
-      8,
-      maxY - minY
-    )
+    x: minX,
+    y: minY,
+    w: Math.max(8, maxX - minX),
+    h: Math.max(8, maxY - minY)
   };
 }
 
-// ======================
-function expandBox(b){
-
-  const padX =
-    Math.floor(b.w * 0.20);
-
-  const padY =
-    Math.floor(b.h * 0.20);
-
-  let x = b.x - padX;
-  let y = b.y - padY;
-
-  let w = b.w + padX*2;
-  let h = b.h + padY*2;
-
+function expandBox(b, p=14){
+  let x = b.x - p;
+  let y = b.y - p;
+  let w = b.w + p*2;
+  let h = b.h + p*2;
   if(x < 0) x = 0;
   if(y < 0) y = 0;
-
-  if(x+w > 500){
-    w = 500 - x;
-  }
-
-  if(y+h > 220){
-    h = 220 - y;
-  }
-
-  return{x,y,w,h};
+  if(x + w > 500) w = 500 - x;
+  if(y + h > 220) h = 220 - y;
+  return{x, y, w, h};
 }
 
-// ======================
-function mergeBox(a,b){
-
-  const x =
-    Math.min(a.x,b.x);
-
-  const y =
-    Math.min(a.y,b.y);
-
-  const r =
-    Math.max(a.x+a.w,b.x+b.w);
-
-  const bt =
-    Math.max(a.y+a.h,b.y+b.h);
-
-  return{
-    x,
-    y,
-    w:r-x,
-    h:bt-y
-  };
+function mergeBox(a, b){
+  const x  = Math.min(a.x, b.x);
+  const y  = Math.min(a.y, b.y);
+  const r  = Math.max(a.x + a.w, b.x + b.w);
+  const bt = Math.max(a.y + a.h, b.y + b.h);
+  return{x, y, w: r-x, h: bt-y};
 }
 
-// ======================
+// =====================
+// ★ 軌跡同士の最短距離
+// =====================
+function minDistanceBetweenStrokes(points1, points2){
+  let min = 99999;
+  for(let p of points2){
+    for(let q of points1){
+      const d = Math.hypot(p.x - q.x, p.y - q.y);
+      if(d < min) min = d;
+      // 十分近ければ早期終了
+      if(min < 2) return min;
+    }
+  }
+  return min;
+}
+
+// =====================
 function getPos(e){
-
-  const rect =
-    canvas.getBoundingClientRect();
-
-  if(
-    e.touches &&
-    e.touches.length
-  ){
-
+  const rect = canvas.getBoundingClientRect();
+  if(e.touches && e.touches.length){
     return{
-
-      x:
-      (e.touches[0].clientX
-      - rect.left)
-      * (500/rect.width),
-
-      y:
-      (e.touches[0].clientY
-      - rect.top)
-      * (220/rect.height)
+      x: (e.touches[0].clientX - rect.left) * (500 / rect.width),
+      y: (e.touches[0].clientY - rect.top)  * (220 / rect.height)
     };
   }
-
   return{
-
-    x:
-    (e.clientX - rect.left)
-    * (500/rect.width),
-
-    y:
-    (e.clientY - rect.top)
-    * (220/rect.height)
+    x: (e.clientX - rect.left) * (500 / rect.width),
+    y: (e.clientY - rect.top)  * (220 / rect.height)
   };
 }
 
-// ======================
-canvas.addEventListener(
-  "mousedown",
-  start
-);
+// =====================
+canvas.addEventListener("mousedown",  start);
+canvas.addEventListener("mousemove",  move);
+canvas.addEventListener("mouseup",    end);
+canvas.addEventListener("mouseleave", end);
 
-canvas.addEventListener(
-  "mousemove",
-  move
-);
+canvas.addEventListener("touchstart", start, {passive:false});
+canvas.addEventListener("touchmove",  move,  {passive:false});
+canvas.addEventListener("touchend",   end,   {passive:false});
 
-canvas.addEventListener(
-  "mouseup",
-  end
-);
-
-canvas.addEventListener(
-  "mouseleave",
-  end
-);
-
-canvas.addEventListener(
-  "touchstart",
-  start,
-  {passive:false}
-);
-
-canvas.addEventListener(
-  "touchmove",
-  move,
-  {passive:false}
-);
-
-canvas.addEventListener(
-  "touchend",
-  end,
-  {passive:false}
-);
-
-// ======================
+// =====================
 function start(e){
-
   drawing = true;
-
-  currentStroke = [];
-
   resetBox();
 
   const p = getPos(e);
+  updateBox(p.x, p.y);
 
-  updateBox(p.x,p.y);
-
-  currentStroke.push({
-    x:p.x,
-    y:p.y
-  });
+  // 現在のストロークに点を追加
+  pushPoint(p.x, p.y);
 
   ctx.beginPath();
-
-  ctx.arc(
-    p.x,
-    p.y,
-    8,
-    0,
-    Math.PI*2
-  );
-
+  ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
   ctx.fillStyle = "black";
   ctx.fill();
 
   ctx.beginPath();
-
-  ctx.moveTo(
-    p.x,
-    p.y
-  );
+  ctx.moveTo(p.x, p.y);
 }
 
-// ======================
 function move(e){
-
   if(!drawing) return;
-
   draw(e);
 }
 
-// ======================
 function draw(e){
-
   e.preventDefault();
 
   const p = getPos(e);
+  updateBox(p.x, p.y);
 
-  updateBox(p.x,p.y);
+  pushPoint(p.x, p.y);
 
-  currentStroke.push({
-    x:p.x,
-    y:p.y
-  });
-
-  ctx.lineWidth = 20;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  ctx.lineWidth   = 20;
+  ctx.lineCap     = "round";
   ctx.strokeStyle = "black";
 
-  ctx.lineTo(
-    p.x,
-    p.y
-  );
-
+  ctx.lineTo(p.x, p.y);
   ctx.stroke();
 
   ctx.beginPath();
-
-  ctx.moveTo(
-    p.x,
-    p.y
-  );
+  ctx.moveTo(p.x, p.y);
 }
 
-// ======================
-function minDistance(
-  s1,
-  s2
-){
-
-  let min = 99999;
-
-  for(let p of s1){
-
-    for(let q of s2){
-
-      const d =
-        Math.hypot(
-          p.x-q.x,
-          p.y-q.y
-        );
-
-      if(d < min){
-        min = d;
-      }
-    }
+// 現在のストローク番号に応じて点を振り分ける
+function pushPoint(x, y){
+  if(strokeCount === 0){
+    stroke1Points.push({x, y});
+  } else {
+    stroke2Points.push({x, y});
   }
-
-  return min;
 }
 
-// ======================
+// =====================
 async function end(){
-
   if(!drawing) return;
 
   drawing = false;
-
   ctx.beginPath();
 
-  const box =
-    expandBox(
-      getRawBox()
-    );
+  strokeCount++;
 
-  allStrokes.push({
-    points:[...currentStroke],
-    box
-  });
+  const box = expandBox(getRawBox());
 
-  // ====================
-  // first stroke
-  // ====================
-  if(strokeCount === 0){
-
+  // -------------------
+  // 1本目 → 十の位（仮）
+  // -------------------
+  if(strokeCount === 1){
     stroke1Box = box;
-
-    tensStrokeSets.push(
-      [...currentStroke]
-    );
-
     drawBoxes();
 
-    tensDigit =
-      await predict(
-        stroke1Box,
-        false,
-        "tens"
-      );
+    tensDigit = await predict(stroke1Box, "tens");
 
-    result.innerHTML =
-      tensDigit;
-
-    strokeCount++;
+    result.innerHTML = tensDigit;
+    mini.innerHTML   = "十の位 仮認識 = " + tensDigit;
     return;
   }
 
-  // ====================
-  // second stroke
-  // ====================
-  if(strokeCount === 1){
+  // -------------------
+  // 2本目 → 軌跡同士の接触判定
+  // -------------------
+  if(strokeCount === 2){
 
-    const dist =
-      minDistance(
-        currentStroke,
-        tensStrokeSets[
-          tensStrokeSets.length-1
-        ]
-      );
+    const dist = minDistanceBetweenStrokes(stroke1Points, stroke2Points);
+    const touching = dist < TOUCH_THRESHOLD;
 
-    // ====================
-    // same digit
-    // ====================
-    if(dist < TOUCH_THRESHOLD){
+    mini.innerHTML = `軌跡間最短距離: ${dist.toFixed(1)}px → ${touching ? "接触（十の位追記）" : "非接触（一の位）"}`;
 
-      tensStrokeSets.push(
-        [...currentStroke]
-      );
-
-      stroke1Box =
-        mergeBox(
-          stroke1Box,
-          box
-        );
-
+    if(touching){
+      // 同じ数字のストロークとみなす → 十の位に追記
+      stroke1Box = mergeBox(stroke1Box, box);
       drawBoxes();
 
-      tensDigit =
-        await predict(
-          stroke1Box,
-          false,
-          "tens"
-        );
+      tensDigit = await predict(stroke1Box, "tens");
 
-      result.innerHTML =
-        tensDigit;
+      result.innerHTML = tensDigit;
+      mini.innerHTML += "<br>十の位 更新 = " + tensDigit;
 
-      strokeCount++;
-      return;
+    } else {
+      // 別の数字 → 一の位確定
+      stroke2Box = box;
+      drawBoxes();
+
+      onesDigit = await predict(stroke2Box, "ones");
+
+      result.innerHTML = (tensDigit * 10) + onesDigit;
+      mini.innerHTML += "<br>十の位確定 / 一の位 = " + onesDigit;
     }
 
-    // ====================
-    // next digit
-    // ====================
-    stroke2Box = box;
-
-    buildMask();
-
-    drawBoxes();
-
-    onesDigit =
-      await predict(
-        stroke2Box,
-        true,
-        "ones"
-      );
-
-    result.innerHTML =
-      (tensDigit*10)
-      + onesDigit;
-
-    strokeCount++;
     return;
   }
 
-  // ====================
-  // ones continue
-  // ====================
-  stroke2Box =
-    mergeBox(
-      stroke2Box,
-      box
-    );
+  // -------------------
+  // 3本目以降
+  // -------------------
+  // stroke2Boxがまだなければ（十の位が2本目まで続いた場合）
+  if(!stroke2Box){
+    stroke2Box = box;
+  } else {
+    stroke2Box = mergeBox(stroke2Box, box);
+  }
 
   drawBoxes();
 
-  onesDigit =
-    await predict(
-      stroke2Box,
-      true,
-      "ones"
-    );
+  onesDigit = await predict(stroke2Box, "ones");
 
-  result.innerHTML =
-    (tensDigit*10)
-    + onesDigit;
-
-  strokeCount++;
+  result.innerHTML = (tensDigit * 10) + onesDigit;
+  mini.innerHTML   = "確定";
 }
 
-// ======================
-function buildMask(){
-
-  maskCtx.clearRect(
-    0,
-    0,
-    500,
-    220
-  );
-
-  maskCtx.strokeStyle =
-    "black";
-
-  // 少し太め
-  maskCtx.lineWidth = 28;
-
-  maskCtx.lineCap =
-    "round";
-
-  maskCtx.lineJoin =
-    "round";
-
-  for(
-    let stroke of
-    tensStrokeSets
-  ){
-
-    if(stroke.length < 2){
-      continue;
-    }
-
-    maskCtx.beginPath();
-
-    maskCtx.moveTo(
-      stroke[0].x,
-      stroke[0].y
-    );
-
-    for(let i=1;i<stroke.length;i++){
-
-      maskCtx.lineTo(
-        stroke[i].x,
-        stroke[i].y
-      );
-    }
-
-    maskCtx.stroke();
-  }
+// =====================
+function drawBoxes(){
+  octx.clearRect(0, 0, 500, 220);
+  if(stroke1Box) rect(stroke1Box, "#00e676");
+  if(stroke2Box) rect(stroke2Box, "#ff5252");
 }
 
-// ======================
-function buildMaskedCanvas(){
-
-  const temp =
-    document.createElement(
-      "canvas"
-    );
-
-  temp.width = 500;
-  temp.height = 220;
-
-  const tctx =
-    temp.getContext("2d");
-
-  tctx.fillStyle = "white";
-
-  tctx.fillRect(
-    0,
-    0,
-    500,
-    220
-  );
-
-  tctx.drawImage(
-    canvas,
-    0,
-    0
-  );
-
-  // ====================
-  // mask apply
-  // ====================
-  const maskData =
-    maskCtx.getImageData(
-      0,
-      0,
-      500,
-      220
-    );
-
-  const imgData =
-    tctx.getImageData(
-      0,
-      0,
-      500,
-      220
-    );
-
-  const md =
-    maskData.data;
-
-  const id =
-    imgData.data;
-
-  for(let i=0;i<md.length;i+=4){
-
-    if(md[i] > 0){
-
-      id[i]   = 255;
-      id[i+1] = 255;
-      id[i+2] = 255;
-      id[i+3] = 255;
-    }
-  }
-
-  tctx.putImageData(
-    imgData,
-    0,
-    0
-  );
-
-  return temp;
+function rect(b, c){
+  octx.strokeStyle = c;
+  octx.lineWidth   = 2;
+  octx.setLineDash([8, 5]);
+  octx.strokeRect(b.x, b.y, b.w, b.h);
+  octx.setLineDash([]);
 }
 
-// ======================
-function preprocess(
-  box,
-  excludeMasked,
-  target
-){
-
+// =====================
+function preprocess(box, target){
   return tf.tidy(() => {
-
-    let srcCanvas;
-
-    if(excludeMasked){
-
-      srcCanvas =
-        buildMaskedCanvas();
-
-    }else{
-
-      srcCanvas = canvas;
-    }
-
-    let img =
-      tf.browser.fromPixels(
-        srcCanvas,
-        1
-      );
+    let img = tf.browser.fromPixels(canvas, 1);
 
     img = tf.slice(
       img,
+      [Math.floor(box.y), Math.floor(box.x), 0],
       [
-        Math.floor(box.y),
-        Math.floor(box.x),
-        0
-      ],
-      [
-        Math.floor(box.h),
-        Math.floor(box.w),
+        Math.max(1, Math.floor(box.h)),
+        Math.max(1, Math.floor(box.w)),
         1
       ]
     );
 
-    const h =
-      img.shape[0];
+    const h = img.shape[0];
+    const w = img.shape[1];
 
-    const w =
-      img.shape[1];
+    const side = Math.max(h, w);
+    const pad  = Math.floor(side * 0.1);
+    const full = side + pad * 2;
 
-    // ====================
-    // aspect ratio keep
-    // ====================
-    const side =
-      Math.max(w,h);
+    let bg  = tf.fill([full, full, 1], 255).bufferSync();
+    const src = img.arraySync();
 
-    const margin =
-      Math.floor(
-        side * 0.20
-      );
+    const top  = Math.floor((full - h) / 2);
+    const left = Math.floor((full - w) / 2);
 
-    const square =
-      side + margin*2;
-
-    let bg =
-      tf.fill(
-        [square,square,1],
-        255
-      ).bufferSync();
-
-    const src =
-      img.arraySync();
-
-    const offsetX =
-      Math.floor(
-        (square-w)/2
-      );
-
-    const offsetY =
-      Math.floor(
-        (square-h)/2
-      );
-
-    for(let y=0;y<h;y++){
-
-      for(let x=0;x<w;x++){
-
-        bg.set(
-          src[y][x][0],
-          y+offsetY,
-          x+offsetX,
-          0
-        );
+    for(let y = 0; y < h; y++){
+      for(let x = 0; x < w; x++){
+        bg.set(src[y][x][0], y+top, x+left, 0);
       }
     }
 
     img = bg.toTensor();
 
-    // ====================
-    // resize
-    // ====================
-    img =
-      tf.image.resizeBilinear(
-        img,
-        [28,28],
-        true
-      );
+    img = tf.image.resizeBilinear(img, [28, 28]);
+    img = tf.sub(255, img);
+    img = img.toFloat().div(255);
 
-    // ====================
-    // invert
-    // ====================
-    img =
-      tf.sub(255,img);
+    drawDebug(img, target);
 
-    img =
-      img.toFloat().div(255);
-
-    // ====================
-    // line normalize
-    // ====================
-    img =
-      tf.avgPool(
-        img.expandDims(0),
-        [2,2],
-        [1,1],
-        "same"
-      ).squeeze([0]);
-
-    // ====================
-    // threshold
-    // ====================
-    img =
-      img.greater(0.16)
-         .toFloat();
-
-    drawDebug(
-      img,
-      target
-    );
-
-    return img.expandDims(0);
+    img = img.expandDims(0);
+    return img;
   });
 }
 
-// ======================
-function drawDebug(
-  t,
-  target
-){
+function drawDebug(t, target){
+  const ctx2 = (target === "ones") ? dctxO : dctxT;
+  const data  = t.dataSync();
+  const imageData = ctx2.createImageData(28, 28);
 
-  const ctx2 =
-    target === "ones"
-    ? dctxO
-    : dctxT;
-
-  ctx2.clearRect(
-    0,
-    0,
-    28,
-    28
-  );
-
-  const data =
-    t.dataSync();
-
-  const imageData =
-    ctx2.createImageData(
-      28,
-      28
-    );
-
-  for(let i=0;i<28*28;i++){
-
-    const v =
-      Math.floor(
-        data[i]*255
-      );
-
-    imageData.data[i*4+0]=v;
-    imageData.data[i*4+1]=v;
-    imageData.data[i*4+2]=v;
-    imageData.data[i*4+3]=255;
+  for(let i = 0; i < 28*28; i++){
+    const v = Math.floor(data[i] * 255);
+    imageData.data[i*4+0] = v;
+    imageData.data[i*4+1] = v;
+    imageData.data[i*4+2] = v;
+    imageData.data[i*4+3] = 255;
   }
 
-  ctx2.putImageData(
-    imageData,
-    0,
-    0
-  );
+  ctx2.putImageData(imageData, 0, 0);
 }
 
-// ======================
-async function predict(
-  box,
-  excludeMasked,
-  target
-){
+async function predict(box, target){
+  if(!model) return 0;
 
-  if(!model){
-    return 0;
-  }
+  const input = preprocess(box, target);
 
-  const input =
-    preprocess(
-      box,
-      excludeMasked,
-      target
-    );
+  let output = model.predict ?
+    model.predict(input) :
+    model.execute(input);
 
-  let output;
+  const data = await output.data();
 
-  if(model.predict){
-
-    output =
-      model.predict(input);
-
-  }else{
-
-    output =
-      model.execute(input);
-  }
-
-  const data =
-    await output.data();
-
-  let max =
-    data[0];
-
+  let max = data[0];
   let idx = 0;
 
-  for(let i=1;i<10;i++){
-
+  for(let i = 1; i < 10; i++){
     if(data[i] > max){
-
       max = data[i];
       idx = i;
     }
@@ -1037,97 +503,15 @@ async function predict(
   return idx;
 }
 
-// ======================
-function drawBoxes(){
-
-  octx.clearRect(
-    0,
-    0,
-    500,
-    220
-  );
-
-  if(stroke1Box){
-
-    drawRect(
-      stroke1Box,
-      "#00e676"
-    );
-  }
-
-  if(stroke2Box){
-
-    drawRect(
-      stroke2Box,
-      "#ff5252"
-    );
-  }
-}
-
-// ======================
-function drawRect(
-  b,
-  color
-){
-
-  octx.strokeStyle =
-    color;
-
-  octx.lineWidth = 2;
-
-  octx.setLineDash([8,5]);
-
-  octx.strokeRect(
-    b.x,
-    b.y,
-    b.w,
-    b.h
-  );
-
-  octx.setLineDash([]);
-}
-
-// ======================
+// =====================
 function clearCanvas(){
-
   ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, 500, 220);
 
-  ctx.fillRect(
-    0,
-    0,
-    500,
-    220
-  );
+  octx.clearRect(0, 0, 500, 220);
 
-  octx.clearRect(
-    0,
-    0,
-    500,
-    220
-  );
-
-  dctxT.clearRect(
-    0,
-    0,
-    28,
-    28
-  );
-
-  dctxO.clearRect(
-    0,
-    0,
-    28,
-    28
-  );
-
-  maskCtx.clearRect(
-    0,
-    0,
-    500,
-    220
-  );
-
-  drawing = false;
+  dctxT.clearRect(0, 0, 28, 28);
+  dctxO.clearRect(0, 0, 28, 28);
 
   strokeCount = 0;
 
@@ -1137,16 +521,12 @@ function clearCanvas(){
   stroke1Box = null;
   stroke2Box = null;
 
-  allStrokes = [];
-
-  currentStroke = [];
-
-  tensStrokeSets = [];
+  stroke1Points = [];
+  stroke2Points = [];
 
   result.innerHTML = "?";
+  mini.innerHTML   = "十の位から書いてください";
 }
-
 </script>
-
 </body>
 </html>
