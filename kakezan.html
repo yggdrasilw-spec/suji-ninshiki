@@ -641,6 +641,82 @@ td{
   }
 }
 </style>
+
+<style id="handwritingModePatch">
+body.handwritingMode #verticalArea,
+body.handwritingMode #attackVerticalArea{
+  display:block;
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:10px 0 16px;
+}
+
+body.handwritingMode table{
+  margin:0 auto;
+}
+
+body.handwritingMode td{
+  width:86px;
+  height:74px;
+}
+
+body.handwritingMode .number,
+body.handwritingMode .mainInput,
+body.handwritingMode .sign{
+  font-size:36px;
+}
+
+body.handwritingMode .handCell{
+  padding:0;
+}
+
+body.handwritingMode .handField{
+  width:100%;
+  height:100%;
+  min-width:100%;
+  min-height:100%;
+}
+
+body.handwritingMode .miniCarryBox{
+  position:relative;
+  top:auto;
+  right:auto;
+  width:100%;
+  height:100%;
+  border-left:0;
+  border-bottom:0;
+}
+
+body.handwritingMode .miniCarryBox .handCanvas,
+body.handwritingMode .miniCarryBox .handValue,
+body.handwritingMode .miniCarryBox .ghostDigit{
+  width:100%;
+  height:100%;
+}
+
+body.handwritingMode .miniCarryBox .handValue,
+body.handwritingMode .miniCarryBox .ghostDigit{
+  font-size:13px;
+}
+
+body.handwritingMode .miniCarryBox .handCanvas{
+  border-radius:0;
+}
+
+@media (max-width:720px){
+  body.handwritingMode td{
+    width:72px;
+    height:62px;
+  }
+  body.handwritingMode .number,
+  body.handwritingMode .mainInput,
+  body.handwritingMode .sign{
+    font-size:30px;
+  }
+}
+</style>
 </head>
 <body>
 
@@ -2750,5 +2826,181 @@ document.addEventListener("DOMContentLoaded", ()=>{
   }
 });
 </script>
+
+<script>
+(function(){
+  let handwritingLayoutTimer1 = 0;
+  let handwritingLayoutTimer2 = 0;
+  let handwritingObserver = null;
+
+  function setBodyInputModeClass(){
+    document.body.classList.toggle('handwritingMode', appState.inputMode === 'handwriting');
+  }
+
+  function scheduleHandwritingLayout(kind){
+    if(appState.inputMode !== 'handwriting') return;
+    if(handwritingLayoutTimer1) cancelAnimationFrame(handwritingLayoutTimer1);
+    if(handwritingLayoutTimer2) cancelAnimationFrame(handwritingLayoutTimer2);
+    handwritingLayoutTimer1 = requestAnimationFrame(()=>{
+      handwritingLayoutTimer2 = requestAnimationFrame(()=>{
+        try{
+          resizeAllHandwritingFields();
+          refreshHandwritingDisplays();
+        }catch(e){}
+      });
+    });
+  }
+
+  const _saveInputModeSetting = saveInputModeSetting;
+  saveInputModeSetting = function(mode){
+    _saveInputModeSetting(mode);
+    setBodyInputModeClass();
+  };
+
+  const _updateSettingsSummary = updateSettingsSummary;
+  updateSettingsSummary = function(){
+    _updateSettingsSummary();
+    setBodyInputModeClass();
+  };
+
+  const _openHome = openHome;
+  openHome = function(){
+    _openHome();
+    setBodyInputModeClass();
+  };
+
+  const _openSettings = openSettings;
+  openSettings = function(){
+    _openSettings();
+    setBodyInputModeClass();
+  };
+
+  const _openPractice = openPractice;
+  openPractice = function(){
+    _openPractice();
+    setBodyInputModeClass();
+    scheduleHandwritingLayout('practice');
+  };
+
+  const _openAttackSetup = openAttackSetup;
+  openAttackSetup = function(){
+    _openAttackSetup();
+    setBodyInputModeClass();
+    scheduleHandwritingLayout('attack');
+  };
+
+  const _showPage = showPage;
+  showPage = function(pageId){
+    _showPage(pageId);
+    setBodyInputModeClass();
+  };
+
+  const _buildTable = buildTable;
+  buildTable = function(kind){
+    _buildTable(kind);
+    scheduleHandwritingLayout(kind);
+  };
+
+  const _initHandwritingFields = initHandwritingFields;
+  initHandwritingFields = function(kind){
+    _initHandwritingFields(kind);
+    scheduleHandwritingLayout(kind);
+    if(!handwritingObserver && 'ResizeObserver' in window){
+      handwritingObserver = new ResizeObserver(entries => {
+        if(appState.inputMode !== 'handwriting') return;
+        let needsRefresh = false;
+        for(const entry of entries){
+          if(entry.target.classList && (entry.target.classList.contains('handField') || entry.target.classList.contains('miniCarryBox'))){
+            needsRefresh = true;
+            break;
+          }
+        }
+        if(needsRefresh){
+          try{ resizeAllHandwritingFields(); }catch(e){}
+        }
+      });
+    }
+    if(handwritingObserver){
+      Object.values(handwritingFields).forEach(st => {
+        try{ handwritingObserver.observe(st.field); }catch(e){}
+      });
+    }
+  };
+
+  const _destroyHandwritingFields = destroyHandwritingFields;
+  destroyHandwritingFields = function(){
+    if(handwritingObserver){
+      try{ handwritingObserver.disconnect(); }catch(e){}
+    }
+    _destroyHandwritingFields();
+  };
+
+  const _resizeHandwritingField = resizeHandwritingField;
+  resizeHandwritingField = function(st){
+    if(!st || !st.visibleCanvas) return;
+    const rect = st.visibleCanvas.getBoundingClientRect();
+    const fallback = st.field.getBoundingClientRect();
+    const baseRect = (rect.width >= 2 && rect.height >= 2) ? rect : fallback;
+    if(baseRect.width < 2 || baseRect.height < 2) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(baseRect.width * dpr));
+    const h = Math.max(1, Math.round(baseRect.height * dpr));
+    [st.visibleCanvas, st.recCanvas].forEach(canvas => {
+      if(canvas.width !== w) canvas.width = w;
+      if(canvas.height !== h) canvas.height = h;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+    });
+    st.dpr = dpr;
+    st.penWidth = (st.field.classList.contains('miniCarryBox') ? 3 : 6) * dpr;
+  };
+
+  const _advanceStep = advanceStep;
+  advanceStep = function(kind){
+    let step = 0;
+    while(step < inputMap.length){
+      const item = inputMap[step];
+      const value = getFieldValue(item.id);
+      if(value === '') break;
+      if(value === item.correct){
+        step++;
+      }else{
+        break;
+      }
+    }
+    currentStep = step;
+    if(kind === 'attack'){
+      updateAttackHints();
+    }else{
+      updateHints();
+    }
+  };
+
+  const _recognizeHandwritingField = recognizeHandwritingField;
+  recognizeHandwritingField = async function(st){
+    await _recognizeHandwritingField(st);
+    if(appState.inputMode === 'handwriting'){
+      scheduleHandwritingLayout(st.kind);
+    }
+  };
+
+  window.addEventListener('resize', ()=>{
+    if(appState.inputMode === 'handwriting'){
+      scheduleHandwritingLayout('all');
+    }
+  }, { passive:true });
+
+  window.addEventListener('orientationchange', ()=>{
+    if(appState.inputMode === 'handwriting'){
+      scheduleHandwritingLayout('all');
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    setBodyInputModeClass();
+  }, { once:true });
+})();
+</script>
+
 </body>
 </html>
