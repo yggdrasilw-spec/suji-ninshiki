@@ -2587,13 +2587,19 @@ function clearHighlights(){
   });
 }
 
+let arrowRedrawToken = { practice: 0, attack: 0 };
+let arrowRedrawSeq = { practice: 0, attack: 0 };
+let arrowRedrawLatest = { practice: null, attack: null };
+
 function drawArrow(item, kind){
+  if(!item) return;
   if(item.rowType !== "partial") return;
   if(item.topIndex === null || item.topIndex < 0) return;
 
   const svgId = kind === "attack" ? "attackArrowSvg" : "arrowSvg";
   const areaId = kind === "attack" ? "attackVerticalArea" : "verticalArea";
   const svg = document.getElementById(svgId);
+  if(!svg) return;
 
   svg.innerHTML = `
     <defs>
@@ -2608,6 +2614,8 @@ function drawArrow(item, kind){
   if(!topCell || !bottomCell) return;
 
   const area = document.getElementById(areaId);
+  if(!area) return;
+
   const base = area.getBoundingClientRect();
   const from = bottomCell.getBoundingClientRect();
   const to = topCell.getBoundingClientRect();
@@ -2625,15 +2633,29 @@ function drawArrow(item, kind){
   svg.appendChild(pathEl);
 }
 
+function requestArrowRedraw(item, kind){
+  if(!item) return;
+  arrowRedrawLatest[kind] = item;
+  const currentSeq = ++arrowRedrawSeq[kind];
+  if(arrowRedrawToken[kind]) return;
+
+  arrowRedrawToken[kind] = requestAnimationFrame(()=>{
+    arrowRedrawToken[kind] = 0;
+    const capturedSeq = arrowRedrawSeq[kind];
+    const latest = arrowRedrawLatest[kind];
+    arrowRedrawLatest[kind] = null;
+    if(!latest) return;
+    if(capturedSeq !== currentSeq && arrowRedrawSeq[kind] !== capturedSeq){
+      return;
+    }
+    try{
+      drawArrow(latest, kind);
+    }catch(e){}
+  });
+}
 
 function drawArrowDeferred(item, kind){
-  requestAnimationFrame(()=>{
-    requestAnimationFrame(()=>{
-      try{
-        drawArrow(item, kind);
-      }catch(e){}
-    });
-  });
+  requestArrowRedraw(item, kind);
 }
 
 function updateHints(){
@@ -3900,6 +3922,9 @@ body.ipadDevice .handwritingPopupCanvas{
     popupTargetNode = node;
     popupTargetKind = node.classList.contains('handField') ? 'handwriting' : 'keyboard';
     popupTargetFieldId = popupTargetKind === 'handwriting' ? node.id : null;
+    if(typeof window.__resetActiveBoardZoom === 'function'){
+      window.__resetActiveBoardZoom();
+    }
     const popup = document.getElementById('handwritingPopup');
     if(popup){
       popup.classList.add('active');
@@ -3909,6 +3934,9 @@ body.ipadDevice .handwritingPopupCanvas{
     popupResizeTimer = setTimeout(()=>{
       resizePopupCanvas();
       fillPopupWhite();
+      if(typeof window.__scheduleHandwritingBoardFit === 'function'){
+        window.__scheduleHandwritingBoardFit();
+      }
     }, 50);
   }
 
@@ -3926,6 +3954,9 @@ body.ipadDevice .handwritingPopupCanvas{
     popupTargetNode = null;
     popupTargetKind = null;
     popupTargetFieldId = null;
+    if(typeof window.__scheduleHandwritingBoardFit === 'function'){
+      window.__scheduleHandwritingBoardFit();
+    }
   };
 
   window.clearPopupCanvas = function(){
@@ -4067,6 +4098,13 @@ body.handwritingMode .miniCarryBox.handField{
     return null;
   }
 
+  function resetActiveBoardZoom(){
+    const board = getActiveBoard();
+    if(!board) return;
+    board.style.zoom = '1';
+    board.dataset.fitScale = '1';
+  }
+
   function fitBoard(){
     const board = getActiveBoard();
     if(!board) return;
@@ -4122,6 +4160,9 @@ body.handwritingMode .miniCarryBox.handField{
     observeTarget('handwritingPopup');
     scheduleFit();
   }
+
+  window.__resetActiveBoardZoom = resetActiveBoardZoom;
+  window.__scheduleHandwritingBoardFit = scheduleFit;
 
   window.addEventListener('resize', scheduleFit, { passive:true });
   window.addEventListener('orientationchange', ()=>setTimeout(scheduleFit, 80), { passive:true });
