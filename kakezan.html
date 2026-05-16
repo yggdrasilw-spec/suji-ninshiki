@@ -1444,6 +1444,9 @@ function showPage(pageId){
   page.classList.add("active");
   page.style.display = page.classList.contains("handwritingFullscreen") ? "flex" : "block";
   appState.page = pageId;
+  if(typeof window.__triggerIpadLayoutRefresh === 'function'){
+    window.__triggerIpadLayoutRefresh();
+  }
 }
 
 function clearPracticeWorkspace(){
@@ -2179,6 +2182,9 @@ function generateProblem(preserveCustom=false){
   checkInputs("practice");
   updateToggleButtons();
   updateHints();
+  if(typeof window.__triggerIpadLayoutRefresh === 'function'){
+    window.__triggerIpadLayoutRefresh();
+  }
 }
 
 
@@ -2811,6 +2817,9 @@ function nextAttackQuestion(initial=false){
   checkInputs("attack");
   updateToggleButtons();
   updateAttackHints();
+  if(typeof window.__triggerIpadLayoutRefresh === 'function'){
+    window.__triggerIpadLayoutRefresh();
+  }
   updateAttackStats();
 }
 
@@ -3136,9 +3145,43 @@ document.addEventListener("DOMContentLoaded", ()=>{
           resizeAllHandwritingFields();
           refreshHandwritingDisplays();
         }catch(e){}
+        if(window.__isIPadLike){
+          clearTimeout(ipadHintRefreshTimer1);
+          clearTimeout(ipadHintRefreshTimer2);
+          ipadHintRefreshTimer1 = setTimeout(()=>{
+            try{
+              resizeAllHandwritingFields();
+              refreshHandwritingDisplays();
+              if(appState.page === 'practicePlayPage'){
+                updateHints();
+              }else if(appState.page === 'attackPlayPage'){
+                updateAttackHints();
+              }
+            }catch(e){}
+          }, 70);
+          ipadHintRefreshTimer2 = setTimeout(()=>{
+            try{
+              resizeAllHandwritingFields();
+              refreshHandwritingDisplays();
+              if(appState.page === 'practicePlayPage'){
+                updateHints();
+              }else if(appState.page === 'attackPlayPage'){
+                updateAttackHints();
+              }
+            }catch(e){}
+          }, 220);
+        }
       });
     });
   }
+
+  function triggerIpadLayoutRefresh(){
+    if(!window.__isIPadLike) return;
+    if(appState.inputMode !== 'handwriting') return;
+    scheduleHandwritingLayout('all');
+  }
+
+  window.__triggerIpadLayoutRefresh = triggerIpadLayoutRefresh;
 
   let popupTargetInput = null;
   let popupCanvasBound = false;
@@ -3514,17 +3557,24 @@ document.addEventListener("DOMContentLoaded", ()=>{
   window.addEventListener('resize', ()=>{
     if(appState.inputMode === 'handwriting'){
       scheduleHandwritingLayout('all');
+      if(window.__isIPadLike){
+        setTimeout(()=>scheduleHandwritingLayout('all'), 90);
+      }
     }
   }, { passive:true });
 
   window.addEventListener('orientationchange', ()=>{
     if(appState.inputMode === 'handwriting'){
       scheduleHandwritingLayout('all');
+      if(window.__isIPadLike){
+        setTimeout(()=>scheduleHandwritingLayout('all'), 120);
+      }
     }
   });
 
   document.addEventListener('DOMContentLoaded', ()=>{
     setBodyInputModeClass();
+    document.body.classList.toggle('ipadDevice', deviceFlags.isIPad);
   }, { once:true });
 })();
 </script>
@@ -3586,6 +3636,21 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
 }
 </style>
 
+
+<style id="ipadOnlyFixes">
+body.ipadDevice.handwritingMode #practicePlayPage .handwritingBoardWrap #verticalArea{
+  transform:scale(1.00) !important;
+}
+body.ipadDevice.handwritingMode #attackPlayPage .handwritingBoardWrap #attackVerticalArea{
+  transform:scale(1.00) !important;
+}
+body.ipadDevice .miniCarryBox.handField{
+  touch-action:manipulation !important;
+}
+body.ipadDevice .handwritingPopupCanvas{
+  height:min(64vh,520px) !important;
+}
+</style>
 <script id="handwritingFinalFixScript">
 (function(){
   let popupTargetNode = null;
@@ -3598,7 +3663,15 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
   let lastTapTime = 0;
   let lastTapTargetKey = "";
   let popupResizeTimer = 0;
+  let ipadHintRefreshTimer1 = 0;
+  let ipadHintRefreshTimer2 = 0;
+  const deviceFlags = {
+    isIPad: /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+    isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+  };
   window.lastHandwritingStrokeEndAt = window.lastHandwritingStrokeEndAt || 0;
+  window.__isIPadLike = deviceFlags.isIPad;
+  document.body.classList.toggle('ipadDevice', deviceFlags.isIPad);
 
   function getPopupCanvas(){
     return document.getElementById('popupCanvas');
@@ -3815,10 +3888,14 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
   document.addEventListener('touchend', e=>{
     const target = e.target.closest('.handField,.mainInput,.miniCarryInput');
     if(!target) return;
+    if(window.__isIPadLike && target.classList && target.classList.contains('miniCarryBox')){
+      return;
+    }
     if(!shouldOpenPopupFromTarget(target)) return;
     const key = target.id || target.className || '';
     const now = Date.now();
-    if(lastTapTargetKey === key && (now - lastTapTime) < 330){
+    const threshold = window.__isIPadLike ? 520 : 330;
+    if(lastTapTargetKey === key && (now - lastTapTime) < threshold){
       e.preventDefault();
       openPopupForNode(target);
       setupPopupCanvas();
