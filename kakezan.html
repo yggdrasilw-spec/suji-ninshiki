@@ -3368,10 +3368,304 @@ document.addEventListener("DOMContentLoaded", ()=>{
 <div style="font-size:24px;font-weight:700;margin-bottom:10px;">✏️ 大きく書こう</div>
 <canvas id="popupCanvas" class="handwritingPopupCanvas" width="480" height="260"></canvas>
 <div style="margin-top:12px;display:flex;gap:10px;justify-content:center;">
-<button class="primaryBtn" onclick="applyPopupRecognition()">認識</button>
 <button class="actionBtn secondary" onclick="clearPopupCanvas()">消す</button>
 <button class="actionBtn secondary" onclick="closePopup()">閉じる</button>
 </div></div></div>
+
+<style id="handwritingFinalFixes">
+/* 補助計算マスを小さく右上に固定 */
+body.handwritingMode .miniCarryBox.handField{
+  position:absolute !important;
+  top:-10px !important;
+  right:-10px !important;
+  width:30px !important;
+  height:30px !important;
+  min-width:30px !important;
+  min-height:30px !important;
+  max-width:30px !important;
+  max-height:30px !important;
+  border:2px dashed #666 !important;
+  border-radius:8px !important;
+  background:#fffde7 !important;
+  z-index:40 !important;
+  overflow:hidden !important;
+}
+
+body.handwritingMode .miniCarryBox.handField .handCanvas{
+  border-radius:0 !important;
+  width:100% !important;
+  height:100% !important;
+}
+
+body.handwritingMode .miniCarryBox.handField .handValue{
+  font-size:13px !important;
+  line-height:1 !important;
+}
+
+body.handwritingMode .miniCarryBox.handField .ghostDigit{
+  font-size:13px !important;
+}
+
+/* ポップアップをスマホでも十分大きく */
+.handwritingPopupCard{
+  width:min(96vw,760px) !important;
+}
+
+.handwritingPopupCanvas{
+  height:min(72vh,560px) !important;
+  width:100% !important;
+  display:block !important;
+  touch-action:none !important;
+}
+</style>
+
+<script id="handwritingFinalFixScript">
+(function(){
+  let popupTargetNode = null;
+  let popupTargetKind = null;
+  let popupTargetFieldId = null;
+  let popupDrawTimer = 0;
+  let popupDrawing = false;
+  let popupLastPoint = null;
+  let popupPointerId = null;
+  let lastTapTime = 0;
+  let lastTapTargetKey = "";
+  let popupResizeTimer = 0;
+
+  function getPopupCanvas(){
+    return document.getElementById('popupCanvas');
+  }
+
+  function getPopupCtx(){
+    const canvas = getPopupCanvas();
+    return canvas ? canvas.getContext('2d') : null;
+  }
+
+  function fillPopupWhite(){
+    const canvas = getPopupCanvas();
+    const ctx = getPopupCtx();
+    if(!canvas || !ctx) return;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
+
+  function resizePopupCanvas(){
+    const canvas = getPopupCanvas();
+    if(!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if(rect.width < 2 || rect.height < 2) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if(canvas.width !== w) canvas.width = w;
+    if(canvas.height !== h) canvas.height = h;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    fillPopupWhite();
+  }
+
+  function schedulePopupRecognition(){
+    clearTimeout(popupDrawTimer);
+    popupDrawTimer = setTimeout(()=>{ recognizePopupCanvas(); }, 220);
+  }
+
+  function popupPos(e){
+    const canvas = getPopupCanvas();
+    const rect = canvas.getBoundingClientRect();
+    const p = e.touches && e.touches[0] ? e.touches[0] : e;
+    return {
+      x: (p.clientX - rect.left) * (canvas.width / rect.width),
+      y: (p.clientY - rect.top) * (canvas.height / rect.height)
+    };
+  }
+
+  function popupStart(e){
+    if(!getPopupCanvas()) return;
+    e.preventDefault();
+    popupDrawing = true;
+    popupPointerId = e.pointerId ?? null;
+    try{ getPopupCanvas().setPointerCapture?.(e.pointerId); }catch(err){}
+    popupLastPoint = popupPos(e);
+    schedulePopupRecognition();
+  }
+
+  function popupMove(e){
+    if(!popupDrawing) return;
+    if(popupPointerId !== null && e.pointerId !== popupPointerId) return;
+    e.preventDefault();
+    const canvas = getPopupCanvas();
+    const ctx = getPopupCtx();
+    const p = popupPos(e);
+    if(!canvas || !ctx) return;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = Math.max(10, Math.round(Math.min(canvas.width, canvas.height) * 0.10));
+    if(!popupLastPoint){
+      popupLastPoint = p;
+      return;
+    }
+    ctx.beginPath();
+    ctx.moveTo(popupLastPoint.x, popupLastPoint.y);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    popupLastPoint = p;
+    schedulePopupRecognition();
+  }
+
+  function popupEnd(e){
+    if(!popupDrawing) return;
+    if(popupPointerId !== null && e.pointerId !== popupPointerId) return;
+    e.preventDefault();
+    popupDrawing = false;
+    popupPointerId = null;
+    popupLastPoint = null;
+    schedulePopupRecognition();
+  }
+
+  async function recognizePopupCanvas(){
+    if(!popupTargetNode) return;
+    const canvas = getPopupCanvas();
+    if(!canvas) return;
+
+    try{
+      if(typeof ensureHandwritingModel === 'function'){
+        await ensureHandwritingModel();
+      }
+      if(typeof handwritingModel === 'undefined' || !handwritingModel){
+        return;
+      }
+      if(typeof preprocessCanvas !== 'function'){
+        return;
+      }
+      const input = preprocessCanvas(canvas);
+      let output = handwritingModel.predict ? handwritingModel.predict(input) : handwritingModel.execute(input);
+      const data = await output.data();
+      let max = data[0];
+      let idx = 0;
+      for(let i=1;i<10;i++){
+        if(data[i] > max){
+          max = data[i];
+          idx = i;
+        }
+      }
+      input.dispose?.();
+      output?.dispose?.();
+
+      const recognized = String(idx);
+
+      if(popupTargetKind === 'handwriting'){
+        const st = handwritingFields && popupTargetFieldId ? handwritingFields[popupTargetFieldId] : null;
+        if(st){
+          setFieldValue(popupTargetFieldId, recognized, { finalize:true });
+          if(typeof checkInputs === 'function') checkInputs(st.kind);
+          if(typeof advanceStep === 'function') advanceStep(st.kind);
+          if(typeof checkFinal === 'function') checkFinal(st.kind);
+        }
+      }else if(popupTargetKind === 'keyboard'){
+        if(popupTargetNode){
+          popupTargetNode.value = recognized;
+          popupTargetNode.dispatchEvent(new Event('input', { bubbles:true }));
+        }
+      }
+
+      closePopup();
+    }catch(err){
+      console.error(err);
+    }
+  }
+
+  function openPopupForNode(node){
+    if(!node) return;
+    popupTargetNode = node;
+    popupTargetKind = node.classList.contains('handField') ? 'handwriting' : 'keyboard';
+    popupTargetFieldId = popupTargetKind === 'handwriting' ? node.id : null;
+    const popup = document.getElementById('handwritingPopup');
+    if(popup){
+      popup.classList.add('active');
+    }
+    clearPopupCanvas();
+    clearTimeout(popupResizeTimer);
+    popupResizeTimer = setTimeout(()=>{
+      resizePopupCanvas();
+      fillPopupWhite();
+    }, 50);
+  }
+
+  window.openPopupForInput = openPopupForNode;
+
+  window.closePopup = function(){
+    const popup = document.getElementById('handwritingPopup');
+    if(popup){
+      popup.classList.remove('active');
+    }
+    clearTimeout(popupDrawTimer);
+    popupDrawing = false;
+    popupPointerId = null;
+    popupLastPoint = null;
+    popupTargetNode = null;
+    popupTargetKind = null;
+    popupTargetFieldId = null;
+  };
+
+  window.clearPopupCanvas = function(){
+    fillPopupWhite();
+  };
+
+  window.applyPopupRecognition = function(){
+    recognizePopupCanvas();
+  };
+
+  window.setupPopupCanvas = function(){
+    const canvas = getPopupCanvas();
+    if(!canvas) return;
+    resizePopupCanvas();
+    fillPopupWhite();
+    canvas.onpointerdown = popupStart;
+    canvas.onpointermove = popupMove;
+    canvas.onpointerup = popupEnd;
+    canvas.onpointercancel = popupEnd;
+    canvas.onpointerleave = popupEnd;
+  };
+
+  document.addEventListener('dblclick', e=>{
+    const target = e.target.closest('.handField,.mainInput,.miniCarryInput');
+    if(!target) return;
+    e.preventDefault();
+    openPopupForNode(target);
+    setupPopupCanvas();
+  });
+
+  document.addEventListener('touchend', e=>{
+    const target = e.target.closest('.handField,.mainInput,.miniCarryInput');
+    if(!target) return;
+    const key = target.id || target.className || '';
+    const now = Date.now();
+    if(lastTapTargetKey === key && (now - lastTapTime) < 330){
+      e.preventDefault();
+      openPopupForNode(target);
+      setupPopupCanvas();
+      lastTapTime = 0;
+      lastTapTargetKey = '';
+    }else{
+      lastTapTime = now;
+      lastTapTargetKey = key;
+    }
+  }, { passive:false });
+
+  window.addEventListener('resize', ()=>{
+    if(document.getElementById('handwritingPopup')?.classList.contains('active')){
+      resizePopupCanvas();
+    }
+  }, { passive:true });
+
+  window.addEventListener('orientationchange', ()=>{
+    if(document.getElementById('handwritingPopup')?.classList.contains('active')){
+      setTimeout(resizePopupCanvas, 80);
+    }
+  });
+})();
+</script>
 
 </body>
 </html>
