@@ -731,11 +731,11 @@ td.wrong .handCanvas{
 .handwritingPopup{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100000;}
 .handwritingPopup.active{display:flex;}
 .handwritingPopupCard{background:white;padding:18px;border-radius:24px;width:min(96vw,720px);box-shadow:0 20px 60px rgba(0,0,0,.28);}
-.handwritingPopupCanvas{width:100%;height:340px;background:white;border:3px solid #90caf9;border-radius:18px;touch-action:none;display:block;}
+.handwritingPopupCanvas{width:100%;height:340px;background:#f8fbff;border:3px solid #90caf9;border-radius:18px;touch-action:none;display:block;}
 
 @media (max-width:720px){
   .handwritingPopupCard{width:min(96vw,720px);}
-  .handwritingPopupCanvas{height:300px;}
+  .handwritingPopupCanvas{height:300px;background:#f8fbff;}
 }
 
 </style>
@@ -2999,6 +2999,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   let popupCanvasBound = false;
   let popupLastTapTarget = null;
   let popupLastTapTime = 0;
+  let popupRecognizeTimer = null;
 
   function getPopupTargetNode(node){
     return node?.closest('.handField, .miniCarryBox, .mainInput, .miniCarryInput') || null;
@@ -3018,10 +3019,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
     if(!canvas) return;
     resizePopupCanvas(canvas);
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#f8fbff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+  }
+
+  function schedulePopupRecognition(){
+    clearTimeout(popupRecognizeTimer);
+    popupRecognizeTimer = setTimeout(() => {
+      applyPopupRecognition();
+    }, 220);
   }
 
   function setupPopupCanvas(){
@@ -3044,6 +3052,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
     const start = (e) => {
       e.preventDefault();
+      clearTimeout(popupRecognizeTimer);
       drawing = true;
       last = pos(e);
       ctx.beginPath();
@@ -3071,6 +3080,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
       drawing = false;
       last = null;
       ctx.beginPath();
+      schedulePopupRecognition();
     };
 
     canvas.addEventListener('pointerdown', (e) => {
@@ -3128,6 +3138,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   }
 
   function closePopup(){
+    clearTimeout(popupRecognizeTimer);
     const popup = document.getElementById('handwritingPopup');
     if(popup) popup.classList.remove('active');
     popupTargetInput = null;
@@ -3146,7 +3157,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
     const kind = handwritingState?.kind || (appState.page === 'attackPlayPage' ? 'attack' : 'practice');
 
     if(appState.inputMode === 'handwriting' && handwritingState){
-      setFieldValue(targetId, value);
+      setFieldValue(targetId, value, { finalize:true });
+      refreshHandwritingDisplays();
       checkInputs(kind);
       advanceStep(kind);
       checkFinal(kind);
@@ -3155,10 +3167,11 @@ document.addEventListener("DOMContentLoaded", ()=>{
       popupTargetInput.dispatchEvent(new Event('input', { bubbles:true }));
     }
 
-    closePopup();
+    clearPopupCanvas();
   }
 
   function bindPopupTriggers(){
+
     document.addEventListener('dblclick', (e) => {
       const target = getPopupTargetNode(e.target);
       if(!target) return;
