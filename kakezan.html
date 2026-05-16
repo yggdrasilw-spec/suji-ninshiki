@@ -1742,7 +1742,7 @@ function setFieldValue(fieldId, value, options={}){
     }
     st.cell.classList.toggle("occupied", !!value);
     if(options.finalize){
-      clearHandwritingCanvas(st, true);
+      st.finalized = true;
     }
   }else{
     const el = document.getElementById(fieldId);
@@ -1762,6 +1762,7 @@ function clearHandwritingCanvas(st, preserveValue=false){
   st.recCtx.fillRect(0,0,w,h);
   if(!preserveValue){
     st.value = "";
+    st.finalized = false;
     if(st.valueEl){
       st.valueEl.textContent = "";
       st.valueEl.style.display = "none";
@@ -1774,6 +1775,26 @@ function clearHandwritingCanvas(st, preserveValue=false){
     }
     st.cell.classList.toggle("occupied", !!st.value);
   }
+}
+
+function snapshotCanvasContent(canvas){
+  if(!canvas || !canvas.width || !canvas.height) return null;
+  const copy = document.createElement("canvas");
+  copy.width = canvas.width;
+  copy.height = canvas.height;
+  try{
+    copy.getContext("2d").drawImage(canvas, 0, 0);
+    return copy;
+  }catch(e){
+    return null;
+  }
+}
+
+function restoreCanvasContent(canvas, snapshot){
+  if(!canvas || !snapshot) return;
+  try{
+    canvas.getContext("2d").drawImage(snapshot, 0, 0);
+  }catch(e){}
 }
 
 
@@ -1812,7 +1833,9 @@ function initHandwritingFields(kind){
       lastPoint: null,
       penColor: "#000000",
       penWidth: 6,
-      kind
+      kind,
+      pendingResize: false,
+      finalized: false
     };
     st.recCtx = st.recCanvas.getContext("2d");
     handwritingFields[fieldId] = st;
@@ -1850,11 +1873,13 @@ function bindHandwritingEvents(st){
 
 
 function redrawCurrentHandwritingState(st){
-  clearHandwritingCanvas(st);
   if(st.value){
     st.valueEl.textContent = st.value;
     st.valueEl.style.display = "flex";
     st.cell.classList.add("occupied");
+  }else{
+    st.valueEl.textContent = "";
+    st.valueEl.style.display = "none";
   }
 }
 
@@ -1872,6 +1897,7 @@ function startHandwritingStroke(e, st){
   e.preventDefault();
   if(st.value){
     st.value = "";
+    st.finalized = false;
     if(st.valueEl){
       st.valueEl.textContent = "";
       st.valueEl.style.display = "none";
@@ -1907,6 +1933,11 @@ function endHandwritingStroke(e, st){
   clearTimeout(handwritingPendingTimers[st.fieldId]);
   handwritingPendingTimers[st.fieldId] = setTimeout(() => {
     recognizeHandwritingField(st);
+    if(st.pendingResize){
+      setTimeout(() => {
+        try{ resizeHandwritingField(st); }catch(err){}
+      }, 0);
+    }
   }, 250);
 }
 
@@ -1981,8 +2012,8 @@ async function recognizeHandwritingField(st){
         idx = i;
       }
     }
-    clearHandwritingCanvas(st);
     st.value = String(idx);
+    st.finalized = true;
     if(st.valueEl){
       st.valueEl.textContent = st.value;
       st.valueEl.style.display = "flex";
@@ -1999,8 +2030,8 @@ async function recognizeHandwritingField(st){
   }
 }
 
-
 function resizeAllHandwritingFields(){
+
   Object.values(handwritingFields).forEach(st => {
     const oldValue = st.value || "";
     resizeHandwritingField(st);
@@ -3508,6 +3539,10 @@ document.addEventListener("DOMContentLoaded", ()=>{
   const _resizeHandwritingField = resizeHandwritingField;
   resizeHandwritingField = function(st){
     if(!st || !st.visibleCanvas) return;
+    if(st.drawing){
+      st.pendingResize = true;
+      return;
+    }
     const rect = st.visibleCanvas.getBoundingClientRect();
     const fallback = st.field.getBoundingClientRect();
     const baseRect = (rect.width >= 2 && rect.height >= 2) ? rect : fallback;
@@ -3515,14 +3550,19 @@ document.addEventListener("DOMContentLoaded", ()=>{
     const dpr = window.devicePixelRatio || 1;
     const w = Math.max(1, Math.round(baseRect.width * dpr));
     const h = Math.max(1, Math.round(baseRect.height * dpr));
+    const visibleSnap = snapshotCanvasContent(st.visibleCanvas);
+    const recSnap = snapshotCanvasContent(st.recCanvas);
     [st.visibleCanvas, st.recCanvas].forEach(canvas => {
       if(canvas.width !== w) canvas.width = w;
       if(canvas.height !== h) canvas.height = h;
       canvas.style.width = '100%';
       canvas.style.height = '100%';
     });
+    if(visibleSnap) restoreCanvasContent(st.visibleCanvas, visibleSnap);
+    if(recSnap) restoreCanvasContent(st.recCanvas, recSnap);
     st.dpr = dpr;
     st.penWidth = (st.field.classList.contains('miniCarryBox') ? 3 : 6) * dpr;
+    st.pendingResize = false;
   };
 
   const _advanceStep = advanceStep;
@@ -3698,11 +3738,13 @@ body.ipadDevice .handwritingPopupCanvas{
     const dpr = window.devicePixelRatio || 1;
     const w = Math.max(1, Math.round(rect.width * dpr));
     const h = Math.max(1, Math.round(rect.height * dpr));
+    const snap = snapshotCanvasContent(canvas);
     if(canvas.width !== w) canvas.width = w;
     if(canvas.height !== h) canvas.height = h;
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     fillPopupWhite();
+    if(snap) restoreCanvasContent(canvas, snap);
   }
 
   function schedulePopupRecognition(){
