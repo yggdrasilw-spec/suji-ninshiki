@@ -51,8 +51,7 @@ function clearPopupCanvas(){
   const canvas=document.getElementById('popupCanvas');
   if(!canvas)return;
   const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#f8fbff';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  
   const textEl=document.getElementById('popupRecognizedText');
   if(textEl)textEl.textContent='';
 }
@@ -217,7 +216,7 @@ small, .muted{
   align-items:flex-start;
   gap:4px;
   text-align:left;
-  background:#f8fbff;
+  background:transparent;
   border:1px solid #e4ebf5;
   padding:8px 10px;
   border-radius:14px;
@@ -519,7 +518,7 @@ td{
 }
 
 .statBox{
-  background:#f8fbff;
+  background:transparent;
   border:1px solid #e3eaf4;
   border-radius:14px;
   padding:10px;
@@ -541,7 +540,7 @@ td{
   width:100%;
   border-collapse:collapse;
   margin-top:10px;
-  overflow:hidden;
+  overflow:auto;
 }
 
 .recordsTable th,
@@ -580,7 +579,7 @@ td{
 .settingsNote{
   margin-top:8px;
   padding:10px 12px;
-  background:#f8fbff;
+  background:transparent;
   border:1px solid #dfe8f4;
   border-radius:14px;
   line-height:1.55;
@@ -621,7 +620,7 @@ td{
   position:relative;
   width:100%;
   height:100%;
-  overflow:hidden;
+  overflow:auto;
   touch-action:none;
   user-select:none;
 }
@@ -633,7 +632,7 @@ td{
   height:100%;
   display:block;
   touch-action:none;
-  background:#f8fbff;
+  background:transparent;
   z-index:1;
 }
 
@@ -748,7 +747,7 @@ td.wrong .handCanvas{
   margin-top:10px;
   padding:10px 12px;
   border-radius:12px;
-  background:#f8fbff;
+  background:transparent;
   border:1px solid #dce6f2;
   text-align:left;
   line-height:1.5;
@@ -781,8 +780,8 @@ td.wrong .handCanvas{
 .practiceBoardWrap{padding:18px 12px 10px;}
 .attackBoardShell{padding:8px 12px 12px;}
 .handwritingBoardWrap #verticalArea,.handwritingBoardWrap #attackVerticalArea{transform-origin:top center;}
-#practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.15);}
-#attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.08);}
+#practicePlayPage .handwritingBoardWrap #verticalArea{transform:none; width:fit-content; margin:auto;}
+#attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:none; width:fit-content; margin:auto;}
 #practicePlayPage.page,#attackPlayPage.page{max-width:none;width:100%;margin:0;padding:0;}
 #practicePlayPage #hint,#practicePlayPage #result{width:100%;text-align:center;}
 .practiceResult{margin-top:10px;min-height:40px;}
@@ -800,7 +799,18 @@ td.wrong .handCanvas{
 .handwritingPopup{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100000;}
 .handwritingPopup.active{display:flex;}
 .handwritingPopupCard{background:white;padding:18px;border-radius:24px;width:min(96vw,720px);box-shadow:0 20px 60px rgba(0,0,0,.28);}
-.handwritingPopupCanvas{width:100%;height:340px;background:#f8fbff;border:3px solid #90caf9;border-radius:18px;touch-action:none;display:block;}
+.handwritingPopupCanvas{width:100%;height:340px;background:transparent;border:3px solid #90caf9;border-radius:18px;touch-action:none;display:block;}
+
+
+#verticalArea table,
+#attackVerticalArea table{
+  max-width: 100%;
+}
+
+body.handwritingMode td{
+  width: clamp(52px, 7vw, 86px);
+  height: clamp(52px, 7vw, 74px);
+}
 
 .popupRecognizedText{
   min-height: 1.4em;
@@ -815,9 +825,9 @@ td.wrong .handCanvas{
 
 @media (max-width:720px){
   .handwritingPopupCard{width:min(96vw,720px);}
-  .handwritingPopupCanvas{height:300px;background:#f8fbff;}
-  #practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.0);}
-  #attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.0);}
+  .handwritingPopupCanvas{height:300px;background:transparent;}
+  #practicePlayPage .handwritingBoardWrap #verticalArea{transform:none; width:fit-content; margin:auto;}
+  #attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:none; width:fit-content; margin:auto;}
   .attackFullscreen .attackHud{font-size:10px;gap:8px;}
   .attackFullscreen .attackHud b{font-size:12px;}
   .attackFullscreen .navBtn{padding:4px 6px;font-size:11px;}
@@ -1755,8 +1765,7 @@ function clearHandwritingCanvas(st, preserveValue=false){
   const w = st.visibleCanvas.width;
   const h = st.visibleCanvas.height;
   st.visibleCtx.clearRect(0,0,w,h);
-  st.visibleCtx.fillStyle = "#f8fbff";
-  st.visibleCtx.fillRect(0,0,w,h);
+  
   st.recCtx.clearRect(0,0,w,h);
   st.recCtx.fillStyle = "#000000";
   st.recCtx.fillRect(0,0,w,h);
