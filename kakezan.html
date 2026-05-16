@@ -48,10 +48,13 @@ canvas.ontouchmove=move;
 canvas.ontouchend=end;
 }
 function clearPopupCanvas(){
-const canvas=document.getElementById('popupCanvas');
-const ctx=canvas.getContext('2d');
-ctx.fillStyle='white';
-ctx.fillRect(0,0,canvas.width,canvas.height);
+  const canvas=document.getElementById('popupCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#f8fbff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  const textEl=document.getElementById('popupRecognizedText');
+  if(textEl)textEl.textContent='';
 }
 function applyPopupRecognition(){
 if(!popupTargetInput)return;
@@ -59,7 +62,9 @@ const val=prompt('認識数字を入力してください','0');
 if(val===null)return;
 popupTargetInput.value=val;
 popupTargetInput.dispatchEvent(new Event('input'));
-closePopup();
+clearPopupCanvas();
+const textEl=document.getElementById('popupRecognizedText');
+if(textEl)textEl.textContent=val;
 }
 document.addEventListener('dblclick',e=>{
 const input=e.target.closest('.mainInput,.miniCarryInput');
@@ -776,8 +781,8 @@ td.wrong .handCanvas{
 .practiceBoardWrap{padding:18px 12px 10px;}
 .attackBoardShell{padding:8px 12px 12px;}
 .handwritingBoardWrap #verticalArea,.handwritingBoardWrap #attackVerticalArea{transform-origin:top center;}
-#practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.85);}
-#attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.7);}
+#practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.15);}
+#attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.08);}
 #practicePlayPage.page,#attackPlayPage.page{max-width:none;width:100%;margin:0;padding:0;}
 #practicePlayPage #hint,#practicePlayPage #result{width:100%;text-align:center;}
 .practiceResult{margin-top:10px;min-height:40px;}
@@ -797,11 +802,22 @@ td.wrong .handCanvas{
 .handwritingPopupCard{background:white;padding:18px;border-radius:24px;width:min(96vw,720px);box-shadow:0 20px 60px rgba(0,0,0,.28);}
 .handwritingPopupCanvas{width:100%;height:340px;background:#f8fbff;border:3px solid #90caf9;border-radius:18px;touch-action:none;display:block;}
 
+.popupRecognizedText{
+  min-height: 1.4em;
+  margin-top: 10px;
+  font-size: 26px;
+  font-weight: 800;
+  color: rgba(107,114,128,.75);
+  text-align: center;
+  letter-spacing: .04em;
+}
+
+
 @media (max-width:720px){
   .handwritingPopupCard{width:min(96vw,720px);}
   .handwritingPopupCanvas{height:300px;background:#f8fbff;}
-  #practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.35);}
-  #attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.28);}
+  #practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.0);}
+  #attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.0);}
   .attackFullscreen .attackHud{font-size:10px;gap:8px;}
   .attackFullscreen .attackHud b{font-size:12px;}
   .attackFullscreen .navBtn{padding:4px 6px;font-size:11px;}
@@ -1688,6 +1704,7 @@ function buildFieldHtml(fieldId, correct, options={}){
       <div class="${cls}" id="${fieldId}" data-field-id="${fieldId}" data-correct="${correct}">
         <div class="ghostDigit">${correct}</div>
         <canvas class="handCanvas" id="canvas_${fieldId}"></canvas>
+<div id="popupRecognizedText" class="popupRecognizedText" aria-live="polite"></div>
         <div class="handValue" id="value_${fieldId}"></div>
       </div>
     `;
@@ -1982,7 +1999,24 @@ async function recognizeHandwritingField(st){
 
 function resizeAllHandwritingFields(){
   Object.values(handwritingFields).forEach(st => {
+    const oldValue = st.value || "";
     resizeHandwritingField(st);
+
+    if(oldValue){
+      if(st.valueEl){
+        st.valueEl.textContent = oldValue;
+        st.valueEl.style.display = "flex";
+      }
+      st.cell.classList.add("occupied");
+    }
+  });
+
+  requestAnimationFrame(()=>{
+    if(appState.mode === "attack"){
+      updateAttackHints();
+    }else{
+      updateHints();
+    }
   });
 }
 
