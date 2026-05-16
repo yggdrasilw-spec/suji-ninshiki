@@ -724,13 +724,27 @@ td.wrong .handCanvas{
 .page.handwritingFullscreen{position:fixed;inset:0;background:#f4f7fb;z-index:99999;flex-direction:column;overflow:hidden;}
 .page.active.handwritingFullscreen{display:flex;}
 .handwritingTopBar{padding:10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
-.handwritingBoardWrap{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:24px;}
-.handwritingBoardWrap #verticalArea,
-.handwritingBoardWrap #attackVerticalArea{transform:scale(1.8);transform-origin:top center;}
-.modeBadge{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#eef4ff;color:#1f3f80;font-weight:700;}
-#practicePlayPage .toggleBar{margin-top:0;}
-#practicePlayPage #hint{margin-top:10px;}
-#practicePlayPage #result{margin-top:12px;}
+.practiceTopBar .practiceTopActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.practiceMiniToolbar,.attackMiniToolbar{margin:8px 0 0;justify-content:center;gap:4px;}
+.practiceMiniToolbar .toggleBtn,.attackMiniToolbar .toggleBtn{font-size:11px;padding:4px 7px;border-radius:999px;}
+.practiceBoardWrap,.attackBoardShell{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
+.practiceBoardWrap{padding:18px 12px 10px;}
+.attackBoardShell{padding:8px 12px 12px;}
+.handwritingBoardWrap #verticalArea,.handwritingBoardWrap #attackVerticalArea{transform-origin:top center;}
+#practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.85);}
+#attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.7);}
+#practicePlayPage.page,#attackPlayPage.page{max-width:none;width:100%;margin:0;padding:0;}
+#practicePlayPage #hint,#practicePlayPage #result{width:100%;text-align:center;}
+.practiceResult{margin-top:10px;min-height:40px;}
+.attackFullscreen .attackTopBar{padding:6px 10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden;}
+.attackFullscreen .attackHud{flex:1;display:flex;align-items:center;justify-content:center;gap:12px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.attackFullscreen .attackHud span{display:inline-flex;align-items:baseline;gap:4px;}
+.attackFullscreen .attackHud b{font-size:14px;}
+.attackFullscreen .navBtn{padding:5px 8px;font-size:12px;border-radius:8px;min-width:0;}
+.attackHint{font-size:14px;margin-top:4px;min-height:20px;text-align:center;}
+.attackVerticalArea{position:relative;display:inline-block;margin-top:8px;}
+.attackResult{margin-top:8px;font-size:20px;min-height:24px;color:#d84315;font-weight:bold;text-align:center;}
+.attackFinishPanel{margin-top:12px;width:min(100%, 1100px);}
 .miniCarryBox{width:22px!important;height:22px!important;top:-1px!important;right:-1px!important;border:2px dashed #666!important;border-radius:6px;background:#fffde7!important;z-index:50!important;overflow:hidden!important;}
 .miniCarryInput{font-size:11px!important;}
 .handwritingPopup{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100000;}
@@ -741,27 +755,11 @@ td.wrong .handCanvas{
 @media (max-width:720px){
   .handwritingPopupCard{width:min(96vw,720px);}
   .handwritingPopupCanvas{height:300px;background:#f8fbff;}
-}
-
-#practicePlayPage.page{
-  max-width:none;
-  width:100%;
-  margin:0;
-  padding:0;
-}
-
-#practicePlayPage .handwritingBoardWrap{
-  min-height:0;
-}
-
-#practicePlayPage .handwritingBoardWrap #verticalArea{
-  transform:scale(1.85);
-  transform-origin:top center;
-}
-
-#practicePlayPage .handwritingTopBar .navBtn{
-  padding:8px 12px;
-  font-size:15px;
+  #practicePlayPage .handwritingBoardWrap #verticalArea{transform:scale(1.35);}
+  #attackPlayPage .handwritingBoardWrap #attackVerticalArea{transform:scale(1.28);}
+  .attackFullscreen .attackHud{font-size:10px;gap:8px;}
+  .attackFullscreen .attackHud b{font-size:12px;}
+  .attackFullscreen .navBtn{padding:4px 6px;font-size:11px;}
 }
 
 </style>
@@ -1056,13 +1054,16 @@ body.handwritingMode .handField.active .handCanvas{
 </div>
 
 <div id="practicePlayPage" class="page handwritingFullscreen">
-  <div class="handwritingTopBar">
-    <button class="navBtn" onclick="returnToPracticeSetup()">← 設定へ</button>
-    <div class="modeBadge">自由練習中</div>
+  <div class="handwritingTopBar practiceTopBar">
     <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <div class="modeBadge">自由練習中</div>
+    <div class="practiceTopActions">
+      <button class="navBtn" onclick="openSettings()">⚙️ 設定</button>
+      <button class="navBtn" onclick="returnToPracticeSetup()">🔁 別の問題</button>
+    </div>
   </div>
 
-  <div class="toggleBar" style="margin:10px 0 0;">
+  <div class="toggleBar practiceMiniToolbar">
     <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
     <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
     <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
@@ -1071,16 +1072,16 @@ body.handwritingMode .handField.active .handCanvas{
     <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊 効果音</button>
   </div>
 
-  <div id="hint" style="margin-top:10px;"></div>
+  <div id="hint" style="margin-top:8px;"></div>
 
-  <div class="handwritingBoardWrap">
+  <div class="handwritingBoardWrap practiceBoardWrap">
     <div id="verticalArea">
       <svg id="arrowSvg"></svg>
       <div id="tableArea"></div>
     </div>
   </div>
 
-  <div id="result" style="margin-top:12px;"></div>
+  <div id="result" class="practiceResult"></div>
 </div>
 
 <div id="attackSetupPage" class="page">
@@ -1164,42 +1165,42 @@ body.handwritingMode .handField.active .handCanvas{
   </div>
 </div>
 
-<div id="attackPlayPage" class="page">
-  <div class="topRow">
+<div id="attackPlayPage" class="page handwritingFullscreen attackFullscreen">
+  <div class="attackTopBar">
     <button class="navBtn" onclick="confirmLeaveAttack()">🏠 ホーム</button>
-    <div class="muted">タイムアタック中</div>
-    <button class="navBtn" onclick="openRecords()">📒 記録</button>
+
+    <div class="attackHud">
+      <span>🕒 <b id="attackElapsed">00:00</b></span>
+      <span>残り <b id="attackProgress">0 / 0</b></span>
+      <span>正解 <b id="attackCorrectCount">0</b></span>
+      <span>ミス <b id="attackMissCount">0</b></span>
+      <span>目標 <b id="attackTargetDisplay">00:00</b></span>
+      <span>達成 <b id="attackGoalStatus">-</b></span>
+    </div>
+
+    <button class="navBtn" onclick="openAttackSetup()">⚙️ 設定</button>
   </div>
 
-  <div class="sectionPanel">
-    <div class="statGrid">
-      <div class="statBox"><div class="label">問題</div><div class="value" id="attackProgress">0 / 0</div></div>
-      <div class="statBox"><div class="label">経過時間</div><div class="value bigTimer" id="attackElapsed">00:00</div></div>
-      <div class="statBox"><div class="label">正解</div><div class="value" id="attackCorrectCount">0</div></div>
-      <div class="statBox"><div class="label">ミス</div><div class="value" id="attackMissCount">0</div></div>
-      <div class="statBox"><div class="label">目標</div><div class="value" id="attackTargetDisplay">00:00</div></div>
-      <div class="statBox"><div class="label">達成</div><div class="value" id="attackGoalStatus">-</div></div>
-    </div>
+  <div class="toggleBar attackMiniToolbar">
+    <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
+    <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
+    <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
+    <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
+    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
+    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊 効果音</button>
+  </div>
 
-    <div class="toggleBar">
-      <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
-      <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
-      <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
-      <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
-      <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
-      <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊 効果音</button>
-    </div>
+  <div id="attackHint" class="attackHint"></div>
 
-    <div id="attackHint"></div>
-
-    <div id="attackVerticalArea" style="position:relative;display:inline-block;margin-top:14px;">
+  <div class="attackBoardShell">
+    <div id="attackVerticalArea" class="attackVerticalArea">
       <svg id="attackArrowSvg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:9999;"></svg>
       <div id="attackTableArea"></div>
     </div>
 
-    <div id="attackResult" style="margin-top:12px;font-size:28px;min-height:40px;color:#d84315;font-weight:bold;"></div>
+    <div id="attackResult" class="attackResult"></div>
 
-    <div id="attackFinishPanel" class="sectionPanel" style="display:none;margin-top:14px;">
+    <div id="attackFinishPanel" class="sectionPanel attackFinishPanel" style="display:none;">
       <h2>結果</h2>
       <div class="statGrid">
         <div class="statBox"><div class="label">正解率</div><div class="value" id="finishAccuracy">0%</div></div>
@@ -1313,7 +1314,6 @@ function openPractice(){
   showPage("practicePage");
   buildCarryCheckboxes();
   updateToggleButtons();
-  generateProblem();
   if(appState.inputMode === "handwriting"){
     ensureHandwritingModel().catch(()=>{});
   }
@@ -1322,6 +1322,13 @@ function openPractice(){
 function returnToPracticeSetup(){
   clearPracticeWorkspace();
   showPage("practicePage");
+}
+
+function enterPracticeFullscreen(){
+  showPage("practicePlayPage");
+  if(appState.inputMode === "handwriting"){
+    ensureHandwritingModel().catch(()=>{});
+  }
 }
 
 
@@ -2031,6 +2038,7 @@ function generateRandomProblem(){
   appState.customTop = null;
   appState.customBottom = null;
   generateProblem(false);
+  enterPracticeFullscreen();
 }
 
 function generateProblem(preserveCustom=false){
@@ -2116,6 +2124,7 @@ function generateCustomProblem(){
   document.getElementById("bottomDigitsSelect").value = String(bottomStr.length);
   buildCarryCheckboxes();
   generateProblem(true);
+  enterPracticeFullscreen();
 }
 
 
