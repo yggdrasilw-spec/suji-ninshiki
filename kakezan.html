@@ -4,73 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>かけ算の筆算 トレーニング</title>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js">
-let popupTargetInput=null;
-function openPopupForInput(input){
-popupTargetInput=input;
-document.getElementById('handwritingPopup').classList.add('active');
-setupPopupCanvas();
-}
-function closePopup(){
-document.getElementById('handwritingPopup').classList.remove('active');
-}
-function setupPopupCanvas(){
-const canvas=document.getElementById('popupCanvas');
-const ctx=canvas.getContext('2d');
-ctx.fillStyle='white';
-ctx.fillRect(0,0,canvas.width,canvas.height);
-let drawing=false;
-function pos(e){
-const r=canvas.getBoundingClientRect();
-const t=e.touches?e.touches[0]:e;
-return{x:(t.clientX-r.left)*(canvas.width/r.width),y:(t.clientY-r.top)*(canvas.height/r.height)};
-}
-function start(e){drawing=true;draw(e);}
-function move(e){if(!drawing)return;draw(e);}
-function end(){drawing=false;ctx.beginPath();}
-function draw(e){
-e.preventDefault();
-const p=pos(e);
-ctx.lineWidth=26;
-ctx.lineCap='round';
-ctx.strokeStyle='black';
-ctx.lineTo(p.x,p.y);
-ctx.stroke();
-ctx.beginPath();
-ctx.moveTo(p.x,p.y);
-}
-canvas.onmousedown=start;
-canvas.onmousemove=move;
-canvas.onmouseup=end;
-canvas.onmouseleave=end;
-canvas.ontouchstart=start;
-canvas.ontouchmove=move;
-canvas.ontouchend=end;
-}
-function clearPopupCanvas(){
-  const canvas=document.getElementById('popupCanvas');
-  if(!canvas)return;
-  const ctx=canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='white';
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-  const textEl=document.getElementById('popupRecognizedText');
-  if(textEl)textEl.textContent='';
-}
-function applyPopupRecognition(){
-if(!popupTargetInput)return;
-const val=prompt('認識数字を入力してください','0');
-if(val===null)return;
-popupTargetInput.value=val;
-popupTargetInput.dispatchEvent(new Event('input'));
-clearPopupCanvas();
-}
-document.addEventListener('dblclick',e=>{
-const input=e.target.closest('.mainInput,.miniCarryInput');
-if(input){openPopupForInput(input);}
-});
-
-</script>
+<script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <style>
 :root{
   --bg:#f4f7fb;
@@ -1735,9 +1669,6 @@ function buildFieldHtml(fieldId, correct, options={}){
 
 
 function getFieldNode(fieldId){
-
-
-function getFieldNode(fieldId){
   return document.getElementById(fieldId);
 }
 
@@ -1773,9 +1704,6 @@ function setFieldValue(fieldId, value, options={}){
 
 
 function clearHandwritingCanvas(st, preserveValue=false){
-
-
-function clearHandwritingCanvas(st, preserveValue=false){
   if(!st) return;
   const w = st.visibleCanvas.width;
   const h = st.visibleCanvas.height;
@@ -1803,9 +1731,6 @@ function clearHandwritingCanvas(st, preserveValue=false){
     st.cell.classList.toggle("occupied", !!st.value);
   }
 }
-
-
-function snapshotCanvasContent(canvas){
 
 
 function snapshotCanvasContent(canvas){
@@ -2061,9 +1986,6 @@ async function recognizeHandwritingField(st){
     output?.dispose?.();
   }
 }
-
-
-function resizeAllHandwritingFields(){
 
 
 function resizeAllHandwritingFields(){
@@ -3897,7 +3819,9 @@ body.ipadDevice .handwritingPopupCanvas{
         }
       }
       clearPopupCanvas();
-
+    }catch(err){
+      console.error(err);
+    }
   }
 
   function openPopupForNode(node){
