@@ -721,7 +721,8 @@ td.wrong .handCanvas{
   }
 }
 
-.handwritingFullscreen{position:fixed;inset:0;background:#f4f7fb;z-index:99999;display:flex;flex-direction:column;overflow:hidden;}
+.page.handwritingFullscreen{position:fixed;inset:0;background:#f4f7fb;z-index:99999;flex-direction:column;overflow:hidden;}
+.page.active.handwritingFullscreen{display:flex;}
 .handwritingTopBar{padding:10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
 .handwritingBoardWrap{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:24px;}
 .handwritingBoardWrap #verticalArea,
@@ -1368,8 +1369,12 @@ function confirmLeaveAttack(){
 function showPage(pageId){
   document.querySelectorAll(".page").forEach(page=>{
     page.classList.remove("active");
+    page.style.display = "none";
   });
-  document.getElementById(pageId).classList.add("active");
+  const page = document.getElementById(pageId);
+  if(!page) return;
+  page.classList.add("active");
+  page.style.display = page.classList.contains("handwritingFullscreen") ? "flex" : "block";
   appState.page = pageId;
 }
 
@@ -2486,7 +2491,7 @@ function drawArrow(item, kind){
 }
 
 function updateHints(){
-  if(appState.page !== "practicePage") return;
+  if(appState.page !== "practicePlayPage") return;
   clearHighlights();
   document.getElementById("arrowSvg").innerHTML = "";
 
