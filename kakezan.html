@@ -4,7 +4,69 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>かけ算の筆算 トレーニング</title>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js">
+let popupTargetInput=null;
+function openPopupForInput(input){
+popupTargetInput=input;
+document.getElementById('handwritingPopup').classList.add('active');
+setupPopupCanvas();
+}
+function closePopup(){
+document.getElementById('handwritingPopup').classList.remove('active');
+}
+function setupPopupCanvas(){
+const canvas=document.getElementById('popupCanvas');
+const ctx=canvas.getContext('2d');
+ctx.fillStyle='white';
+ctx.fillRect(0,0,canvas.width,canvas.height);
+let drawing=false;
+function pos(e){
+const r=canvas.getBoundingClientRect();
+const t=e.touches?e.touches[0]:e;
+return{x:(t.clientX-r.left)*(canvas.width/r.width),y:(t.clientY-r.top)*(canvas.height/r.height)};
+}
+function start(e){drawing=true;draw(e);}
+function move(e){if(!drawing)return;draw(e);}
+function end(){drawing=false;ctx.beginPath();}
+function draw(e){
+e.preventDefault();
+const p=pos(e);
+ctx.lineWidth=26;
+ctx.lineCap='round';
+ctx.strokeStyle='black';
+ctx.lineTo(p.x,p.y);
+ctx.stroke();
+ctx.beginPath();
+ctx.moveTo(p.x,p.y);
+}
+canvas.onmousedown=start;
+canvas.onmousemove=move;
+canvas.onmouseup=end;
+canvas.onmouseleave=end;
+canvas.ontouchstart=start;
+canvas.ontouchmove=move;
+canvas.ontouchend=end;
+}
+function clearPopupCanvas(){
+const canvas=document.getElementById('popupCanvas');
+const ctx=canvas.getContext('2d');
+ctx.fillStyle='white';
+ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+function applyPopupRecognition(){
+if(!popupTargetInput)return;
+const val=prompt('認識数字を入力してください','0');
+if(val===null)return;
+popupTargetInput.value=val;
+popupTargetInput.dispatchEvent(new Event('input'));
+closePopup();
+}
+document.addEventListener('dblclick',e=>{
+const input=e.target.closest('.mainInput,.miniCarryInput');
+if(input){openPopupForInput(input);}
+});
+
+</script>
 <style>
 :root{
   --bg:#f4f7fb;
@@ -640,6 +702,18 @@ td{
     font-size:20px;
   }
 }
+
+.handwritingFullscreen{position:fixed;inset:0;background:#f4f7fb;z-index:99999;display:flex;flex-direction:column;overflow:hidden;}
+.handwritingTopBar{padding:10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;justify-content:space-between;align-items:center;}
+.handwritingBoardWrap{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:24px;}
+.handwritingBoardWrap #verticalArea,.handwritingBoardWrap #attackVerticalArea{transform:scale(1.65);transform-origin:top center;}
+.miniCarryBox{width:34px!important;height:34px!important;top:-14px!important;right:-14px!important;border:2px dashed #666!important;border-radius:8px;background:#fffde7!important;z-index:40!important;}
+.miniCarryInput{font-size:18px!important;}
+.handwritingPopup{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100000;}
+.handwritingPopup.active{display:flex;}
+.handwritingPopupCard{background:white;padding:18px;border-radius:24px;width:min(92vw,520px);}
+.handwritingPopupCanvas{width:100%;height:260px;background:white;border:3px solid #90caf9;border-radius:18px;touch-action:none;}
+
 </style>
 
 <style id="handwritingModePatch">
@@ -680,17 +754,13 @@ body.handwritingMode .handField{
 }
 
 body.handwritingMode .miniCarryBox{
-  position:absolute;
-  top:4px;
-  right:4px;
-  width:32px;
-  height:32px;
-  border:2px dashed rgba(43,124,255,.68);
-  border-radius:8px;
-  background:rgba(255,255,255,.96);
-  overflow:hidden;
-  z-index:5;
-  box-shadow:0 0 0 1px rgba(43,124,255,.10) inset;
+  position:relative;
+  top:auto;
+  right:auto;
+  width:100%;
+  height:100%;
+  border-left:0;
+  border-bottom:0;
 }
 
 body.handwritingMode .miniCarryBox .handCanvas,
@@ -709,26 +779,6 @@ body.handwritingMode .miniCarryBox .handCanvas{
   border-radius:0;
 }
 
-body.handwritingMode .handField.target .handCanvas,
-body.handwritingMode .miniCarryBox.target .handCanvas{
-  background:#bfe0ff;
-}
-
-body.handwritingMode .handField.highlight .handCanvas,
-body.handwritingMode .miniCarryBox.highlight .handCanvas{
-  background:#ffe7a3;
-}
-
-body.handwritingMode .handField.correct .handCanvas,
-body.handwritingMode .miniCarryBox.correct .handCanvas{
-  background:#c8f7c5;
-}
-
-body.handwritingMode .handField.wrong .handCanvas,
-body.handwritingMode .miniCarryBox.wrong .handCanvas{
-  background:#ffd6d6;
-}
-
 @media (max-width:720px){
   body.handwritingMode td{
     width:72px;
@@ -738,12 +788,6 @@ body.handwritingMode .miniCarryBox.wrong .handCanvas{
   body.handwritingMode .mainInput,
   body.handwritingMode .sign{
     font-size:30px;
-  }
-  body.handwritingMode .miniCarryBox{
-    width:28px;
-    height:28px;
-    top:3px;
-    right:3px;
   }
 }
 </style>
@@ -1654,7 +1698,6 @@ function startHandwritingStroke(e, st){
   e.preventDefault();
   if(st.value){
     st.value = "";
-    st.field.classList.remove("correct", "wrong");
     if(st.valueEl){
       st.valueEl.textContent = "";
       st.valueEl.style.display = "none";
@@ -2233,19 +2276,29 @@ function checkInputs(kind){
     lastCellState[item.id] = next;
 
     if(!uiState.correctness){
-      el?.classList.remove("correct");
-      el?.classList.remove("wrong");
+      if(appState.inputMode === "handwriting"){
+        cell?.classList.remove("correct");
+        cell?.classList.remove("wrong");
+      }else{
+        el?.classList.remove("correct");
+        el?.classList.remove("wrong");
+      }
       return;
     }
 
     if(value === ""){
-      el?.classList.remove("correct");
-      el?.classList.remove("wrong");
+      if(appState.inputMode === "handwriting"){
+        cell?.classList.remove("correct");
+        cell?.classList.remove("wrong");
+      }else{
+        el?.classList.remove("correct");
+        el?.classList.remove("wrong");
+      }
       return;
     }
 
     const isCorrect = value === item.correct;
-    const targetNode = el;
+    const targetNode = appState.inputMode === "handwriting" ? cell : el;
     if(!targetNode) return;
     targetNode.classList.toggle("correct", isCorrect);
     targetNode.classList.toggle("wrong", !isCorrect);
@@ -2287,12 +2340,7 @@ function clearHighlights(){
     td.classList.remove("highlight");
     td.classList.remove("target");
   });
-  document.querySelectorAll(".handField").forEach(field=>{
-    field.classList.remove("highlight");
-    field.classList.remove("target");
-  });
   document.querySelectorAll(".miniCarryBox").forEach(box=>{
-    box.classList.remove("highlight");
     box.classList.remove("target");
   });
 }
@@ -2347,8 +2395,7 @@ function updateHints(){
 
   const item = inputMap[currentStep];
   const target = document.getElementById(getCellId(item.rowIndex, item.col));
-  const targetNode = appState.inputMode === "handwriting" ? target?.querySelector(".handField") : target;
-  if(uiState.target && targetNode) targetNode.classList.add("target");
+  if(uiState.target && target) target.classList.add("target");
 
   const carryId = carryBoxByInput[item.id];
   const carry = carryId ? document.getElementById(carryId) : null;
@@ -2390,8 +2437,7 @@ function updateAttackHints(){
 
   const item = inputMap[currentStep];
   const target = document.getElementById(getCellId(item.rowIndex, item.col));
-  const targetNode = appState.inputMode === "handwriting" ? target?.querySelector(".handField") : target;
-  if(uiState.target && targetNode) targetNode.classList.add("target");
+  if(uiState.target && target) target.classList.add("target");
 
   const carryId = carryBoxByInput[item.id];
   const carry = carryId ? document.getElementById(carryId) : null;
@@ -3029,6 +3075,17 @@ document.addEventListener("DOMContentLoaded", ()=>{
   }, { once:true });
 })();
 </script>
+
+
+<div id="handwritingPopup" class="handwritingPopup">
+<div class="handwritingPopupCard">
+<div style="font-size:24px;font-weight:700;margin-bottom:10px;">✏️ 大きく書こう</div>
+<canvas id="popupCanvas" class="handwritingPopupCanvas" width="480" height="260"></canvas>
+<div style="margin-top:12px;display:flex;gap:10px;justify-content:center;">
+<button class="primaryBtn" onclick="applyPopupRecognition()">認識</button>
+<button class="actionBtn secondary" onclick="clearPopupCanvas()">消す</button>
+<button class="actionBtn secondary" onclick="closePopup()">閉じる</button>
+</div></div></div>
 
 </body>
 </html>
