@@ -615,7 +615,7 @@ td{
   height:100%;
   display:block;
   touch-action:none;
-  background:#fff;
+  background:#f8fbff;
   z-index:1;
 }
 
@@ -1634,7 +1634,7 @@ function setFieldValue(fieldId, value, options={}){
     }
     st.cell.classList.toggle("occupied", !!value);
     if(options.finalize){
-      clearHandwritingCanvas(st);
+      clearHandwritingCanvas(st, true);
     }
   }else{
     const el = document.getElementById(fieldId);
@@ -1642,22 +1642,30 @@ function setFieldValue(fieldId, value, options={}){
   }
 }
 
-function clearHandwritingCanvas(st){
+function clearHandwritingCanvas(st, preserveValue=false){
   if(!st) return;
   const w = st.visibleCanvas.width;
   const h = st.visibleCanvas.height;
   st.visibleCtx.clearRect(0,0,w,h);
-  st.visibleCtx.fillStyle = "#ffffff";
+  st.visibleCtx.fillStyle = "#f8fbff";
   st.visibleCtx.fillRect(0,0,w,h);
   st.recCtx.clearRect(0,0,w,h);
   st.recCtx.fillStyle = "#000000";
   st.recCtx.fillRect(0,0,w,h);
-  st.value = "";
-  if(st.valueEl){
-    st.valueEl.textContent = "";
-    st.valueEl.style.display = "none";
+  if(!preserveValue){
+    st.value = "";
+    if(st.valueEl){
+      st.valueEl.textContent = "";
+      st.valueEl.style.display = "none";
+    }
+    st.cell.classList.remove("occupied");
+  }else{
+    if(st.valueEl){
+      st.valueEl.textContent = st.value || "";
+      st.valueEl.style.display = st.value ? "flex" : "none";
+    }
+    st.cell.classList.toggle("occupied", !!st.value);
   }
-  st.cell.classList.remove("occupied");
 }
 
 
@@ -1787,6 +1795,7 @@ function endHandwritingStroke(e, st){
   st.drawing = false;
   st.activePointerId = null;
   st.lastPoint = null;
+  window.lastHandwritingStrokeEndAt = Date.now();
   clearTimeout(handwritingPendingTimers[st.fieldId]);
   handwritingPendingTimers[st.fieldId] = setTimeout(() => {
     recognizeHandwritingField(st);
@@ -3431,6 +3440,7 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
   let lastTapTime = 0;
   let lastTapTargetKey = "";
   let popupResizeTimer = 0;
+  window.lastHandwritingStrokeEndAt = window.lastHandwritingStrokeEndAt || 0;
 
   function getPopupCanvas(){
     return document.getElementById('popupCanvas');
@@ -3445,7 +3455,7 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
     const canvas = getPopupCanvas();
     const ctx = getPopupCtx();
     if(!canvas || !ctx) return;
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = '#f8fbff';
     ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
@@ -3469,6 +3479,17 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
     popupDrawTimer = setTimeout(()=>{ recognizePopupCanvas(); }, 220);
   }
 
+  function shouldOpenPopupFromTarget(target){
+    if(!target) return false;
+    if(target.classList && target.classList.contains('handField')){
+      const lastStrokeEnd = Number(window.lastHandwritingStrokeEndAt || 0);
+      if(lastStrokeEnd && (Date.now() - lastStrokeEnd) < 800){
+        return false;
+      }
+    }
+    return true;
+  }
+
   function popupPos(e){
     const canvas = getPopupCanvas();
     const rect = canvas.getBoundingClientRect();
@@ -3486,7 +3507,6 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
     popupPointerId = e.pointerId ?? null;
     try{ getPopupCanvas().setPointerCapture?.(e.pointerId); }catch(err){}
     popupLastPoint = popupPos(e);
-    schedulePopupRecognition();
   }
 
   function popupMove(e){
@@ -3510,7 +3530,6 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
     ctx.lineTo(p.x, p.y);
     ctx.stroke();
     popupLastPoint = p;
-    schedulePopupRecognition();
   }
 
   function popupEnd(e){
@@ -3568,8 +3587,6 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
           popupTargetNode.dispatchEvent(new Event('input', { bubbles:true }));
         }
       }
-
-      closePopup();
     }catch(err){
       console.error(err);
     }
@@ -3631,6 +3648,7 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
   document.addEventListener('dblclick', e=>{
     const target = e.target.closest('.handField,.mainInput,.miniCarryInput');
     if(!target) return;
+    if(!shouldOpenPopupFromTarget(target)) return;
     e.preventDefault();
     openPopupForNode(target);
     setupPopupCanvas();
@@ -3639,6 +3657,7 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
   document.addEventListener('touchend', e=>{
     const target = e.target.closest('.handField,.mainInput,.miniCarryInput');
     if(!target) return;
+    if(!shouldOpenPopupFromTarget(target)) return;
     const key = target.id || target.className || '';
     const now = Date.now();
     if(lastTapTargetKey === key && (now - lastTapTime) < 330){
