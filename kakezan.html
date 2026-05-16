@@ -1,0 +1,2754 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>かけ算の筆算 トレーニング</title>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<style>
+:root{
+  --bg:#f4f7fb;
+  --panel:#ffffff;
+  --ink:#243041;
+  --muted:#6b7280;
+  --primary:#2b7cff;
+  --primary-weak:#e7f0ff;
+  --accent:#ff7043;
+  --green:#43a047;
+  --blue:#1e88e5;
+  --purple:#8e24aa;
+  --line:#8892a6;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  text-align:center;
+  background:var(--bg);
+  color:var(--ink);
+  margin:0;
+  padding:12px;
+}
+
+h1{
+  margin:12px 0 10px;
+  font-size:28px;
+}
+
+h2{
+  margin:8px 0 12px;
+  font-size:22px;
+}
+
+small, .muted{
+  color:var(--muted);
+}
+
+.page{
+  display:none;
+  max-width:1180px;
+  margin:0 auto;
+}
+
+.page.active{
+  display:block;
+}
+
+.topRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:10px;
+}
+
+.navBtn{
+  border:none;
+  background:#d9e7ff;
+  color:#1f3f80;
+  border-radius:10px;
+  padding:8px 12px;
+  font-size:16px;
+  cursor:pointer;
+}
+
+.primaryBtn, .actionBtn{
+  border:none;
+  border-radius:12px;
+  background:var(--primary);
+  color:white;
+  padding:10px 16px;
+  font-size:18px;
+  cursor:pointer;
+  box-shadow:0 2px 0 rgba(0,0,0,.08);
+}
+
+.actionBtn.secondary{
+  background:#e8edf4;
+  color:#233048;
+}
+
+.cardGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px;
+  margin-top:14px;
+}
+
+.card{
+  background:var(--panel);
+  border-radius:20px;
+  padding:16px;
+  box-shadow:0 8px 24px rgba(33,52,74,.08);
+  text-align:left;
+}
+
+.card h3{
+  margin:0 0 8px;
+  font-size:20px;
+}
+
+.card p{
+  margin:0 0 12px;
+  line-height:1.55;
+  color:#334155;
+}
+
+.card .cardBtn{
+  width:100%;
+  border:none;
+  border-radius:14px;
+  padding:12px 14px;
+  font-size:17px;
+  cursor:pointer;
+  background:var(--primary);
+  color:white;
+}
+
+.sectionPanel{
+  background:var(--panel);
+  border-radius:18px;
+  padding:14px;
+  box-shadow:0 8px 24px rgba(33,52,74,.08);
+  margin-top:12px;
+}
+
+.rowControls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  justify-content:center;
+  align-items:center;
+  margin:10px 0;
+}
+
+.labelBox{
+  display:inline-flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  text-align:left;
+  background:#f8fbff;
+  border:1px solid #e4ebf5;
+  padding:8px 10px;
+  border-radius:14px;
+}
+
+select, input[type="text"], input[type="number"]{
+  font-size:18px;
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid #cfd8e3;
+  background:white;
+  min-width:76px;
+}
+
+input[type="number"]{
+  width:110px;
+}
+
+input.shortInput{
+  width:120px;
+}
+
+#carrySettings{
+  margin:12px auto 0;
+  padding:12px;
+  background:white;
+  border-radius:14px;
+  display:inline-block;
+  box-shadow:0 5px 14px rgba(33,52,74,.06);
+}
+
+#carryChecks{
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
+}
+
+.toggleBar{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:6px;
+  margin:10px 0 6px;
+}
+
+.toggleBtn{
+  font-size:13px;
+  padding:6px 9px;
+  border-radius:999px;
+  min-width:0;
+  line-height:1;
+  border:1px solid transparent;
+  box-shadow:none;
+  cursor:pointer;
+  opacity:1;
+  transition:transform .08s ease, opacity .08s ease, background .08s ease;
+}
+
+.toggleBtn:active{ transform:scale(0.96); }
+.toggleBtn.off{
+  background:#b9b9b9;
+  color:#f5f5f5;
+  border-color:#a0a0a0;
+  opacity:0.85;
+}
+
+.toggleBtn.on{
+  color:white;
+}
+
+.toggleBtn.on[data-toggle="arrow"]{ background:var(--accent); }
+.toggleBtn.on[data-toggle="target"]{ background:var(--blue); }
+.toggleBtn.on[data-toggle="correctness"]{ background:var(--green); }
+.toggleBtn.on[data-toggle="text"]{ background:var(--purple); }
+.toggleBtn.on[data-toggle="sound"]{ background:#f59e0b; }
+.toggleBtn.on[data-toggle="superHint"]{ background:#14b8a6; }
+
+.ghostDigit{
+  position:absolute;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  font-size:34px;
+  font-weight:800;
+  color:rgba(107,114,128,.18);
+  pointer-events:none;
+  z-index:1;
+}
+
+body.superHintOn .ghostDigit{ display:flex; }
+
+td.hasValue .ghostDigit{ display:none !important; }
+
+.mainInput{
+  position:relative;
+  z-index:2;
+}
+
+.miniCarryBox .ghostDigit{
+  font-size:14px;
+  color:rgba(107,114,128,.22);
+}
+
+#verticalArea{
+  position:relative;
+  display:inline-block;
+  margin-top:14px;
+}
+
+#arrowSvg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  pointer-events:none;
+  z-index:9999;
+}
+
+.arrowPath{
+  fill:none;
+  stroke:red;
+  stroke-width:4;
+}
+
+table{
+  border-collapse:collapse;
+  position:relative;
+  z-index:1;
+  margin:0 auto;
+}
+
+td{
+  width:72px;
+  height:58px;
+  border:2px solid #888;
+  position:relative;
+  background:white;
+  overflow:visible;
+}
+
+.line td{ border-top:5px solid black; }
+
+.number{
+  font-size:38px;
+  font-weight:bold;
+  text-align:right;
+  padding-right:12px;
+  box-sizing:border-box;
+}
+
+.sign{
+  font-size:38px;
+  font-weight:bold;
+  text-align:center;
+}
+
+.mainInput{
+  width:100%;
+  height:100%;
+  border:none;
+  outline:none;
+  background:transparent;
+  font-size:38px;
+  text-align:right;
+  padding-right:12px;
+  box-sizing:border-box;
+  font-variant-numeric:tabular-nums;
+}
+
+.hasCarryBox .mainInput{ padding-right:26px; }
+
+.correct{ background:#c8f7c5 !important; }
+.wrong{ background:#ffd6d6 !important; }
+.highlight{ background:#ffe082 !important; }
+.target{ background:#81d4fa !important; }
+
+.miniCarryBox{
+  position:absolute;
+  top:-2px;
+  right:-2px;
+  width:24px;
+  height:24px;
+  background:#fffde7;
+  border-left:2px solid #666;
+  border-bottom:2px solid #666;
+  z-index:20;
+}
+
+.miniCarryBox.target{ background:#81d4fa; }
+
+.miniCarryInput{
+  width:100%;
+  height:100%;
+  border:none;
+  outline:none;
+  background:transparent;
+  text-align:center;
+  font-size:16px;
+  font-weight:bold;
+  padding:0;
+}
+
+.correctCircle{
+  position:absolute;
+  right:2px;
+  bottom:-8px;
+  color:red;
+  font-size:38px;
+  z-index:10;
+}
+
+#hint{
+  margin-top:12px;
+  font-size:24px;
+  min-height:32px;
+  font-weight:bold;
+}
+
+#result{
+  margin-top:12px;
+  font-size:28px;
+  min-height:40px;
+  color:#d84315;
+  font-weight:bold;
+}
+
+.setupGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:12px;
+  margin-top:12px;
+}
+
+.setupCard{
+  background:#f9fbff;
+  border:1px solid #e3eaf4;
+  border-radius:16px;
+  padding:12px;
+  text-align:left;
+}
+
+.setupCard h4{
+  margin:0 0 8px;
+  font-size:18px;
+}
+
+.setupCard p{
+  margin:6px 0;
+  line-height:1.5;
+}
+
+.wheelRow{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:6px;
+}
+
+.wheelDigit{
+  width:56px;
+  height:72px;
+  font-size:34px;
+  font-weight:700;
+  text-align:center;
+  border-radius:16px;
+  border:1px solid #cfd8e3;
+  background:white;
+}
+
+.bigTimer{
+  font-size:34px;
+  font-weight:800;
+}
+
+.statGrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+  margin-top:10px;
+}
+
+.statBox{
+  background:#f8fbff;
+  border:1px solid #e3eaf4;
+  border-radius:14px;
+  padding:10px;
+  text-align:center;
+}
+
+.statBox .label{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.statBox .value{
+  font-size:24px;
+  font-weight:800;
+}
+
+.recordsTable{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+  overflow:hidden;
+}
+
+.recordsTable th,
+.recordsTable td{
+  border:1px solid #d7deea;
+  padding:8px 6px;
+  font-size:14px;
+  text-align:center;
+  height:auto;
+}
+
+.recordsTable th{
+  background:#eef4ff;
+}
+
+.footerActions{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+
+.modeBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:#eef4ff;
+  color:#1f3f80;
+  font-weight:700;
+}
+
+.settingsNote{
+  margin-top:8px;
+  padding:10px 12px;
+  background:#f8fbff;
+  border:1px solid #dfe8f4;
+  border-radius:14px;
+  line-height:1.55;
+  text-align:left;
+}
+
+.settingsBox{
+  background:#f9fbff;
+  border:1px solid #e3eaf4;
+  border-radius:16px;
+  padding:14px;
+  text-align:left;
+}
+
+.settingsBox h4{
+  margin:0 0 10px;
+  font-size:18px;
+}
+
+.radioGroup{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.radioRow{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  line-height:1.5;
+  padding:8px 10px;
+  background:white;
+  border:1px solid #e6edf6;
+  border-radius:12px;
+}
+
+.handField{
+  position:relative;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  touch-action:none;
+  user-select:none;
+}
+
+.handCanvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  touch-action:none;
+  background:#fff;
+  z-index:1;
+}
+
+.handValue{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:34px;
+  font-weight:800;
+  color:rgba(107,114,128,.52);
+  pointer-events:none;
+  z-index:2;
+}
+
+.miniCarryBox .handValue{
+  font-size:15px;
+  color:rgba(107,114,128,.58);
+}
+
+.handField.active .handCanvas{
+  box-shadow:inset 0 0 0 2px rgba(43,124,255,.45);
+}
+
+.handField .ghostDigit{
+  z-index:3;
+  color:rgba(107,114,128,.18);
+}
+
+.handField .handCanvas{
+  z-index:1;
+}
+
+.handField .handValue{
+  z-index:2;
+}
+
+
+.handField.occupied .handCanvas{
+  opacity:.92;
+}
+
+.handField.cleared .handCanvas{
+  opacity:1;
+}
+
+.handCell{
+  padding:0;
+}
+
+.handCell .handField{
+  border:0;
+}
+
+.handMini{
+  width:100%;
+  height:100%;
+}
+
+.modelStatus{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f8fbff;
+  border:1px solid #dce6f2;
+  text-align:left;
+  line-height:1.5;
+}
+
+.modelStatus.ok{ background:#eefbf0; border-color:#cce8d0; }
+.modelStatus.warn{ background:#fff8e8; border-color:#f3dfaa; }
+.modelStatus.err{ background:#fff1f1; border-color:#f1c1c1; }
+
+@media (max-width:720px){
+  td{
+    width:56px;
+    height:48px;
+  }
+  .number,.mainInput,.sign{
+    font-size:28px;
+  }
+  #hint{
+    font-size:20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="homePage" class="page active">
+  <h1>かけ算の筆算トレーニング</h1>
+  <div class="muted">自由練習とタイムアタックを切り替えて使えます。</div>
+
+  <div class="cardGrid">
+    <div class="card">
+      <h3>🧩 自由練習</h3>
+      <p>1問ごとに条件を設定して練習します。ランダム生成でも、自分で式を入れても使えます。</p>
+      <button class="cardBtn" onclick="openPractice()">自由練習をはじめる</button>
+    </div>
+
+    <div class="card">
+      <h3>⏱️ タイムアタック</h3>
+      <p>5問・10問・20問で挑戦します。基本はヒントなし。目標時間は難易度ごとに記憶します。</p>
+      <button class="cardBtn" onclick="openAttackSetup()">タイムアタック開始</button>
+    </div>
+
+    <div class="card">
+      <h3>📒 記録</h3>
+      <p>タイムアタックの結果を一覧で見られます。localStorage に保存します。</p>
+      <button class="cardBtn" onclick="openRecords()">記録を見る</button>
+    </div>
+
+    <div class="card">
+      <h3>⚙️ 設定</h3>
+      <p>入力方法をキーボードと手書きから選べます。手書きモードでは、全ての入力マスをキャンバスとして使えます。</p>
+      <button class="cardBtn" onclick="openSettings()">設定を開く</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="settingsPage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <div class="muted">設定ページ</div>
+    <button class="navBtn" onclick="openPractice()">🧩 自由練習へ</button>
+  </div>
+
+  <div class="sectionPanel">
+    <h2>入力方法の設定</h2>
+
+    <div class="setupGrid">
+      <div class="settingsBox">
+        <h4>入力方法</h4>
+        <div class="radioGroup">
+          <label class="radioRow">
+            <input type="radio" name="inputMode" value="keyboard">
+            <div>
+              <strong>① 従来のキーボードモード</strong><br>
+              <span class="muted">数字をキーボードで入力します。今まで通りの操作です。</span>
+            </div>
+          </label>
+          <label class="radioRow">
+            <input type="radio" name="inputMode" value="handwriting">
+            <div>
+              <strong>② 手書きモード</strong><br>
+              <span class="muted">各マスに手書きで数字を書き、書き終わると自動で認識します。</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="settingsNote">
+          ・認識後は線を消して、グレーの数字だけを残します。<br>
+          ・その上から書き直すと、再び認識します。<br>
+          ・手書き認識モデルは TensorFlow.js を使い、<code>./model/model.json</code> を読み込みます。
+        </div>
+
+        <div class="footerActions" style="justify-content:flex-start;">
+          <button class="primaryBtn" onclick="saveInputModeFromSettings()">この設定で保存</button>
+        </div>
+
+        <div id="modelStatusBox" class="modelStatus warn">モデルの状態を確認中です…</div>
+      </div>
+
+      <div class="settingsBox">
+        <h4>手書きモードの使い方</h4>
+        <p>・手書きは「1マスにつき1桁」を想定しています。</p>
+        <p>・入力後、少し止まると自動で認識します。</p>
+        <p>・認識した数字はそのまま正誤判定に使われます。</p>
+        <p>・補助計算マス（繰り上がりのマス）も、同じように手書きできます。</p>
+        <p>・認識がうまくいかないときは、書き直しで再入力できます。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="practicePage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <div class="muted">自由練習モード</div>
+    <button class="navBtn" onclick="openAttackSetup()">⏱️ タイムアタックへ</button>
+  </div>
+
+  <div class="sectionPanel">
+    <h2>自由練習の設定</h2>
+
+    <div class="setupGrid">
+      <div class="setupCard">
+        <h4>ランダム問題</h4>
+        <div class="rowControls">
+          <label class="labelBox">
+            <span>かけられる数</span>
+            <select id="topDigitsSelect">
+              <option value="1">1桁</option>
+              <option value="2">2桁</option>
+              <option value="3" selected>3桁</option>
+            </select>
+          </label>
+
+          <label class="labelBox">
+            <span>かける数</span>
+            <select id="bottomDigitsSelect">
+              <option value="1" selected>1桁</option>
+              <option value="2">2桁</option>
+              <option value="3">3桁</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="rowControls">
+          <button class="primaryBtn" onclick="generateRandomProblem()">問題を作る</button>
+        </div>
+      </div>
+
+      <div class="setupCard">
+        <h4>自分で式を入れる</h4>
+        <p class="muted">1〜3桁の数を入れて、その式の筆算を練習できます。</p>
+        <div class="rowControls">
+          <label class="labelBox">
+            <span>かけられる数</span>
+            <input id="customTopInput" class="shortInput" type="text" inputmode="numeric" maxlength="3" placeholder="例: 123">
+          </label>
+          <label class="labelBox">
+            <span>かける数</span>
+            <input id="customBottomInput" class="shortInput" type="text" inputmode="numeric" maxlength="3" placeholder="例: 45">
+          </label>
+        </div>
+        <div class="rowControls">
+          <button class="primaryBtn" onclick="generateCustomProblem()">この式で練習</button>
+        </div>
+      </div>
+
+      <div class="setupCard">
+        <h4>音</h4>
+        <p>正誤判定と正解時に効果音を鳴らします。</p>
+        <div class="toggleBar" style="justify-content:flex-start;">
+          <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">
+            🔊 効果音
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="carrySettings">
+      <div>
+        <label>
+          <input type="radio" name="carryMode" value="random" checked>
+          ランダム
+        </label>
+
+        <label style="margin-left:10px;">
+          <input type="radio" name="carryMode" value="none">
+          繰り上がりなし
+        </label>
+
+        <label style="margin-left:10px;">
+          <input type="radio" name="carryMode" value="custom">
+          指定
+        </label>
+      </div>
+
+      <div id="carryChecks"></div>
+    </div>
+  </div>
+
+  <div class="toggleBar">
+    <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">
+      ➡️ 矢印
+    </button>
+    <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">
+      🔵 次マス
+    </button>
+    <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">
+      🟥🟩 判定
+    </button>
+    <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">
+      📝 式
+    </button>
+    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">
+      🪄 超ヒント
+    </button>
+  </div>
+
+  <div id="hint"></div>
+
+  <div id="verticalArea">
+    <svg id="arrowSvg"></svg>
+    <div id="tableArea"></div>
+  </div>
+
+  <div id="result"></div>
+</div>
+
+<div id="attackSetupPage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <div class="muted">タイムアタック設定</div>
+    <button class="navBtn" onclick="openPractice()">🧩 自由練習へ</button>
+  </div>
+
+  <div class="sectionPanel">
+    <h2>タイムアタックの設定</h2>
+
+    <div class="setupGrid">
+      <div class="setupCard">
+        <h4>問題の種類</h4>
+        <div class="rowControls">
+          <label class="labelBox">
+            <span>かけられる数</span>
+            <select id="attackTopDigitsSelect">
+              <option value="1">1桁</option>
+              <option value="2">2桁</option>
+              <option value="3" selected>3桁</option>
+            </select>
+          </label>
+          <label class="labelBox">
+            <span>かける数</span>
+            <select id="attackBottomDigitsSelect">
+              <option value="1" selected>1桁</option>
+              <option value="2">2桁</option>
+              <option value="3">3桁</option>
+            </select>
+          </label>
+          <label class="labelBox">
+            <span>問題数</span>
+            <select id="attackQuestionCountSelect">
+              <option value="5">5問</option>
+              <option value="10" selected>10問</option>
+              <option value="20">20問</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="setupCard">
+        <h4>目標時間（分）</h4>
+        <p class="muted">十の位と一の位をルーレットのように選びます。前回の設定を記憶します。</p>
+        <div class="wheelRow">
+          <select id="attackTargetMinTens" class="wheelDigit" aria-label="目標時間 十の位"></select>
+          <select id="attackTargetMinOnes" class="wheelDigit" aria-label="目標時間 一の位"></select>
+          <span style="font-size:22px;font-weight:700;">分</span>
+        </div>
+        <div class="muted" id="attackTargetPreview" style="margin-top:8px;font-size:16px;"></div>
+      </div>
+
+      <div class="setupCard">
+        <h4>繰り上がり</h4>
+        <div>
+          <label><input type="radio" name="attackCarryMode" value="random" checked> ランダム</label>
+          <label style="margin-left:10px;"><input type="radio" name="attackCarryMode" value="none"> 繰り上がりなし</label>
+          <label style="margin-left:10px;"><input type="radio" name="attackCarryMode" value="custom"> 指定</label>
+        </div>
+        <div id="attackCarryChecks" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="setupCard">
+        <h4>ヒント</h4>
+        <p>基本はヒントなしで始めます。</p>
+        <div class="toggleBar" style="justify-content:flex-start;">
+          <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
+          <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
+          <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
+          <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
+          <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footerActions">
+      <button class="primaryBtn" onclick="startAttack()">タイムアタックをはじめる</button>
+    </div>
+  </div>
+</div>
+
+<div id="attackPlayPage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="confirmLeaveAttack()">🏠 ホーム</button>
+    <div class="muted">タイムアタック中</div>
+    <button class="navBtn" onclick="openRecords()">📒 記録</button>
+  </div>
+
+  <div class="sectionPanel">
+    <div class="statGrid">
+      <div class="statBox"><div class="label">問題</div><div class="value" id="attackProgress">0 / 0</div></div>
+      <div class="statBox"><div class="label">経過時間</div><div class="value bigTimer" id="attackElapsed">00:00</div></div>
+      <div class="statBox"><div class="label">正解</div><div class="value" id="attackCorrectCount">0</div></div>
+      <div class="statBox"><div class="label">ミス</div><div class="value" id="attackMissCount">0</div></div>
+      <div class="statBox"><div class="label">目標</div><div class="value" id="attackTargetDisplay">00:00</div></div>
+      <div class="statBox"><div class="label">達成</div><div class="value" id="attackGoalStatus">-</div></div>
+    </div>
+
+    <div class="toggleBar">
+      <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
+      <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
+      <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
+      <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
+      <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
+      <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊 効果音</button>
+    </div>
+
+    <div id="attackHint"></div>
+
+    <div id="attackVerticalArea" style="position:relative;display:inline-block;margin-top:14px;">
+      <svg id="attackArrowSvg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:9999;"></svg>
+      <div id="attackTableArea"></div>
+    </div>
+
+    <div id="attackResult" style="margin-top:12px;font-size:28px;min-height:40px;color:#d84315;font-weight:bold;"></div>
+
+    <div id="attackFinishPanel" class="sectionPanel" style="display:none;margin-top:14px;">
+      <h2>結果</h2>
+      <div class="statGrid">
+        <div class="statBox"><div class="label">正解率</div><div class="value" id="finishAccuracy">0%</div></div>
+        <div class="statBox"><div class="label">かかった時間</div><div class="value" id="finishTime">00:00</div></div>
+        <div class="statBox"><div class="label">目標時間</div><div class="value" id="finishTarget">00:00</div></div>
+        <div class="statBox"><div class="label">達成</div><div class="value" id="finishGoal">-</div></div>
+      </div>
+      <div class="footerActions">
+        <button class="primaryBtn" onclick="repeatAttack()">もう一度</button>
+        <button class="actionBtn secondary" onclick="openAttackSetup()">設定へ戻る</button>
+        <button class="actionBtn secondary" onclick="openRecords()">記録を見る</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="recordPage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <div class="muted">記録ページ</div>
+    <button class="navBtn" onclick="openAttackSetup()">⏱️ タイムアタックへ</button>
+  </div>
+
+  <div class="sectionPanel">
+    <h2>記録一覧</h2>
+    <div class="footerActions">
+      <button class="actionBtn secondary" onclick="clearRecords()">記録を全削除</button>
+      <button class="actionBtn secondary" onclick="renderRecords()">更新</button>
+    </div>
+
+    <div id="recordsSummary" class="statGrid"></div>
+    <div id="recordsTableWrap"></div>
+  </div>
+</div>
+
+<script>
+let topNumber = 0;
+let bottomNumber = 0;
+let topDigits = [];
+let bottomDigits = [];
+let finalAnswer = 0;
+let currentCols = 0;
+
+let answerRows = [];
+let inputMap = [];
+let currentStep = 0;
+let topCellIds = [];
+let bottomCellIds = [];
+let carryBoxByInput = {};
+let finalShown = false;
+
+const uiState = {
+  arrow: true,
+  target: true,
+  correctness: true,
+  text: true,
+  sound: true,
+  superHint: false
+};
+
+const appState = {
+  page: "home",
+  mode: "practice",
+  attackActive: false,
+  attackQuestions: [],
+  attackIndex: 0,
+  attackCorrect: 0,
+  attackMiss: 0,
+  attackStartMs: 0,
+  attackTimer: null,
+  attackTargetMinutes: 10,
+  attackPatternKey: "",
+  attackQuestionCount: 10,
+  attackCarryMode: "random",
+  customTop: null,
+  customBottom: null,
+  customEquationActive: false,
+  inputMode: "keyboard"
+};
+
+const STORAGE_KEYS = {
+  records: "multiplicationRecords",
+  targets: "attackTargetTimes",
+  sound: "soundEnabled",
+  superHint: "superHintEnabled",
+  inputMode: "inputMode"
+};
+
+let audioCtx = null;
+let lastCellState = {};
+let handwritingModel = null;
+let handwritingModelPromise = null;
+let handwritingFields = {};
+let handwritingPendingTimers = {};
+
+function openHome(){
+  stopAttackTimer();
+  clearPracticeWorkspace();
+  clearAttackWorkspace();
+  destroyHandwritingFields();
+  showPage("homePage");
+  appState.page = "home";
+}
+
+
+
+function openPractice(){
+  stopAttackTimer();
+  clearAttackWorkspace();
+  appState.mode = "practice";
+  showPage("practicePage");
+  buildCarryCheckboxes();
+  updateToggleButtons();
+  generateProblem();
+  if(appState.inputMode === "handwriting"){
+    ensureHandwritingModel().catch(()=>{});
+  }
+}
+
+
+
+function openAttackSetup(){
+  stopAttackTimer();
+  clearPracticeWorkspace();
+  showPage("attackSetupPage");
+  appState.mode = "attack";
+  uiState.arrow = false;
+  uiState.target = false;
+  uiState.correctness = false;
+  uiState.text = false;
+  uiState.superHint = false;
+  updateToggleButtons();
+  buildAttackCarryCheckboxes();
+  syncAttackTargetWheel();
+  updateAttackTargetPreview();
+  if(appState.inputMode === "handwriting"){
+    ensureHandwritingModel().catch(()=>{});
+  }
+}
+
+
+
+function openRecords(){
+  stopAttackTimer();
+  showPage("recordPage");
+  renderRecords();
+}
+
+
+
+function confirmLeaveAttack(){
+  if(appState.attackActive){
+    const ok = confirm("タイムアタックを終了してホームへ戻りますか？");
+    if(!ok) return;
+  }
+  stopAttackTimer();
+  clearAttackWorkspace();
+  openHome();
+}
+
+
+function showPage(pageId){
+  document.querySelectorAll(".page").forEach(page=>{
+    page.classList.remove("active");
+  });
+  document.getElementById(pageId).classList.add("active");
+  appState.page = pageId;
+}
+
+function clearPracticeWorkspace(){
+  const tableArea = document.getElementById("tableArea");
+  const arrowSvg = document.getElementById("arrowSvg");
+  const hint = document.getElementById("hint");
+  const result = document.getElementById("result");
+  if(tableArea) tableArea.innerHTML = "";
+  if(arrowSvg) arrowSvg.innerHTML = "";
+  if(hint) hint.innerHTML = "";
+  if(result) result.innerHTML = "";
+  destroyHandwritingFields();
+}
+
+
+function clearAttackWorkspace(){
+  const tableArea = document.getElementById("attackTableArea");
+  const arrowSvg = document.getElementById("attackArrowSvg");
+  const hint = document.getElementById("attackHint");
+  const result = document.getElementById("attackResult");
+  const finishPanel = document.getElementById("attackFinishPanel");
+  if(tableArea) tableArea.innerHTML = "";
+  if(arrowSvg) arrowSvg.innerHTML = "";
+  if(hint) hint.innerHTML = "";
+  if(result) result.innerHTML = "";
+  if(finishPanel) finishPanel.style.display = "none";
+  destroyHandwritingFields();
+}
+
+
+function rand(min, max){
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateNumber(digits){
+  return rand(Math.pow(10, digits - 1), Math.pow(10, digits) - 1);
+}
+
+function getCellId(row, col){
+  return `cell_r${row}_c${col}`;
+}
+
+function getInputId(row, col){
+  return `in_r${row}_c${col}`;
+}
+
+function getCarryLabel(index){
+  const labels = [
+    "一の位から十の位へ繰り上がり",
+    "十の位から百の位へ繰り上がり",
+    "百の位から千の位へ繰り上がり",
+    "千の位から一万の位へ繰り上がり"
+  ];
+  return labels[index] || `${index + 1}回目`;
+}
+
+function initAudio(){
+  if(audioCtx) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if(!AC) return;
+  audioCtx = new AC();
+}
+
+function playTone(freq, duration = 0.12, type = "sine", volume = 0.06){
+  if(!uiState.sound) return;
+  initAudio();
+  if(!audioCtx) return;
+  if(audioCtx.state === "suspended"){
+    audioCtx.resume().catch(()=>{});
+  }
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.value = volume;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  const now = audioCtx.currentTime;
+  gain.gain.setValueAtTime(volume, now);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  osc.start(now);
+  osc.stop(now + duration + 0.02);
+}
+
+function playCorrectCellSound(){
+  playTone(880, 0.08, "sine", 0.05);
+  setTimeout(()=>playTone(1175, 0.08, "sine", 0.04), 80);
+}
+
+function playWrongCellSound(){
+  playTone(220, 0.14, "square", 0.03);
+}
+
+function playQuestionClearSound(){
+  playTone(784, 0.10, "triangle", 0.05);
+  setTimeout(()=>playTone(988, 0.10, "triangle", 0.05), 110);
+  setTimeout(()=>playTone(1318, 0.12, "triangle", 0.05), 220);
+}
+
+function playFinishSound(){
+  playTone(523, 0.12, "triangle", 0.05);
+  setTimeout(()=>playTone(659, 0.12, "triangle", 0.05), 130);
+  setTimeout(()=>playTone(784, 0.14, "triangle", 0.05), 260);
+}
+
+function toggleSound(){
+  uiState.sound = !uiState.sound;
+  localStorage.setItem(STORAGE_KEYS.sound, JSON.stringify(uiState.sound));
+  updateToggleButtons();
+  initAudio();
+}
+
+function toggleHint(key){
+  uiState[key] = !uiState[key];
+  if(key === "superHint"){
+    localStorage.setItem(STORAGE_KEYS.superHint, JSON.stringify(uiState.superHint));
+  }
+  updateToggleButtons();
+  updateHints();
+  updateAttackHints();
+}
+
+function updateToggleButtons(){
+  document.body.classList.toggle("superHintOn", !!uiState.superHint);
+  document.querySelectorAll(".toggleBtn").forEach(btn=>{
+    const key = btn.dataset.toggle;
+    if(!key) return;
+    const isOn = !!uiState[key];
+    btn.classList.toggle("on", isOn);
+    btn.classList.toggle("off", !isOn);
+  });
+}
+
+function readSoundSetting(){
+  const raw = localStorage.getItem(STORAGE_KEYS.sound);
+  if(raw === null) return true;
+  try{
+    return JSON.parse(raw);
+  }catch(e){
+    return true;
+  }
+}
+
+function readSuperHintSetting(){
+  const raw = localStorage.getItem(STORAGE_KEYS.superHint);
+  if(raw === null) return false;
+  try{
+    return JSON.parse(raw);
+  }catch(e){
+    return false;
+  }
+}
+
+
+function readInputModeSetting(){
+  const raw = localStorage.getItem(STORAGE_KEYS.inputMode);
+  if(raw === null) return "keyboard";
+  return raw === "handwriting" ? "handwriting" : "keyboard";
+}
+
+function saveInputModeSetting(mode){
+  const normalized = mode === "handwriting" ? "handwriting" : "keyboard";
+  appState.inputMode = normalized;
+  localStorage.setItem(STORAGE_KEYS.inputMode, normalized);
+  const radios = document.querySelectorAll('input[name="inputMode"]');
+  radios.forEach(r => r.checked = r.value === normalized);
+  updateSettingsSummary();
+}
+
+function updateSettingsSummary(){
+  document.querySelectorAll('input[name="inputMode"]').forEach(r => {
+    r.checked = r.value === appState.inputMode;
+  });
+}
+
+function openSettings(){
+  stopAttackTimer();
+  clearPracticeWorkspace();
+  clearAttackWorkspace();
+  showPage("settingsPage");
+  appState.page = "settingsPage";
+  updateSettingsSummary();
+  updateModelStatusBox();
+  if(appState.inputMode === "handwriting"){
+    ensureHandwritingModel();
+  }
+}
+
+function saveInputModeFromSettings(){
+  const checked = document.querySelector('input[name="inputMode"]:checked');
+  const mode = checked ? checked.value : "keyboard";
+  saveInputModeSetting(mode);
+  updateModelStatusBox();
+  if(mode === "handwriting"){
+    ensureHandwritingModel().catch(()=>{});
+  }
+  alert(mode === "handwriting" ? "手書きモードに切り替えました。" : "キーボードモードに切り替えました。");
+}
+
+
+async function ensureHandwritingModel(){
+  if(handwritingModel) return handwritingModel;
+  if(handwritingModelPromise) return handwritingModelPromise;
+  handwritingModelPromise = (async ()=>{
+    updateModelStatusBox("loading");
+    try{
+      if(typeof tf === "undefined"){
+        throw new Error("TensorFlow.js が読み込めませんでした。");
+      }
+      const model = await tf.loadGraphModel("./model/model.json");
+      handwritingModel = model;
+      updateModelStatusBox("ok");
+      return model;
+    }catch(e){
+      console.error(e);
+      handwritingModel = null;
+      updateModelStatusBox("err", e.message);
+      throw e;
+    }finally{
+      handwritingModelPromise = null;
+    }
+  })();
+  return handwritingModelPromise;
+}
+
+function updateModelStatusBox(state, message=""){
+  const box = document.getElementById("modelStatusBox");
+  if(!box) return;
+  if(!state){
+    const saved = appState.inputMode === "handwriting" ? "手書きモードが選ばれています。モデルを読み込んでいます。" : "キーボードモードが選ばれています。";
+    box.className = "modelStatus " + (appState.inputMode === "handwriting" ? "warn" : "ok");
+    box.innerHTML = saved;
+    return;
+  }
+  if(state === "loading"){
+    box.className = "modelStatus warn";
+    box.innerHTML = "モデルを読み込み中です…";
+  }else if(state === "ok"){
+    box.className = "modelStatus ok";
+    box.innerHTML = "✅ モデル読み込み成功。手書き認識を使えます。";
+  }else{
+    box.className = "modelStatus err";
+    box.innerHTML = `❌ モデル読み込み失敗。<br>${message || "model/model.json を確認してください。"}`;
+  }
+}
+
+function destroyHandwritingFields(){
+  Object.values(handwritingPendingTimers).forEach(timer => clearTimeout(timer));
+  handwritingPendingTimers = {};
+  handwritingFields = {};
+}
+
+function buildFieldHtml(fieldId, correct, options={}){
+  const isMini = !!options.mini;
+  if(appState.inputMode === "handwriting"){
+    const cls = isMini ? "miniCarryBox handField" : "handField";
+    return `
+      <div class="${cls}" id="${fieldId}" data-field-id="${fieldId}" data-correct="${correct}">
+        <div class="ghostDigit">${correct}</div>
+        <canvas class="handCanvas" id="canvas_${fieldId}"></canvas>
+        <div class="handValue" id="value_${fieldId}"></div>
+      </div>
+    `;
+  }
+  const inputClass = isMini ? "miniCarryInput" : "mainInput";
+  return `<input class="${inputClass}" id="${fieldId}" maxlength="1" inputmode="numeric">`;
+}
+
+
+function getFieldNode(fieldId){
+  return document.getElementById(fieldId);
+}
+
+function getFieldValue(fieldId){
+  if(appState.inputMode === "handwriting"){
+    const st = handwritingFields[fieldId];
+    return st ? st.value : "";
+  }
+  const el = document.getElementById(fieldId);
+  return el ? (el.value || "") : "";
+}
+
+function setFieldValue(fieldId, value, options={}){
+  if(appState.inputMode === "handwriting"){
+    const st = handwritingFields[fieldId];
+    if(!st) return;
+    st.value = value;
+    const valueEl = st.valueEl;
+    if(valueEl){
+      valueEl.textContent = value;
+      valueEl.style.display = value ? "flex" : "none";
+    }
+    st.cell.classList.toggle("occupied", !!value);
+    if(options.finalize){
+      clearHandwritingCanvas(st);
+    }
+  }else{
+    const el = document.getElementById(fieldId);
+    if(el) el.value = value;
+  }
+}
+
+function clearHandwritingCanvas(st){
+  if(!st) return;
+  const w = st.visibleCanvas.width;
+  const h = st.visibleCanvas.height;
+  st.visibleCtx.clearRect(0,0,w,h);
+  st.visibleCtx.fillStyle = "#ffffff";
+  st.visibleCtx.fillRect(0,0,w,h);
+  st.recCtx.clearRect(0,0,w,h);
+  st.recCtx.fillStyle = "#000000";
+  st.recCtx.fillRect(0,0,w,h);
+  st.value = "";
+  if(st.valueEl){
+    st.valueEl.textContent = "";
+    st.valueEl.style.display = "none";
+  }
+  st.cell.classList.remove("occupied");
+}
+
+
+function clearHandwritingField(fieldId){
+  const st = handwritingFields[fieldId];
+  if(st){
+    clearTimeout(handwritingPendingTimers[fieldId]);
+    delete handwritingPendingTimers[fieldId];
+    clearHandwritingCanvas(st);
+  }
+}
+
+function initHandwritingFields(kind){
+  if(appState.inputMode !== "handwriting") return;
+  destroyHandwritingFields();
+  const area = document.getElementById(kind === "attack" ? "attackTableArea" : "tableArea");
+  if(!area) return;
+  const fields = Array.from(area.querySelectorAll(".handField"));
+  fields.forEach(field => {
+    const fieldId = field.id;
+    const visibleCanvas = field.querySelector(".handCanvas");
+    const valueEl = field.querySelector(".handValue");
+    if(!visibleCanvas) return;
+    const st = {
+      fieldId,
+      cell: field.closest("td") || field,
+      field,
+      visibleCanvas,
+      visibleCtx: visibleCanvas.getContext("2d"),
+      recCanvas: document.createElement("canvas"),
+      recCtx: null,
+      valueEl,
+      value: "",
+      drawing: false,
+      activePointerId: null,
+      lastPoint: null,
+      penColor: "#000000",
+      penWidth: 6,
+      kind
+    };
+    st.recCtx = st.recCanvas.getContext("2d");
+    handwritingFields[fieldId] = st;
+    resizeHandwritingField(st);
+    clearHandwritingCanvas(st);
+    bindHandwritingEvents(st);
+  });
+}
+
+
+function resizeHandwritingField(st){
+  const rect = st.visibleCanvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.round(rect.width * dpr));
+  const h = Math.max(1, Math.round(rect.height * dpr));
+  [st.visibleCanvas, st.recCanvas].forEach(canvas => {
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+  });
+  st.dpr = dpr;
+  st.penWidth = (st.field.classList.contains("miniCarryBox") ? 3 : 6) * dpr;
+}
+
+
+function bindHandwritingEvents(st){
+  const canvas = st.visibleCanvas;
+  canvas.addEventListener("pointerdown", e => startHandwritingStroke(e, st));
+  canvas.addEventListener("pointermove", e => moveHandwritingStroke(e, st));
+  canvas.addEventListener("pointerup", e => endHandwritingStroke(e, st));
+  canvas.addEventListener("pointercancel", e => endHandwritingStroke(e, st));
+  canvas.addEventListener("pointerleave", e => endHandwritingStroke(e, st));
+}
+
+
+function redrawCurrentHandwritingState(st){
+  clearHandwritingCanvas(st);
+  if(st.value){
+    st.valueEl.textContent = st.value;
+    st.valueEl.style.display = "flex";
+    st.cell.classList.add("occupied");
+  }
+}
+
+
+function getCanvasPoint(e, canvas){
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function startHandwritingStroke(e, st){
+  if(appState.inputMode !== "handwriting") return;
+  e.preventDefault();
+  if(st.value){
+    st.value = "";
+    if(st.valueEl){
+      st.valueEl.textContent = "";
+      st.valueEl.style.display = "none";
+    }
+    clearHandwritingCanvas(st);
+  }
+  st.drawing = true;
+  st.activePointerId = e.pointerId;
+  try{ st.visibleCanvas.setPointerCapture(e.pointerId); }catch(err){}
+  const p = getCanvasPoint(e, st.visibleCanvas);
+  st.lastPoint = p;
+  drawHandwritingPoint(st, p, true);
+  clearTimeout(handwritingPendingTimers[st.fieldId]);
+}
+
+
+function moveHandwritingStroke(e, st){
+  if(!st.drawing || st.activePointerId !== e.pointerId) return;
+  e.preventDefault();
+  const p = getCanvasPoint(e, st.visibleCanvas);
+  drawHandwritingPoint(st, p, false);
+  st.lastPoint = p;
+}
+
+
+function endHandwritingStroke(e, st){
+  if(!st.drawing || st.activePointerId !== e.pointerId) return;
+  e.preventDefault();
+  st.drawing = false;
+  st.activePointerId = null;
+  st.lastPoint = null;
+  clearTimeout(handwritingPendingTimers[st.fieldId]);
+  handwritingPendingTimers[st.fieldId] = setTimeout(() => {
+    recognizeHandwritingField(st);
+  }, 250);
+}
+
+
+function drawHandwritingPoint(st, point, first){
+  const c = st.visibleCtx;
+  const r = st.recCtx;
+  const lineWidth = st.penWidth;
+
+  c.lineCap = "round";
+  c.lineJoin = "round";
+  r.lineCap = "round";
+  r.lineJoin = "round";
+
+  if(first || !st.lastPoint){
+    c.beginPath();
+    c.moveTo(point.x, point.y);
+    r.beginPath();
+    r.moveTo(point.x, point.y);
+    return;
+  }
+
+  c.strokeStyle = "#111111";
+  c.lineWidth = lineWidth;
+  c.beginPath();
+  c.moveTo(st.lastPoint.x, st.lastPoint.y);
+  c.lineTo(point.x, point.y);
+  c.stroke();
+
+  r.strokeStyle = "#ffffff";
+  r.lineWidth = lineWidth;
+  r.beginPath();
+  r.moveTo(st.lastPoint.x, st.lastPoint.y);
+  r.lineTo(point.x, point.y);
+  r.stroke();
+}
+
+
+function preprocessCanvas(canvas){
+  return tf.tidy(() => {
+    let img = tf.browser.fromPixels(canvas, 1);
+    img = tf.image.resizeBilinear(img, [28, 28]);
+    img = img.toFloat().div(255.0);
+    img = img.expandDims(0);
+    return img;
+  });
+}
+
+async function recognizeHandwritingField(st){
+  if(!handwritingModel){
+    try{
+      await ensureHandwritingModel();
+    }catch(e){
+      return;
+    }
+  }
+  if(!handwritingModel) return;
+
+  const input = preprocessCanvas(st.recCanvas);
+  let output;
+  try{
+    output = handwritingModel.predict ? handwritingModel.predict(input) : handwritingModel.execute(input);
+    const data = await output.data();
+    let max = data[0];
+    let idx = 0;
+    for(let i=1; i<10; i++){
+      if(data[i] > max){
+        max = data[i];
+        idx = i;
+      }
+    }
+    clearHandwritingCanvas(st);
+    st.value = String(idx);
+    if(st.valueEl){
+      st.valueEl.textContent = st.value;
+      st.valueEl.style.display = "flex";
+    }
+    st.cell.classList.add("occupied");
+    checkInputs(st.kind);
+    advanceStep(st.kind);
+    checkFinal(st.kind);
+  }catch(e){
+    console.error(e);
+  }finally{
+    input.dispose();
+    output?.dispose?.();
+  }
+}
+
+
+function resizeAllHandwritingFields(){
+  Object.values(handwritingFields).forEach(st => {
+    resizeHandwritingField(st);
+  });
+}
+
+function refreshHandwritingDisplays(){
+  Object.values(handwritingFields).forEach(st => {
+    const value = st.value || "";
+    if(st.valueEl){
+      st.valueEl.textContent = value;
+      st.valueEl.style.display = value ? "flex" : "none";
+    }
+    st.cell.classList.toggle("occupied", !!value);
+  });
+}
+function buildCarryCheckboxes(){
+  const bottomLen = Number(document.getElementById("bottomDigitsSelect").value);
+  const settings = document.getElementById("carrySettings");
+  if(bottomLen !== 1){
+    settings.style.display = "none";
+    return;
+  }
+  settings.style.display = "inline-block";
+  const topLen = Number(document.getElementById("topDigitsSelect").value);
+  let html = "";
+  for(let i=0;i<topLen;i++){
+    html += `
+      <label>
+        <input type="checkbox" class="carryCheck">
+        ${getCarryLabel(i)}
+      </label>
+    `;
+  }
+  document.getElementById("carryChecks").innerHTML = html;
+  updateCarryCheckboxes();
+}
+
+function buildAttackCarryCheckboxes(){
+  const bottomLen = Number(document.getElementById("attackBottomDigitsSelect").value);
+  const box = document.getElementById("attackCarryChecks");
+  if(bottomLen !== 1){
+    box.innerHTML = '<div class="muted">1桁×n桁のときだけ繰り上がり指定が使えます。</div>';
+    return;
+  }
+  const topLen = Number(document.getElementById("attackTopDigitsSelect").value);
+  let html = "";
+  for(let i=0;i<topLen;i++){
+    html += `
+      <label style="display:block;margin:4px 0;">
+        <input type="checkbox" class="attackCarryCheck">
+        ${getCarryLabel(i)}
+      </label>
+    `;
+  }
+  box.innerHTML = html;
+  updateAttackCarryCheckboxes();
+}
+
+function updateCarryCheckboxes(){
+  const mode = document.querySelector('input[name="carryMode"]:checked').value;
+  document.querySelectorAll(".carryCheck").forEach(check=>{
+    check.disabled = mode !== "custom";
+    if(mode !== "custom") check.checked = false;
+  });
+}
+
+function updateAttackCarryCheckboxes(){
+  const mode = document.querySelector('input[name="attackCarryMode"]:checked').value;
+  document.querySelectorAll(".attackCarryCheck").forEach(check=>{
+    check.disabled = mode !== "custom";
+    if(mode !== "custom") check.checked = false;
+  });
+}
+
+document.querySelectorAll('input[name="carryMode"]').forEach(el=>{
+  el.addEventListener("change", updateCarryCheckboxes);
+});
+
+document.querySelectorAll('input[name="attackCarryMode"]').forEach(el=>{
+  el.addEventListener("change", updateAttackCarryCheckboxes);
+});
+
+document.getElementById("topDigitsSelect").addEventListener("change", buildCarryCheckboxes);
+document.getElementById("bottomDigitsSelect").addEventListener("change", buildCarryCheckboxes);
+document.getElementById("attackTopDigitsSelect").addEventListener("change", ()=>{
+  buildAttackCarryCheckboxes();
+  syncAttackTargetWheel();
+});
+document.getElementById("attackBottomDigitsSelect").addEventListener("change", ()=>{
+  buildAttackCarryCheckboxes();
+  syncAttackTargetWheel();
+});
+document.getElementById("attackQuestionCountSelect").addEventListener("change", ()=>{
+  syncAttackTargetWheel();
+  updateAttackTargetPreview();
+});
+
+function generateRandomProblem(){
+  appState.customEquationActive = false;
+  appState.customTop = null;
+  appState.customBottom = null;
+  generateProblem(false);
+}
+
+function generateProblem(preserveCustom=false){
+  appState.mode = "practice";
+  clearAttackWorkspace();
+  if(!preserveCustom){
+    appState.customEquationActive = false;
+    appState.customTop = null;
+    appState.customBottom = null;
+  }
+  finalShown = false;
+  document.getElementById("result").innerHTML = "";
+  currentStep = 0;
+
+  const topLen = Number(document.getElementById("topDigitsSelect").value);
+  const bottomLen = Number(document.getElementById("bottomDigitsSelect").value);
+  let ok = false;
+
+  while(!ok){
+    if(appState.customEquationActive && appState.customTop !== null && appState.customBottom !== null){
+      topNumber = appState.customTop;
+      bottomNumber = appState.customBottom;
+      ok = true;
+    }else{
+      topNumber = generateNumber(topLen);
+      bottomNumber = generateNumber(bottomLen);
+      ok = true;
+    }
+
+    topDigits = String(topNumber).split("").map(Number);
+    bottomDigits = String(bottomNumber).split("").map(Number);
+    finalAnswer = topNumber * bottomNumber;
+
+    if(bottomLen !== 1) continue;
+
+    const mode = document.querySelector('input[name="carryMode"]:checked').value;
+    if(mode === "random") continue;
+
+    const checks = document.querySelectorAll(".carryCheck");
+    let matched = true;
+    for(let i=0;i<topDigits.length;i++){
+      const digit = topDigits[topDigits.length - 1 - i];
+      const carry = digit * bottomDigits[0] >= 10;
+      if(mode === "none"){
+        if(carry){ matched = false; break; }
+      }else{
+        if(checks[i] && checks[i].checked !== carry){
+          matched = false;
+          break;
+        }
+      }
+    }
+    ok = matched;
+  }
+
+  buildTable("practice");
+  addEvents("practice");
+  checkInputs("practice");
+  updateToggleButtons();
+  updateHints();
+}
+
+
+function generateCustomProblem(){
+  const topStr = document.getElementById("customTopInput").value.trim();
+  const bottomStr = document.getElementById("customBottomInput").value.trim();
+  if(!/^[1-9][0-9]{0,2}$/.test(topStr) || !/^[1-9][0-9]{0,2}$/.test(bottomStr)){
+    alert("1〜3桁の数字を入れてください。");
+    return;
+  }
+  const topVal = Number(topStr);
+  const bottomVal = Number(bottomStr);
+  if(topVal < 1 || topVal > 999 || bottomVal < 1 || bottomVal > 999){
+    alert("1〜3桁の数字を入れてください。");
+    return;
+  }
+  appState.customTop = topVal;
+  appState.customBottom = bottomVal;
+  appState.customEquationActive = true;
+
+  document.getElementById("topDigitsSelect").value = String(topStr.length);
+  document.getElementById("bottomDigitsSelect").value = String(bottomStr.length);
+  buildCarryCheckboxes();
+  generateProblem(true);
+}
+
+
+function buildTable(kind){
+  destroyHandwritingFields();
+  answerRows = [];
+  inputMap = [];
+  topCellIds = [];
+  bottomCellIds = [];
+  carryBoxByInput = {};
+  lastCellState = {};
+
+  const answerStr = String(finalAnswer);
+  currentCols = Math.max(answerStr.length, topDigits.length + bottomDigits.length);
+  let html = "<table>";
+
+  html += "<tr>";
+  const topBlank = currentCols - topDigits.length;
+  for(let c=0;c<currentCols;c++){
+    const cellId = `topcell_${c}`;
+    if(c < topBlank){
+      html += `<td id="${cellId}"></td>`;
+    }else{
+      const idx = c - topBlank;
+      topCellIds[idx] = cellId;
+      html += `<td id="${cellId}" class="number">${topDigits[idx]}</td>`;
+    }
+  }
+  html += "</tr>";
+
+  html += "<tr>";
+  const symbolPos = currentCols - (Math.max(topDigits.length, bottomDigits.length) + 1);
+  const lowerBlank = currentCols - symbolPos - 1 - bottomDigits.length;
+  for(let c=0;c<currentCols;c++){
+    const cellId = `bottomcell_${c}`;
+    if(c < symbolPos){
+      html += `<td id="${cellId}"></td>`;
+    }else if(c === symbolPos){
+      html += `<td class="sign">×</td>`;
+    }else if(c < symbolPos + 1 + lowerBlank){
+      html += `<td id="${cellId}"></td>`;
+    }else{
+      const idx = c - (symbolPos + 1 + lowerBlank);
+      bottomCellIds[idx] = cellId;
+      html += `<td id="${cellId}" class="number">${bottomDigits[idx]}</td>`;
+    }
+  }
+  html += "</tr>";
+
+  for(let row=0; row<bottomDigits.length; row++){
+    const digit = bottomDigits[bottomDigits.length - 1 - row];
+    const partial = String(topNumber * digit);
+    const startCol = currentCols - partial.length - row;
+    const rowIndex = 2 + row;
+
+    const rowMeta = {
+      kind: "partial",
+      rowIndex,
+      rowOrder: row,
+      startCol,
+      digitsStr: partial,
+      inputIds: [],
+      bottomDigit: digit
+    };
+    answerRows.push(rowMeta);
+
+    html += row === 0 ? '<tr class="line">' : "<tr>";
+    for(let c=0;c<currentCols;c++){
+      const cellId = getCellId(rowIndex, c);
+      if(c < startCol || c >= startCol + partial.length){
+        html += `<td id="${cellId}"></td>`;
+      }else{
+        const idx = c - startCol;
+        const inputId = getInputId(rowIndex, c);
+        rowMeta.inputIds.push(inputId);
+        inputMap.push({
+          id: inputId,
+          correct: partial[idx],
+          rowType: "partial",
+          row,
+          rowIndex,
+          col: c,
+          topIndex: topDigits.length - partial.length + idx,
+          bottomIndex: row
+        });
+        if(appState.inputMode === "handwriting"){
+          html += `<td id="${cellId}" class="handCell">${buildFieldHtml(inputId, partial[idx])}</td>`;
+        }else{
+          html += `<td id="${cellId}"><div class="ghostDigit">${partial[idx]}</div>${buildFieldHtml(inputId, partial[idx])}</td>`;
+        }
+      }
+    }
+    html += "</tr>";
+  }
+
+  if(bottomDigits.length > 1){
+    const finalRowIndex = 2 + bottomDigits.length;
+    const finalStart = currentCols - answerStr.length;
+    const finalRowMeta = {
+      kind: "final",
+      rowIndex: finalRowIndex,
+      rowOrder: bottomDigits.length,
+      startCol: finalStart,
+      digitsStr: answerStr,
+      inputIds: []
+    };
+    answerRows.push(finalRowMeta);
+
+    html += '<tr class="line">';
+    for(let c=0;c<currentCols;c++){
+      const cellId = getCellId(finalRowIndex, c);
+      if(c < finalStart || c >= finalStart + answerStr.length){
+        html += `<td id="${cellId}"></td>`;
+      }else{
+        const idx = c - finalStart;
+        const inputId = getInputId(finalRowIndex, c);
+        finalRowMeta.inputIds.push(inputId);
+        inputMap.push({
+          id: inputId,
+          correct: answerStr[idx],
+          rowType: "final",
+          row: bottomDigits.length,
+          rowIndex: finalRowIndex,
+          col: c
+        });
+        if(appState.inputMode === "handwriting"){
+          html += `<td id="${cellId}" class="handCell">${buildFieldHtml(inputId, answerStr[idx])}</td>`;
+        }else{
+          html += `<td id="${cellId}"><div class="ghostDigit">${answerStr[idx]}</div>${buildFieldHtml(inputId, answerStr[idx])}</td>`;
+        }
+      }
+    }
+    html += "</tr>";
+  }
+
+  html += "</table>";
+
+  const targetTableArea = kind === "attack" ? "attackTableArea" : "tableArea";
+  document.getElementById(targetTableArea).innerHTML = html;
+  rebuildCarryBoxes();
+  reorderInputMap();
+}
+
+
+function reorderInputMap(){
+  inputMap.sort((a,b)=>{
+    if(a.row !== b.row) return a.row - b.row;
+    return b.col - a.col;
+  });
+}
+
+function appendCarryBox(rowIndex, destCol, sourceInputId, carryText=""){
+  if(destCol < 0) return;
+  const destCell = document.getElementById(getCellId(rowIndex, destCol));
+  if(!destCell) return;
+
+  destCell.classList.add("hasCarryBox");
+
+  if(appState.inputMode === "handwriting"){
+    const fieldId = `mini_${sourceInputId}`;
+    destCell.insertAdjacentHTML("beforeend", buildFieldHtml(fieldId, carryText, {mini:true}));
+    carryBoxByInput[sourceInputId] = fieldId;
+    return;
+  }
+
+  const box = document.createElement("div");
+  box.className = "miniCarryBox";
+  box.id = `mini_${sourceInputId}`;
+  box.innerHTML = `<div class="ghostDigit ghostCarryDigit">${carryText}</div><input class="miniCarryInput" maxlength="1" inputmode="numeric">`;
+  destCell.appendChild(box);
+  carryBoxByInput[sourceInputId] = box.id;
+}
+
+
+
+function rebuildCarryBoxes(){
+  document.querySelectorAll(".miniCarryBox").forEach(box=>box.remove());
+  document.querySelectorAll("td.hasCarryBox").forEach(td=>td.classList.remove("hasCarryBox"));
+  carryBoxByInput = {};
+  addCarryBoxes();
+  addFinalCarryBoxes();
+}
+
+
+function addCarryBoxes(){
+  const partialRows = answerRows.filter(row=>row.kind === "partial");
+  partialRows.forEach(row=>{
+    let carry = 0;
+    for(let i=topDigits.length - 1; i>=0; i--){
+      const pos = row.digitsStr.length - topDigits.length + i;
+      if(pos < 0 || pos >= row.digitsStr.length) continue;
+      const sum = topDigits[i] * row.bottomDigit + carry;
+      const outCarry = Math.floor(sum / 10);
+      if(outCarry > 0){
+        const sourceInputId = row.inputIds[pos];
+        const destCol = row.startCol + pos - 1;
+        appendCarryBox(row.rowIndex, destCol, sourceInputId, String(outCarry));
+      }
+      carry = outCarry;
+    }
+  });
+}
+
+
+function addFinalCarryBoxes(){
+  if(bottomDigits.length <= 1) return;
+  const finalRow = answerRows.find(row=>row.kind === "final");
+  if(!finalRow) return;
+  const partialRows = answerRows.filter(row=>row.kind === "partial");
+  let carry = 0;
+  for(let col=currentCols - 1; col>=finalRow.startCol; col--){
+    let sum = carry;
+    partialRows.forEach(row=>{
+      const pos = col - row.startCol;
+      if(pos >= 0 && pos < row.digitsStr.length){
+        sum += Number(row.digitsStr[pos]);
+      }
+    });
+    const outCarry = Math.floor(sum / 10);
+    if(outCarry > 0 && col > finalRow.startCol){
+      const sourceInputId = getInputId(finalRow.rowIndex, col);
+      appendCarryBox(finalRow.rowIndex, col - 1, sourceInputId, String(outCarry));
+    }
+    carry = outCarry;
+  }
+}
+
+
+function addEvents(kind){
+  if(appState.inputMode === "handwriting"){
+    requestAnimationFrame(()=>{
+      initHandwritingFields(kind);
+      resizeAllHandwritingFields();
+    });
+    return;
+  }
+  document.querySelectorAll(kind === "attack" ? "#attackTableArea .mainInput" : "#tableArea .mainInput").forEach(input=>{
+    input.addEventListener("input", ()=>{
+      if(kind === "attack"){
+        checkInputs("attack");
+        advanceStep("attack");
+        checkFinal("attack");
+      }else{
+        checkInputs("practice");
+        advanceStep("practice");
+        checkFinal("practice");
+      }
+    });
+  });
+}
+
+
+function checkInputs(kind){
+  const shouldSound = uiState.sound;
+  inputMap.forEach(item=>{
+    const value = getFieldValue(item.id);
+    const el = document.getElementById(item.id);
+    const cell = el ? el.closest("td") : null;
+    if(cell){
+      cell.classList.toggle("hasValue", value !== "");
+    }
+
+    const prev = lastCellState[item.id] || "";
+    const next = value === "" ? "empty" : value === item.correct ? "correct" : "wrong";
+    lastCellState[item.id] = next;
+
+    if(!uiState.correctness){
+      if(appState.inputMode === "handwriting"){
+        cell?.classList.remove("correct");
+        cell?.classList.remove("wrong");
+      }else{
+        el?.classList.remove("correct");
+        el?.classList.remove("wrong");
+      }
+      return;
+    }
+
+    if(value === ""){
+      if(appState.inputMode === "handwriting"){
+        cell?.classList.remove("correct");
+        cell?.classList.remove("wrong");
+      }else{
+        el?.classList.remove("correct");
+        el?.classList.remove("wrong");
+      }
+      return;
+    }
+
+    const isCorrect = value === item.correct;
+    const targetNode = appState.inputMode === "handwriting" ? cell : el;
+    if(!targetNode) return;
+    targetNode.classList.toggle("correct", isCorrect);
+    targetNode.classList.toggle("wrong", !isCorrect);
+
+    if(isCorrect){
+      if(shouldSound && prev !== "correct"){
+        playCorrectCellSound();
+      }
+    }else{
+      if(shouldSound && prev !== "wrong"){
+        playWrongCellSound();
+      }
+    }
+  });
+}
+
+
+function advanceStep(kind){
+  while(currentStep < inputMap.length){
+    const item = inputMap[currentStep];
+    const value = getFieldValue(item.id);
+    if(value === "") break;
+    if(value === item.correct){
+      currentStep++;
+    }else{
+      break;
+    }
+  }
+  if(kind === "attack"){
+    updateAttackHints();
+  }else{
+    updateHints();
+  }
+}
+
+
+function clearHighlights(){
+  document.querySelectorAll("td").forEach(td=>{
+    td.classList.remove("highlight");
+    td.classList.remove("target");
+  });
+  document.querySelectorAll(".miniCarryBox").forEach(box=>{
+    box.classList.remove("target");
+  });
+}
+
+function drawArrow(item, kind){
+  if(item.rowType !== "partial") return;
+  if(item.topIndex === null || item.topIndex < 0) return;
+
+  const svgId = kind === "attack" ? "attackArrowSvg" : "arrowSvg";
+  const areaId = kind === "attack" ? "attackVerticalArea" : "verticalArea";
+  const svg = document.getElementById(svgId);
+
+  svg.innerHTML = `
+    <defs>
+      <marker id="${kind}ArrowHead" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
+        <polygon points="0 0,4 2,0 4" fill="red"></polygon>
+      </marker>
+    </defs>
+  `;
+
+  const topCell = document.getElementById(topCellIds[item.topIndex]);
+  const bottomCell = document.getElementById(bottomCellIds[bottomDigits.length - 1 - item.bottomIndex]);
+  if(!topCell || !bottomCell) return;
+
+  const area = document.getElementById(areaId);
+  const base = area.getBoundingClientRect();
+  const from = bottomCell.getBoundingClientRect();
+  const to = topCell.getBoundingClientRect();
+
+  const x1 = from.left + from.width/2 - base.left;
+  const y1 = from.top - base.top + 8;
+  const x2 = to.left + to.width/2 - base.left;
+  const y2 = to.bottom - base.top - 8;
+
+  const path = `M ${x1} ${y1} L ${x2} ${y2}`;
+  const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  pathEl.setAttribute("d", path);
+  pathEl.setAttribute("class", "arrowPath");
+  pathEl.setAttribute("marker-end", `url(#${kind}ArrowHead)`);
+  svg.appendChild(pathEl);
+}
+
+function updateHints(){
+  if(appState.page !== "practicePage") return;
+  clearHighlights();
+  document.getElementById("arrowSvg").innerHTML = "";
+
+  if(currentStep >= inputMap.length){
+    document.getElementById("hint").innerHTML = uiState.text ? "完成！" : "";
+    return;
+  }
+
+  const item = inputMap[currentStep];
+  const target = document.getElementById(getCellId(item.rowIndex, item.col));
+  if(uiState.target && target) target.classList.add("target");
+
+  const carryId = carryBoxByInput[item.id];
+  const carry = carryId ? document.getElementById(carryId) : null;
+  if(uiState.target && carry) carry.classList.add("target");
+
+  if(item.rowType === "partial"){
+    const topCell = item.topIndex !== null && item.topIndex >= 0 ? document.getElementById(topCellIds[item.topIndex]) : null;
+    const bottomCell = document.getElementById(bottomCellIds[bottomDigits.length - 1 - item.bottomIndex]);
+
+    if(uiState.text){
+      topCell?.classList.add("highlight");
+      bottomCell?.classList.add("highlight");
+    }
+    if(uiState.arrow){
+      drawArrow(item, "practice");
+    }
+
+    const topDigit = item.topIndex !== null && item.topIndex >= 0 ? topDigits[item.topIndex] : undefined;
+    const bottomDigit = bottomDigits[bottomDigits.length - 1 - item.bottomIndex];
+    if(uiState.text){
+      document.getElementById("hint").innerHTML = topDigit === undefined ? "大きいマスに書き込もう" : `${topDigit} × ${bottomDigit} を計算`;
+    }else{
+      document.getElementById("hint").innerHTML = "";
+    }
+  }else{
+    document.getElementById("hint").innerHTML = uiState.text ? "部分積を足そう" : "";
+  }
+}
+
+function updateAttackHints(){
+  if(appState.page !== "attackPlayPage") return;
+  clearHighlights();
+  document.getElementById("attackArrowSvg").innerHTML = "";
+
+  if(currentStep >= inputMap.length){
+    document.getElementById("attackHint").innerHTML = uiState.text ? "完成！" : "";
+    return;
+  }
+
+  const item = inputMap[currentStep];
+  const target = document.getElementById(getCellId(item.rowIndex, item.col));
+  if(uiState.target && target) target.classList.add("target");
+
+  const carryId = carryBoxByInput[item.id];
+  const carry = carryId ? document.getElementById(carryId) : null;
+  if(uiState.target && carry) carry.classList.add("target");
+
+  if(item.rowType === "partial"){
+    const topCell = item.topIndex !== null && item.topIndex >= 0 ? document.getElementById(topCellIds[item.topIndex]) : null;
+    const bottomCell = document.getElementById(bottomCellIds[bottomDigits.length - 1 - item.bottomIndex]);
+
+    if(uiState.text){
+      topCell?.classList.add("highlight");
+      bottomCell?.classList.add("highlight");
+    }
+    if(uiState.arrow){
+      drawArrow(item, "attack");
+    }
+
+    const topDigit = item.topIndex !== null && item.topIndex >= 0 ? topDigits[item.topIndex] : undefined;
+    const bottomDigit = bottomDigits[bottomDigits.length - 1 - item.bottomIndex];
+    if(uiState.text){
+      document.getElementById("attackHint").innerHTML = topDigit === undefined ? "大きいマスに書き込もう" : `${topDigit} × ${bottomDigit} を計算`;
+    }else{
+      document.getElementById("attackHint").innerHTML = "";
+    }
+  }else{
+    document.getElementById("attackHint").innerHTML = uiState.text ? "部分積を足そう" : "";
+  }
+}
+
+function addCircle(target){
+  const circle = document.createElement("div");
+  circle.className = "correctCircle";
+  circle.textContent = "◯";
+  target.appendChild(circle);
+}
+
+function checkFinal(kind){
+  let ok = true;
+  inputMap.forEach(item=>{
+    const value = getFieldValue(item.id);
+    if(value !== item.correct){
+      ok = false;
+    }
+  });
+
+  if(ok){
+    if(kind === "practice"){
+      if(finalShown) return;
+      finalShown = true;
+      inputMap.forEach(item=>{
+        const cell = document.getElementById(getCellId(item.rowIndex, item.col));
+        if(cell) addCircle(cell);
+      });
+      document.getElementById("result").innerHTML = "正解！";
+      playQuestionClearSound();
+    }else{
+      finishAttackQuestion();
+    }
+  }
+}
+
+
+function updatePracticeResultIfComplete(){
+  if(finalShown) return;
+}
+
+function currentAttackQuestion(){
+  return appState.attackQuestions[appState.attackIndex] || null;
+}
+
+function startAttack(){
+  clearPracticeWorkspace();
+  appState.attackActive = true;
+  appState.attackQuestions = [];
+  appState.attackIndex = 0;
+  appState.attackCorrect = 0;
+  appState.attackMiss = 0;
+  finalShown = false;
+  currentStep = 0;
+
+  appState.attackTargetMinutes = getAttackTargetMinutes();
+  appState.attackQuestionCount = Number(document.getElementById("attackQuestionCountSelect").value);
+  appState.attackPatternKey = `${document.getElementById("attackTopDigitsSelect").value}x${document.getElementById("attackBottomDigitsSelect").value}_${appState.attackQuestionCount}`;
+  appState.attackCarryMode = document.querySelector('input[name="attackCarryMode"]:checked').value;
+
+  const topLen = Number(document.getElementById("attackTopDigitsSelect").value);
+  const bottomLen = Number(document.getElementById("attackBottomDigitsSelect").value);
+
+  for(let i=0;i<appState.attackQuestionCount;i++){
+    let top, bottom;
+    let tries = 0;
+    do{
+      top = generateNumber(topLen);
+      bottom = generateNumber(bottomLen);
+      tries++;
+      if(tries > 500) break;
+    }while(!attackQuestionMatchesCarry(top, bottom));
+    appState.attackQuestions.push({ top, bottom });
+  }
+
+  uiState.arrow = false;
+  uiState.target = false;
+  uiState.correctness = false;
+  uiState.text = false;
+  uiState.superHint = false;
+  updateToggleButtons();
+
+  showPage("attackPlayPage");
+  nextAttackQuestion(true);
+  startAttackTimer();
+}
+
+
+function attackQuestionMatchesCarry(top, bottom){
+  const bottomLen = String(bottom).length;
+  if(bottomLen !== 1) return true;
+  const mode = document.querySelector('input[name="attackCarryMode"]:checked').value;
+  if(mode === "random") return true;
+
+  const topDigitsArr = String(top).split("").map(Number);
+  const checks = document.querySelectorAll(".attackCarryCheck");
+  let matched = true;
+  for(let i=0;i<topDigitsArr.length;i++){
+    const digit = topDigitsArr[topDigitsArr.length - 1 - i];
+    const carry = digit * Number(String(bottom)) >= 10;
+    if(mode === "none"){
+      if(carry){ matched = false; break; }
+    }else{
+      if(checks[i] && checks[i].checked !== carry){ matched = false; break; }
+    }
+  }
+  return matched;
+}
+
+function nextAttackQuestion(initial=false){
+  finalShown = false;
+  clearPracticeWorkspace();
+  currentStep = 0;
+  document.getElementById("attackResult").innerHTML = "";
+  document.getElementById("attackFinishPanel").style.display = "none";
+
+  const q = currentAttackQuestion();
+  if(!q){
+    finishAttackSession();
+    return;
+  }
+
+  topNumber = q.top;
+  bottomNumber = q.bottom;
+  topDigits = String(topNumber).split("").map(Number);
+  bottomDigits = String(bottomNumber).split("").map(Number);
+  finalAnswer = topNumber * bottomNumber;
+
+  buildTable("attack");
+  addEvents("attack");
+  checkInputs("attack");
+  updateToggleButtons();
+  updateAttackHints();
+  updateAttackStats();
+}
+
+
+function startAttackTimer(){
+  stopAttackTimer();
+  appState.attackStartMs = Date.now();
+  appState.attackTimer = setInterval(updateAttackTimer, 250);
+  updateAttackTimer();
+}
+
+function stopAttackTimer(){
+  if(appState.attackTimer){
+    clearInterval(appState.attackTimer);
+    appState.attackTimer = null;
+  }
+}
+
+function updateAttackTimer(){
+  const elapsedSec = Math.floor((Date.now() - appState.attackStartMs) / 1000);
+  document.getElementById("attackElapsed").textContent = formatTime(elapsedSec);
+  document.getElementById("attackTargetDisplay").textContent = formatTime(appState.attackTargetMinutes * 60);
+  const goalOk = elapsedSec <= appState.attackTargetMinutes * 60 ? "◯" : "×";
+  document.getElementById("attackGoalStatus").textContent = goalOk;
+}
+
+function finishAttackQuestion(){
+  if(!appState.attackActive) return;
+  appState.attackCorrect++;
+  updateAttackStats();
+  playQuestionClearSound();
+  document.getElementById("attackResult").innerHTML = "正解！";
+  setTimeout(()=>{
+    appState.attackIndex++;
+    if(appState.attackIndex >= appState.attackQuestions.length){
+      finishAttackSession();
+    }else{
+      nextAttackQuestion();
+    }
+  }, 650);
+}
+
+function updateAttackStats(){
+  document.getElementById("attackProgress").textContent = `${Math.min(appState.attackIndex + 1, appState.attackQuestionCount)} / ${appState.attackQuestionCount}`;
+  document.getElementById("attackCorrectCount").textContent = String(appState.attackCorrect);
+  document.getElementById("attackMissCount").textContent = String(appState.attackMiss);
+}
+
+function finishAttackSession(){
+  stopAttackTimer();
+  appState.attackActive = false;
+  const elapsedSec = Math.floor((Date.now() - appState.attackStartMs) / 1000);
+  const total = appState.attackQuestionCount;
+  const correct = appState.attackCorrect;
+  const miss = appState.attackMiss;
+  const accuracy = total ? Math.round((correct / total) * 100) : 0;
+  const targetSec = appState.attackTargetMinutes * 60;
+  const targetClear = elapsedSec <= targetSec;
+
+  const record = {
+    date: new Date().toISOString(),
+    mode: "timeAttack",
+    pattern: `${document.getElementById("attackTopDigitsSelect").value}x${document.getElementById("attackBottomDigitsSelect").value}`,
+    questionCount: total,
+    correct,
+    miss,
+    accuracy,
+    elapsedSec,
+    targetMinutes: appState.attackTargetMinutes,
+    targetClear,
+    hintsUsed: uiState.arrow || uiState.target || uiState.text || uiState.correctness
+  };
+  saveRecord(record);
+
+  document.getElementById("finishAccuracy").textContent = `${accuracy}%`;
+  document.getElementById("finishTime").textContent = formatTime(elapsedSec);
+  document.getElementById("finishTarget").textContent = formatTime(targetSec);
+  document.getElementById("finishGoal").textContent = targetClear ? "達成" : "未達成";
+  document.getElementById("attackFinishPanel").style.display = "block";
+  document.getElementById("attackResult").innerHTML = targetClear ? "おつかれさま！ 目標達成です。" : "おつかれさま！ もう少しで目標です。";
+  playFinishSound();
+  updateAttackTimer();
+}
+
+function repeatAttack(){
+  openAttackSetup();
+  startAttack();
+}
+
+function getAttackTargetKey(){
+  const top = document.getElementById("attackTopDigitsSelect").value;
+  const bottom = document.getElementById("attackBottomDigitsSelect").value;
+  const count = document.getElementById("attackQuestionCountSelect").value;
+  return `${top}x${bottom}_${count}`;
+}
+
+function getStoredAttackTargets(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.targets) || "{}");
+  }catch(e){
+    return {};
+  }
+}
+
+function setStoredAttackTarget(key, minutes){
+  const data = getStoredAttackTargets();
+  data[key] = minutes;
+  localStorage.setItem(STORAGE_KEYS.targets, JSON.stringify(data));
+}
+
+function getAttackTargetMinutes(){
+  const q = Number(document.getElementById("attackQuestionCountSelect").value);
+  const defaults = { 5: 5, 10: 10, 20: 20 };
+  const key = getAttackTargetKey();
+  const stored = getStoredAttackTargets();
+  if(stored[key] !== undefined && stored[key] !== null){
+    return Number(stored[key]);
+  }
+  return defaults[q] || 10;
+}
+
+function syncAttackTargetWheel(){
+  const minutes = getAttackTargetMinutes();
+  const tens = Math.floor(minutes / 10) % 10;
+  const ones = minutes % 10;
+  const tensEl = document.getElementById("attackTargetMinTens");
+  const onesEl = document.getElementById("attackTargetMinOnes");
+  populateWheelSelect(tensEl);
+  populateWheelSelect(onesEl);
+  tensEl.value = String(tens);
+  onesEl.value = String(ones);
+  [tensEl, onesEl].forEach(el=>{
+    el.onchange = ()=>{
+      const val = getWheelMinutes();
+      setStoredAttackTarget(getAttackTargetKey(), val);
+      updateAttackTargetPreview();
+    };
+  });
+  setStoredAttackTarget(getAttackTargetKey(), minutes);
+}
+
+function populateWheelSelect(selectEl){
+  if(selectEl.options.length === 10) return;
+  selectEl.innerHTML = "";
+  for(let i=0;i<=9;i++){
+    const opt = document.createElement("option");
+    opt.value = String(i);
+    opt.textContent = String(i);
+    selectEl.appendChild(opt);
+  }
+}
+
+function getWheelMinutes(){
+  const tens = Number(document.getElementById("attackTargetMinTens").value);
+  const ones = Number(document.getElementById("attackTargetMinOnes").value);
+  return tens * 10 + ones;
+}
+
+function updateAttackTargetPreview(){
+  const q = Number(document.getElementById("attackQuestionCountSelect").value);
+  const value = getWheelMinutes();
+  document.getElementById("attackTargetPreview").textContent = `現在の目標: ${formatTime(value * 60)} ／ 初期値: ${q}問なら ${q}分`;
+  setStoredAttackTarget(getAttackTargetKey(), value);
+  appState.attackTargetMinutes = value;
+}
+
+function saveRecord(record){
+  const records = getRecords();
+  records.unshift(record);
+  localStorage.setItem(STORAGE_KEYS.records, JSON.stringify(records));
+}
+
+function getRecords(){
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEYS.records) || "[]");
+  }catch(e){
+    return [];
+  }
+}
+
+function clearRecords(){
+  const ok = confirm("記録を全て削除しますか？");
+  if(!ok) return;
+  localStorage.removeItem(STORAGE_KEYS.records);
+  renderRecords();
+}
+
+function formatTime(sec){
+  const s = Math.max(0, Math.floor(sec));
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${String(m).padStart(2,"0")}:${String(r).padStart(2,"0")}`;
+}
+
+function formatDate(iso){
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderRecords(){
+  const records = getRecords();
+  const summary = document.getElementById("recordsSummary");
+  const tableWrap = document.getElementById("recordsTableWrap");
+
+  if(records.length === 0){
+    summary.innerHTML = `<div class="statBox"><div class="label">保存された記録</div><div class="value">0</div></div>`;
+    tableWrap.innerHTML = `<p class="muted">まだ記録はありません。</p>`;
+    return;
+  }
+
+  const attackRecords = records.filter(r=>r.mode === "timeAttack");
+  const bestByPattern = {};
+  attackRecords.forEach(r=>{
+    const key = `${r.pattern}_${r.questionCount}`;
+    const score = r.elapsedSec;
+    if(!bestByPattern[key] || score < bestByPattern[key].elapsedSec){
+      bestByPattern[key] = r;
+    }
+  });
+
+  summary.innerHTML = `
+    <div class="statBox"><div class="label">保存件数</div><div class="value">${records.length}</div></div>
+    <div class="statBox"><div class="label">タイムアタック</div><div class="value">${attackRecords.length}</div></div>
+    <div class="statBox"><div class="label">最速</div><div class="value">${attackRecords.length ? formatTime(Math.min(...attackRecords.map(r=>r.elapsedSec))) : "--:--"}</div></div>
+    <div class="statBox"><div class="label">平均正答率</div><div class="value">${attackRecords.length ? Math.round(attackRecords.reduce((a,b)=>a+b.accuracy,0)/attackRecords.length) : 0}%</div></div>
+  `;
+
+  let html = `
+    <table class="recordsTable">
+      <thead>
+        <tr>
+          <th>日時</th>
+          <th>種類</th>
+          <th>問題数</th>
+          <th>正答率</th>
+          <th>時間</th>
+          <th>目標</th>
+          <th>達成</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  records.forEach(r=>{
+    html += `
+      <tr>
+        <td>${formatDate(r.date)}</td>
+        <td>${r.mode === "timeAttack" ? "タイムアタック" : "練習"}</td>
+        <td>${r.pattern ? `${r.pattern} / ${r.questionCount}` : "-"}</td>
+        <td>${r.accuracy !== undefined ? `${r.accuracy}%` : "-"}</td>
+        <td>${r.elapsedSec !== undefined ? formatTime(r.elapsedSec) : "-"}</td>
+        <td>${r.targetMinutes !== undefined ? formatTime(r.targetMinutes * 60) : "-"}</td>
+        <td>${r.targetClear !== undefined ? (r.targetClear ? "◯" : "×") : "-"}</td>
+      </tr>
+    `;
+  });
+  html += `</tbody></table>`;
+
+  if(attackRecords.length){
+    html += `<h3 style="margin-top:18px;">ベスト記録</h3><table class="recordsTable"><thead><tr><th>種類</th><th>最速</th><th>正答率</th><th>達成</th></tr></thead><tbody>`;
+    Object.entries(bestByPattern).forEach(([key,r])=>{
+      html += `<tr><td>${key}</td><td>${formatTime(r.elapsedSec)}</td><td>${r.accuracy}%</td><td>${r.targetClear ? "◯" : "×"}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  tableWrap.innerHTML = html;
+}
+
+function setSoundButtonState(){
+  updateToggleButtons();
+}
+
+function initFromStorage(){
+  uiState.sound = readSoundSetting();
+  uiState.superHint = readSuperHintSetting();
+  appState.inputMode = readInputModeSetting();
+  updateToggleButtons();
+  setSoundButtonState();
+  updateSettingsSummary();
+  populateWheelSelect(document.getElementById("attackTargetMinTens"));
+  populateWheelSelect(document.getElementById("attackTargetMinOnes"));
+}
+
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  initFromStorage();
+  buildCarryCheckboxes();
+  buildAttackCarryCheckboxes();
+  syncAttackTargetWheel();
+  updateAttackTargetPreview();
+  openHome();
+  updateToggleButtons();
+  updateSettingsSummary();
+  window.addEventListener("resize", ()=>{
+    if(appState.inputMode === "handwriting"){
+      resizeAllHandwritingFields();
+    }
+  }, { passive:true });
+  if(appState.inputMode === "handwriting"){
+    ensureHandwritingModel().catch(()=>{});
+  }
+});
+</script>
+</body>
+</html>
