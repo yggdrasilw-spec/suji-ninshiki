@@ -327,7 +327,9 @@ td.hasValue .ghostDigit{ display:none !important; }
   position:relative;
   display:inline-block;
   margin-top:14px;
-  touch-action:pinch-zoom;
+  touch-action:pan-x pan-y pinch-zoom;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
 }
 
 #arrowSvg{
@@ -622,7 +624,7 @@ td{
   width:100%;
   height:100%;
   overflow:auto;
-  touch-action:pinch-zoom;
+  touch-action:pan-x pan-y pinch-zoom;
   user-select:none;
 }
 
@@ -632,7 +634,7 @@ td{
   width:100%;
   height:100%;
   display:block;
-  touch-action:pinch-zoom;
+  touch-action:pan-x pan-y pinch-zoom;
   background:transparent;
   z-index:1;
 }
@@ -778,6 +780,10 @@ td.wrong .handCanvas{
 .practiceMiniToolbar,.attackMiniToolbar{margin:8px 0 0;justify-content:center;gap:4px;}
 .practiceMiniToolbar .toggleBtn,.attackMiniToolbar .toggleBtn{font-size:11px;padding:4px 7px;border-radius:999px;}
 .practiceBoardWrap,.attackBoardShell{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
+body.handwritingMode .practiceBoardWrap,
+body.handwritingMode .attackBoardShell{
+  align-items:flex-start;
+}
 .practiceBoardWrap{padding:18px 12px 10px;}
 .attackBoardShell{padding:8px 12px 12px;}
 .handwritingBoardWrap #verticalArea,.handwritingBoardWrap #attackVerticalArea{transform-origin:top center;}
@@ -856,13 +862,16 @@ body.handwritingMode td{
 body.handwritingMode #verticalArea,
 body.handwritingMode #attackVerticalArea{
   display:block;
-  width:100%;
+  width:max-content;
+  min-width:100%;
   max-width:100%;
   overflow-x:auto;
   overflow-y:auto;
   padding:10px 0 16px;
-  touch-action:pinch-zoom;
+  touch-action:pan-x pan-y pinch-zoom;
+  overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch;
+  align-self:flex-start;
 }
 
 body.handwritingMode table{
@@ -962,6 +971,28 @@ body.handwritingMode .handField.active .handCanvas{
     box-shadow:inset 0 0 0 2px rgba(211,47,47,.95);
   }
 }
+@media (orientation: landscape) and (max-width: 1024px){
+  body.handwritingMode td{
+    width:clamp(46px, 5.2vw, 72px);
+    height:clamp(44px, 5.0vw, 64px);
+  }
+  body.handwritingMode .number,
+  body.handwritingMode .mainInput,
+  body.handwritingMode .sign{
+    font-size:clamp(24px, 2.8vw, 30px);
+  }
+  body.handwritingMode .miniCarryBox{
+    width:20px!important;
+    height:20px!important;
+    top:-1px!important;
+    right:-1px!important;
+  }
+  body.handwritingMode .miniCarryBox .handValue,
+  body.handwritingMode .miniCarryBox .ghostDigit{
+    font-size:9px!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1771,6 +1802,7 @@ function setFieldValue(fieldId, value, options={}){
     st.cell.classList.toggle("occupied", !!value);
     if(options.finalize){
       st.finalized = true;
+      clearHandwritingCanvas(st, true);
     }
   }else{
     const el = document.getElementById(fieldId);
@@ -2046,6 +2078,7 @@ async function recognizeHandwritingField(st){
       st.valueEl.style.display = "flex";
     }
     st.cell.classList.add("occupied");
+    clearHandwritingCanvas(st, true);
     checkInputs(st.kind);
     advanceStep(st.kind);
     checkFinal(st.kind);
@@ -3260,7 +3293,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     canvas.height = Math.max(1, Math.round(rect.height * dpr));
   }
 
-  function clearPopupCanvas(){
+  function clearPopupCanvas(preserveText = false){
     const canvas = document.getElementById('popupCanvas');
     if(!canvas) return;
     resizePopupCanvas(canvas);
@@ -3269,6 +3302,9 @@ document.addEventListener("DOMContentLoaded", ()=>{
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    if(!preserveText){
+      setPopupRecognizedText('');
+    }
   }
 
   function schedulePopupRecognition(){
@@ -3387,6 +3423,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     clearTimeout(popupRecognizeTimer);
     const popup = document.getElementById('handwritingPopup');
     if(popup) popup.classList.remove('active');
+    setPopupRecognizedText('');
     popupTargetInput = null;
     popupLastTapTarget = null;
     popupLastTapTime = 0;
@@ -3413,7 +3450,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
       popupTargetInput.dispatchEvent(new Event('input', { bubbles:true }));
     }
 
-    clearPopupCanvas();
+    clearPopupCanvas(true);
+    setPopupRecognizedText(value);
   }
 
   function bindPopupTriggers(){
