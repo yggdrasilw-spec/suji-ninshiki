@@ -680,13 +680,17 @@ body.handwritingMode .handField{
 }
 
 body.handwritingMode .miniCarryBox{
-  position:relative;
-  top:auto;
-  right:auto;
-  width:100%;
-  height:100%;
-  border-left:0;
-  border-bottom:0;
+  position:absolute;
+  top:4px;
+  right:4px;
+  width:32px;
+  height:32px;
+  border:2px dashed rgba(43,124,255,.68);
+  border-radius:8px;
+  background:rgba(255,255,255,.96);
+  overflow:hidden;
+  z-index:5;
+  box-shadow:0 0 0 1px rgba(43,124,255,.10) inset;
 }
 
 body.handwritingMode .miniCarryBox .handCanvas,
@@ -705,6 +709,26 @@ body.handwritingMode .miniCarryBox .handCanvas{
   border-radius:0;
 }
 
+body.handwritingMode .handField.target .handCanvas,
+body.handwritingMode .miniCarryBox.target .handCanvas{
+  background:#bfe0ff;
+}
+
+body.handwritingMode .handField.highlight .handCanvas,
+body.handwritingMode .miniCarryBox.highlight .handCanvas{
+  background:#ffe7a3;
+}
+
+body.handwritingMode .handField.correct .handCanvas,
+body.handwritingMode .miniCarryBox.correct .handCanvas{
+  background:#c8f7c5;
+}
+
+body.handwritingMode .handField.wrong .handCanvas,
+body.handwritingMode .miniCarryBox.wrong .handCanvas{
+  background:#ffd6d6;
+}
+
 @media (max-width:720px){
   body.handwritingMode td{
     width:72px;
@@ -714,6 +738,12 @@ body.handwritingMode .miniCarryBox .handCanvas{
   body.handwritingMode .mainInput,
   body.handwritingMode .sign{
     font-size:30px;
+  }
+  body.handwritingMode .miniCarryBox{
+    width:28px;
+    height:28px;
+    top:3px;
+    right:3px;
   }
 }
 </style>
@@ -1624,6 +1654,7 @@ function startHandwritingStroke(e, st){
   e.preventDefault();
   if(st.value){
     st.value = "";
+    st.field.classList.remove("correct", "wrong");
     if(st.valueEl){
       st.valueEl.textContent = "";
       st.valueEl.style.display = "none";
@@ -2202,29 +2233,19 @@ function checkInputs(kind){
     lastCellState[item.id] = next;
 
     if(!uiState.correctness){
-      if(appState.inputMode === "handwriting"){
-        cell?.classList.remove("correct");
-        cell?.classList.remove("wrong");
-      }else{
-        el?.classList.remove("correct");
-        el?.classList.remove("wrong");
-      }
+      el?.classList.remove("correct");
+      el?.classList.remove("wrong");
       return;
     }
 
     if(value === ""){
-      if(appState.inputMode === "handwriting"){
-        cell?.classList.remove("correct");
-        cell?.classList.remove("wrong");
-      }else{
-        el?.classList.remove("correct");
-        el?.classList.remove("wrong");
-      }
+      el?.classList.remove("correct");
+      el?.classList.remove("wrong");
       return;
     }
 
     const isCorrect = value === item.correct;
-    const targetNode = appState.inputMode === "handwriting" ? cell : el;
+    const targetNode = el;
     if(!targetNode) return;
     targetNode.classList.toggle("correct", isCorrect);
     targetNode.classList.toggle("wrong", !isCorrect);
@@ -2266,7 +2287,12 @@ function clearHighlights(){
     td.classList.remove("highlight");
     td.classList.remove("target");
   });
+  document.querySelectorAll(".handField").forEach(field=>{
+    field.classList.remove("highlight");
+    field.classList.remove("target");
+  });
   document.querySelectorAll(".miniCarryBox").forEach(box=>{
+    box.classList.remove("highlight");
     box.classList.remove("target");
   });
 }
@@ -2321,7 +2347,8 @@ function updateHints(){
 
   const item = inputMap[currentStep];
   const target = document.getElementById(getCellId(item.rowIndex, item.col));
-  if(uiState.target && target) target.classList.add("target");
+  const targetNode = appState.inputMode === "handwriting" ? target?.querySelector(".handField") : target;
+  if(uiState.target && targetNode) targetNode.classList.add("target");
 
   const carryId = carryBoxByInput[item.id];
   const carry = carryId ? document.getElementById(carryId) : null;
@@ -2363,7 +2390,8 @@ function updateAttackHints(){
 
   const item = inputMap[currentStep];
   const target = document.getElementById(getCellId(item.rowIndex, item.col));
-  if(uiState.target && target) target.classList.add("target");
+  const targetNode = appState.inputMode === "handwriting" ? target?.querySelector(".handField") : target;
+  if(uiState.target && targetNode) targetNode.classList.add("target");
 
   const carryId = carryBoxByInput[item.id];
   const carry = carryId ? document.getElementById(carryId) : null;
