@@ -405,7 +405,20 @@ td{
   z-index:20;
 }
 
-.miniCarryBox.target{ background:#81d4fa; }
+.miniCarryBox.target{
+  background:#e3f2fd;
+  box-shadow:inset 0 0 0 2px rgba(30,136,229,.95);
+}
+
+.miniCarryBox.correct{
+  background:#e8f5e9;
+  box-shadow:inset 0 0 0 2px rgba(67,160,71,.95);
+}
+
+.miniCarryBox.wrong{
+  background:#ffebee;
+  box-shadow:inset 0 0 0 2px rgba(211,47,47,.95);
+}
 
 .miniCarryInput{
   width:100%;
@@ -637,8 +650,23 @@ td{
   color:rgba(107,114,128,.58);
 }
 
+.handField{
+  position:relative;
+  overflow:hidden;
+}
+
+.handField::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:8px;
+  pointer-events:none;
+  opacity:0;
+  z-index:0;
+}
+
 .handField.active .handCanvas{
-  box-shadow:inset 0 0 0 2px rgba(43,124,255,.45);
+  box-shadow:inset 0 0 0 2px rgba(43,124,255,.55);
 }
 
 .handField .ghostDigit{
@@ -652,6 +680,24 @@ td{
 
 .handField .handValue{
   z-index:2;
+}
+
+.handField.target::after,
+td.target .handCanvas{
+  opacity:1;
+  background:rgba(30,136,229,.14);
+}
+
+.handField.correct::after,
+td.correct .handCanvas{
+  opacity:1;
+  background:rgba(67,160,71,.14);
+}
+
+.handField.wrong::after,
+td.wrong .handCanvas{
+  opacity:1;
+  background:rgba(211,47,47,.14);
 }
 
 .handField.target .handCanvas,
@@ -672,9 +718,8 @@ td.wrong .handCanvas{
   border-radius:8px;
 }
 
-
 .handField.occupied .handCanvas{
-  opacity:.92;
+  opacity:.90;
 }
 
 .handField.cleared .handCanvas{
@@ -2414,10 +2459,14 @@ function checkInputs(kind){
     }
 
     const isCorrect = value === item.correct;
-    const targetNode = appState.inputMode === "handwriting" ? cell : el;
+    const targetNode = el || cell;
     if(!targetNode) return;
     targetNode.classList.toggle("correct", isCorrect);
     targetNode.classList.toggle("wrong", !isCorrect);
+    if(appState.inputMode === "handwriting" && cell){
+      cell.classList.toggle("correct", isCorrect);
+      cell.classList.toggle("wrong", !isCorrect);
+    }
 
     if(isCorrect){
       if(shouldSound && prev !== "correct"){
@@ -2452,12 +2501,9 @@ function advanceStep(kind){
 
 
 function clearHighlights(){
-  document.querySelectorAll("td").forEach(td=>{
-    td.classList.remove("highlight");
-    td.classList.remove("target");
-  });
-  document.querySelectorAll(".miniCarryBox").forEach(box=>{
-    box.classList.remove("target");
+  document.querySelectorAll("td, .handField, .miniCarryBox, .mainInput, .miniCarryInput").forEach(el=>{
+    el.classList.remove("highlight");
+    el.classList.remove("target");
   });
 }
 
@@ -2499,6 +2545,17 @@ function drawArrow(item, kind){
   svg.appendChild(pathEl);
 }
 
+
+function drawArrowDeferred(item, kind){
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      try{
+        drawArrow(item, kind);
+      }catch(e){}
+    });
+  });
+}
+
 function updateHints(){
   if(appState.page !== "practicePlayPage") return;
   clearHighlights();
@@ -2511,7 +2568,11 @@ function updateHints(){
 
   const item = inputMap[currentStep];
   const target = document.getElementById(getCellId(item.rowIndex, item.col));
-  if(uiState.target && target) target.classList.add("target");
+  const targetField = document.getElementById(item.id);
+  if(uiState.target){
+    target?.classList.add("target");
+    targetField?.classList.add("target");
+  }
 
   const carryId = carryBoxByInput[item.id];
   const carry = carryId ? document.getElementById(carryId) : null;
@@ -2526,7 +2587,7 @@ function updateHints(){
       bottomCell?.classList.add("highlight");
     }
     if(uiState.arrow){
-      drawArrow(item, "practice");
+      drawArrowDeferred(item, "practice");
     }
 
     const topDigit = item.topIndex !== null && item.topIndex >= 0 ? topDigits[item.topIndex] : undefined;
@@ -2553,7 +2614,11 @@ function updateAttackHints(){
 
   const item = inputMap[currentStep];
   const target = document.getElementById(getCellId(item.rowIndex, item.col));
-  if(uiState.target && target) target.classList.add("target");
+  const targetField = document.getElementById(item.id);
+  if(uiState.target){
+    target?.classList.add("target");
+    targetField?.classList.add("target");
+  }
 
   const carryId = carryBoxByInput[item.id];
   const carry = carryId ? document.getElementById(carryId) : null;
@@ -2568,7 +2633,7 @@ function updateAttackHints(){
       bottomCell?.classList.add("highlight");
     }
     if(uiState.arrow){
-      drawArrow(item, "attack");
+      drawArrowDeferred(item, "attack");
     }
 
     const topDigit = item.topIndex !== null && item.topIndex >= 0 ? topDigits[item.topIndex] : undefined;
