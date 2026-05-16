@@ -722,10 +722,14 @@ td.wrong .handCanvas{
 }
 
 .handwritingFullscreen{position:fixed;inset:0;background:#f4f7fb;z-index:99999;display:flex;flex-direction:column;overflow:hidden;}
-.handwritingTopBar{padding:10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;justify-content:space-between;align-items:center;}
+.handwritingTopBar{padding:10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
 .handwritingBoardWrap{flex:1;overflow:auto;display:flex;justify-content:center;align-items:flex-start;padding:24px;}
 .handwritingBoardWrap #verticalArea,
 .handwritingBoardWrap #attackVerticalArea{transform:scale(1.8);transform-origin:top center;}
+.modeBadge{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#eef4ff;color:#1f3f80;font-weight:700;}
+#practicePlayPage .toggleBar{margin-top:0;}
+#practicePlayPage #hint{margin-top:10px;}
+#practicePlayPage #result{margin-top:12px;}
 .miniCarryBox{width:22px!important;height:22px!important;top:-1px!important;right:-1px!important;border:2px dashed #666!important;border-radius:6px;background:#fffde7!important;z-index:50!important;overflow:hidden!important;}
 .miniCarryInput{font-size:11px!important;}
 .handwritingPopup{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100000;}
@@ -736,6 +740,27 @@ td.wrong .handCanvas{
 @media (max-width:720px){
   .handwritingPopupCard{width:min(96vw,720px);}
   .handwritingPopupCanvas{height:300px;background:#f8fbff;}
+}
+
+#practicePlayPage.page{
+  max-width:none;
+  width:100%;
+  margin:0;
+  padding:0;
+}
+
+#practicePlayPage .handwritingBoardWrap{
+  min-height:0;
+}
+
+#practicePlayPage .handwritingBoardWrap #verticalArea{
+  transform:scale(1.85);
+  transform-origin:top center;
+}
+
+#practicePlayPage .handwritingTopBar .navBtn{
+  padding:8px 12px;
+  font-size:15px;
 }
 
 </style>
@@ -1027,33 +1052,34 @@ body.handwritingMode .handField.active .handCanvas{
       <div id="carryChecks"></div>
     </div>
   </div>
+</div>
 
-  <div class="toggleBar">
-    <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">
-      ➡️ 矢印
-    </button>
-    <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">
-      🔵 次マス
-    </button>
-    <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">
-      🟥🟩 判定
-    </button>
-    <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">
-      📝 式
-    </button>
-    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">
-      🪄 超ヒント
-    </button>
+<div id="practicePlayPage" class="page handwritingFullscreen">
+  <div class="handwritingTopBar">
+    <button class="navBtn" onclick="returnToPracticeSetup()">← 設定へ</button>
+    <div class="modeBadge">自由練習中</div>
+    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
   </div>
 
-  <div id="hint"></div>
-
-  <div id="verticalArea">
-    <svg id="arrowSvg"></svg>
-    <div id="tableArea"></div>
+  <div class="toggleBar" style="margin:10px 0 0;">
+    <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
+    <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
+    <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
+    <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
+    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
+    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊 効果音</button>
   </div>
 
-  <div id="result"></div>
+  <div id="hint" style="margin-top:10px;"></div>
+
+  <div class="handwritingBoardWrap">
+    <div id="verticalArea">
+      <svg id="arrowSvg"></svg>
+      <div id="tableArea"></div>
+    </div>
+  </div>
+
+  <div id="result" style="margin-top:12px;"></div>
 </div>
 
 <div id="attackSetupPage" class="page">
@@ -1290,6 +1316,11 @@ function openPractice(){
   if(appState.inputMode === "handwriting"){
     ensureHandwritingModel().catch(()=>{});
   }
+}
+
+function returnToPracticeSetup(){
+  clearPracticeWorkspace();
+  showPage("practicePage");
 }
 
 
@@ -2050,6 +2081,7 @@ function generateProblem(preserveCustom=false){
     ok = matched;
   }
 
+  showPage("practicePlayPage");
   buildTable("practice");
   addEvents("practice");
   checkInputs("practice");
