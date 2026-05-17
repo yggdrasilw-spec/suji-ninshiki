@@ -4086,97 +4086,488 @@ body.handwritingMode .miniCarryBox.handField{
 }
 </style>
 
-<script id="handwritingAutoFitFix">
-(function(){
-  const MIN_SCALE = 0.62;
-  let fitTimer = 0;
 
-  function getActiveBoard(){
-    if(typeof appState === 'undefined' || appState.inputMode !== 'handwriting') return null;
-    if(appState.page === 'practicePlayPage') return document.getElementById('verticalArea');
-    if(appState.page === 'attackPlayPage') return document.getElementById('attackVerticalArea');
+<style id="boardGestureFixes">
+body.handwritingMode .practiceBoardWrap,
+body.handwritingMode .attackBoardShell{
+  overflow:hidden !important;
+}
+
+body.handwritingMode #verticalArea,
+body.handwritingMode #attackVerticalArea{
+  display:inline-block !important;
+  width:fit-content !important;
+  max-width:none !important;
+  overflow:visible !important;
+  margin:0 !important;
+  align-self:flex-start !important;
+  transform-origin:0 0 !important;
+  will-change:transform !important;
+  touch-action:none !important;
+  user-select:none !important;
+}
+
+body.handwritingMode #verticalArea table,
+body.handwritingMode #attackVerticalArea table{
+  transform:none !important;
+}
+
+body.handwritingMode .handField,
+body.handwritingMode .handCanvas,
+body.handwritingMode .miniCarryBox.handField{
+  touch-action:none !important;
+  user-select:none !important;
+}
+
+body.handwritingMode .practiceBoardWrap,
+body.handwritingMode .attackBoardShell,
+body.handwritingMode .handwritingBoardWrap{
+  touch-action:none !important;
+}
+
+body.handwritingMode .handwritingPopupCanvas{
+  touch-action:none !important;
+}
+</style>
+
+<script id="boardManagedZoom">
+(function(){
+  const MIN_SCALE = 0.42;
+  const MAX_SCALE = 2.50;
+  const FIT_MARGIN = 0.94;
+
+  const boardState = {
+    practice: createBoardState('practice', 'verticalArea', '.practiceBoardWrap', '.practiceTopBar', '.practiceMiniToolbar', '#hint', '#result'),
+    attack: createBoardState('attack', 'attackVerticalArea', '.attackBoardShell', '.attackTopBar', '.attackMiniToolbar', '#attackHint', '#attackResult')
+  };
+
+  let fitTimer = 0;
+  let overlayTimer = 0;
+  let arrowTimer = 0;
+  let resizeObserver = null;
+  let mutationObserver = null;
+  let activeGestureCount = 0;
+  window.__boardGestureActive = false;
+  window.__boardZoomMode = 'managed';
+
+  const original = {
+    updateHints: typeof window.updateHints === 'function' ? window.updateHints : null,
+    updateAttackHints: typeof window.updateAttackHints === 'function' ? window.updateAttackHints : null,
+    drawArrowDeferred: typeof window.drawArrowDeferred === 'function' ? window.drawArrowDeferred : null,
+    showPage: typeof window.showPage === 'function' ? window.showPage : null,
+    buildTable: typeof window.buildTable === 'function' ? window.buildTable : null,
+    initHandwritingFields: typeof window.initHandwritingFields === 'function' ? window.initHandwritingFields : null,
+    closePopup: typeof window.closePopup === 'function' ? window.closePopup : null,
+    resizeAllHandwritingFields: typeof window.resizeAllHandwritingFields === 'function' ? window.resizeAllHandwritingFields : null,
+    refreshHandwritingDisplays: typeof window.refreshHandwritingDisplays === 'function' ? window.refreshHandwritingDisplays : null,
+    startHandwritingStroke: typeof window.startHandwritingStroke === 'function' ? window.startHandwritingStroke : null,
+    moveHandwritingStroke: typeof window.moveHandwritingStroke === 'function' ? window.moveHandwritingStroke : null,
+    endHandwritingStroke: typeof window.endHandwritingStroke === 'function' ? window.endHandwritingStroke : null
+  };
+
+  function createBoardState(kind, id, viewportSelector, topBarSelector, toolbarSelector, hintSelector, resultSelector){
+    return {
+      kind,
+      id,
+      el: null,
+      viewportSelector,
+      topBarSelector,
+      toolbarSelector,
+      hintSelector,
+      resultSelector,
+      fitScale: 1,
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      gesture: false,
+      pointers: new Map(),
+      gestureStart: null,
+      pendingPointerStyle: false,
+      fitScheduled: false,
+      arrowScheduled: false,
+      latestArrowItem: null,
+      latestArrowKind: kind,
+      boardMutationSeen: false
+    };
+  }
+
+  function currentKind(){
+    if(typeof appState === 'undefined') return null;
+    if(appState.page === 'practicePlayPage') return 'practice';
+    if(appState.page === 'attackPlayPage') return 'attack';
     return null;
   }
 
-  function resetActiveBoardZoom(){
-    const board = getActiveBoard();
-    if(!board) return;
-    board.style.zoom = '1';
-    board.dataset.fitScale = '1';
+  function getBoard(kind){
+    const board = boardState[kind];
+    if(!board) return null;
+    if(!board.el){
+      board.el = document.getElementById(board.id);
+    }
+    return board.el ? board : null;
   }
 
-  function fitBoard(){
-    const board = getActiveBoard();
-    if(!board) return;
+  function getViewport(kind){
+    const board = getBoard(kind);
+    if(!board) return null;
+    return board.el.parentElement || null;
+  }
 
+  function clamp(value, min, max){
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function setBoardTransform(board){
+    if(!board || !board.el) return;
+    const transform = `translate(${board.panX}px, ${board.panY}px) scale(${board.scale})`;
+    board.el.style.transformOrigin = '0 0';
+    board.el.style.transform = transform;
+    board.el.style.webkitTransform = transform;
+    board.el.style.zoom = '1';
+    board.el.dataset.fitScale = String(board.fitScale || 1);
+  }
+
+  function readNaturalRect(board){
+    const el = board?.el;
+    if(!el) return null;
+    const prevTransform = el.style.transform;
+    const prevOrigin = el.style.transformOrigin;
+    const prevZoom = el.style.zoom;
+    el.style.transform = 'none';
+    el.style.transformOrigin = '0 0';
+    el.style.zoom = '1';
+    const rect = el.getBoundingClientRect();
+    el.style.transform = prevTransform;
+    el.style.transformOrigin = prevOrigin;
+    el.style.zoom = prevZoom;
+    return rect;
+  }
+
+  function getAvailableHeight(kind){
+    const board = getBoard(kind);
+    if(!board) return 0;
+    const topBar = document.querySelector(board.topBarSelector);
+    const toolbar = document.querySelector(board.toolbarSelector);
+    const hint = document.querySelector(board.hintSelector);
+    const result = document.querySelector(board.resultSelector);
+    const occupiedTop = (topBar?.getBoundingClientRect().height || 0)
+      + (toolbar?.getBoundingClientRect().height || 0)
+      + (hint?.getBoundingClientRect().height || 0)
+      + (result?.getBoundingClientRect().height || 0);
+    return Math.max(180, (window.innerHeight || document.documentElement.clientHeight) - occupiedTop - 16);
+  }
+
+  function applyBoardFit(kind, force=false){
+    const board = getBoard(kind);
+    if(!board) return;
+    if(typeof appState !== 'undefined' && appState.inputMode !== 'handwriting') return;
     const popup = document.getElementById('handwritingPopup');
-    if(popup && popup.classList.contains('active')) return;
+    if(popup && popup.classList.contains('active') && !force) return;
 
-    const prevZoom = board.style.zoom;
-    board.style.zoom = '1';
-    const naturalRect = board.getBoundingClientRect();
-    board.style.zoom = prevZoom || '';
+    const viewport = getViewport(kind);
+    const natural = readNaturalRect(board);
+    if(!viewport || !natural || natural.width < 2 || natural.height < 2) return;
 
-    const topBar = document.querySelector(appState.page === 'practicePlayPage' ? '.practiceTopBar' : '.attackTopBar');
-    const toolbar = document.querySelector(appState.page === 'practicePlayPage' ? '.practiceMiniToolbar' : '.attackMiniToolbar');
-    const hint = document.getElementById(appState.page === 'practicePlayPage' ? 'hint' : 'attackHint');
-    const result = document.getElementById(appState.page === 'practicePlayPage' ? 'result' : 'attackResult');
+    const availW = Math.max(220, (window.innerWidth || document.documentElement.clientWidth) - 18);
+    const availH = getAvailableHeight(kind);
 
-    const availW = Math.max(320, (window.innerWidth || document.documentElement.clientWidth) - 18);
-    const occupiedTop = (topBar?.getBoundingClientRect().height || 0) + (toolbar?.getBoundingClientRect().height || 0) + (hint?.getBoundingClientRect().height || 0) + (result?.getBoundingClientRect().height || 0);
-    const boardTop = board.parentElement?.getBoundingClientRect().top || 0;
-    const availH = Math.max(220, (window.innerHeight || document.documentElement.clientHeight) - boardTop - occupiedTop - 16);
-
-    let scale = Math.min(1, availW / Math.max(1, naturalRect.width), availH / Math.max(1, naturalRect.height));
+    let scale = Math.min(availW / natural.width, availH / natural.height, 1);
     if(!Number.isFinite(scale) || scale <= 0) scale = 1;
-    scale = Math.max(MIN_SCALE, Math.min(1, scale));
+    scale = clamp(scale * FIT_MARGIN, MIN_SCALE, MAX_SCALE);
 
-    board.style.zoom = String(scale);
-    board.dataset.fitScale = String(scale);
-
-    if(typeof resizeAllHandwritingFields === 'function'){
-      resizeAllHandwritingFields();
-    }
-    if(typeof refreshHandwritingDisplays === 'function'){
-      refreshHandwritingDisplays();
-    }
+    board.fitScale = scale;
+    board.scale = scale;
+    board.panX = Math.max(0, Math.round((availW - (natural.width * scale)) / 2));
+    board.panY = 0;
+    setBoardTransform(board);
   }
 
-  function scheduleFit(){
+  function requestBoardFit(kind = 'current', force=false){
     clearTimeout(fitTimer);
-    fitTimer = setTimeout(fitBoard, 60);
+    fitTimer = setTimeout(()=>{
+      const target = kind === 'current' ? currentKind() : kind;
+      if(target === 'practice' || target === 'attack'){
+        applyBoardFit(target, force);
+        requestOverlayRefresh(target);
+      }else{
+        applyBoardFit('practice', force);
+        applyBoardFit('attack', force);
+        requestOverlayRefresh('all');
+      }
+    }, 24);
   }
 
-  function observeTarget(id){
-    const el = document.getElementById(id);
-    if(!el || el.__handwritingFitObserved) return;
-    el.__handwritingFitObserved = true;
-    new MutationObserver(scheduleFit).observe(el, { childList:true, subtree:true });
+  function resetActiveBoardZoom(){
+    const kind = currentKind();
+    if(!kind) return;
+    applyBoardFit(kind, true);
+  }
+
+  function beginGesture(board){
+    if(!board || !board.el || board.pointers.size < 2) return;
+    const pts = Array.from(board.pointers.values()).slice(0, 2);
+    const p1 = pts[0];
+    const p2 = pts[1];
+    const center = {
+      x: (p1.x + p2.x) / 2,
+      y: (p1.y + p2.y) / 2
+    };
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    board.gesture = true;
+    board.gestureStart = {
+      scale: board.scale,
+      panX: board.panX,
+      panY: board.panY,
+      center,
+      dist,
+      worldX: (center.x - board.panX) / Math.max(board.scale, 0.0001),
+      worldY: (center.y - board.panY) / Math.max(board.scale, 0.0001)
+    };
+    activeGestureCount += 1;
+    window.__boardGestureActive = true;
+  }
+
+  function endGesture(board){
+    if(!board || !board.gesture) return;
+    board.gesture = false;
+    board.gestureStart = null;
+    activeGestureCount = Math.max(0, activeGestureCount - 1);
+    window.__boardGestureActive = activeGestureCount > 0;
+  }
+
+  function updateGesture(board){
+    if(!board || !board.gesture || !board.gestureStart || board.pointers.size < 2) return;
+    const pts = Array.from(board.pointers.values()).slice(0, 2);
+    const p1 = pts[0];
+    const p2 = pts[1];
+    const center = {
+      x: (p1.x + p2.x) / 2,
+      y: (p1.y + p2.y) / 2
+    };
+    const dist = Math.max(1, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+    const start = board.gestureStart;
+    const scale = clamp(start.scale * (dist / Math.max(1, start.dist)), MIN_SCALE, MAX_SCALE);
+    board.scale = scale;
+    board.panX = center.x - (start.worldX * scale);
+    board.panY = center.y - (start.worldY * scale);
+    setBoardTransform(board);
+  }
+
+  function boardLocalPoint(board, e){
+    const rect = board.el.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  }
+
+  function boardPointerDown(kind, e){
+    if(typeof appState !== 'undefined' && appState.inputMode !== 'handwriting') return;
+    if(e.pointerType !== 'touch') return;
+    const board = getBoard(kind);
+    if(!board || !board.el) return;
+    if(!board.el.contains(e.target)) return;
+    const p = boardLocalPoint(board, e);
+    board.pointers.set(e.pointerId, { x: p.x, y: p.y });
+    try{ board.el.setPointerCapture(e.pointerId); }catch(err){}
+    if(board.pointers.size >= 2 && !board.gesture){
+      beginGesture(board);
+    }
+  }
+
+  function boardPointerMove(kind, e){
+    const board = getBoard(kind);
+    if(!board || !board.el) return;
+    if(!board.pointers.has(e.pointerId)) return;
+    const p = boardLocalPoint(board, e);
+    board.pointers.set(e.pointerId, { x: p.x, y: p.y });
+    if(board.gesture){
+      e.preventDefault();
+      updateGesture(board);
+    }
+  }
+
+  function boardPointerUp(kind, e){
+    const board = getBoard(kind);
+    if(!board || !board.el) return;
+    if(!board.pointers.has(e.pointerId)) return;
+    board.pointers.delete(e.pointerId);
+    if(board.gesture){
+      e.preventDefault();
+      if(board.pointers.size < 2){
+        endGesture(board);
+      }else{
+        updateGesture(board);
+      }
+    }
+  }
+
+  function bindBoardGesture(kind){
+    const board = getBoard(kind);
+    if(!board || !board.el || board.el.__gestureBound) return;
+    board.el.__gestureBound = true;
+    board.el.addEventListener('pointerdown', e => boardPointerDown(kind, e), { passive:false });
+    board.el.addEventListener('pointermove', e => boardPointerMove(kind, e), { passive:false });
+    board.el.addEventListener('pointerup', e => boardPointerUp(kind, e), { passive:false });
+    board.el.addEventListener('pointercancel', e => boardPointerUp(kind, e), { passive:false });
+    board.el.addEventListener('pointerleave', e => boardPointerUp(kind, e), { passive:false });
+  }
+
+  function requestOverlayRefresh(kind='current'){
+    clearTimeout(overlayTimer);
+    overlayTimer = setTimeout(()=>{
+      const target = kind === 'current' ? currentKind() : kind;
+      if(target === 'practice' && original.updateHints){
+        try{ original.updateHints(); }catch(err){}
+      }else if(target === 'attack' && original.updateAttackHints){
+        try{ original.updateAttackHints(); }catch(err){}
+      }else if(target === 'all'){
+        if(original.updateHints){ try{ original.updateHints(); }catch(err){} }
+        if(original.updateAttackHints){ try{ original.updateAttackHints(); }catch(err){} }
+      }
+    }, 16);
+  }
+
+  function scheduleArrowDraw(kind, item){
+    const board = getBoard(kind);
+    if(!board) return;
+    board.latestArrowItem = item;
+    if(board.arrowScheduled) return;
+    board.arrowScheduled = true;
+    requestAnimationFrame(()=>{
+      board.arrowScheduled = false;
+      const latest = board.latestArrowItem;
+      board.latestArrowItem = null;
+      if(!latest || !original.drawArrowDeferred || !board.el) return;
+      try{
+        original.drawArrowDeferred(latest, kind);
+      }catch(err){}
+    });
+  }
+
+  function wrapUpdates(){
+    if(original.updateHints){
+      window.updateHints = function(){
+        requestOverlayRefresh('practice');
+      };
+    }
+    if(original.updateAttackHints){
+      window.updateAttackHints = function(){
+        requestOverlayRefresh('attack');
+      };
+    }
+    if(original.drawArrowDeferred){
+      window.drawArrowDeferred = function(item, kind){
+        scheduleArrowDraw(kind, item);
+      };
+    }
+    if(original.showPage){
+      window.showPage = function(pageId){
+        const result = original.showPage(pageId);
+        requestBoardFit('current');
+        return result;
+      };
+    }
+    if(original.buildTable){
+      window.buildTable = function(kind){
+        const result = original.buildTable(kind);
+        requestBoardFit(kind);
+        return result;
+      };
+    }
+    if(original.initHandwritingFields){
+      window.initHandwritingFields = function(kind){
+        const result = original.initHandwritingFields(kind);
+        bindBoardGesture(kind === 'attack' ? 'attack' : 'practice');
+        requestBoardFit(kind);
+        return result;
+      };
+    }
+    if(original.closePopup){
+      window.closePopup = function(){
+        const result = original.closePopup();
+        activeGestureCount = 0;
+        window.__boardGestureActive = false;
+        requestBoardFit('current', true);
+        return result;
+      };
+    }
+    if(original.resizeAllHandwritingFields){
+      window.resizeAllHandwritingFields = function(){
+        const result = original.resizeAllHandwritingFields();
+        requestBoardFit('current');
+        return result;
+      };
+    }
+    if(original.refreshHandwritingDisplays){
+      window.refreshHandwritingDisplays = function(){
+        return original.refreshHandwritingDisplays();
+      };
+    }
+    if(original.startHandwritingStroke){
+      window.startHandwritingStroke = function(e, st){
+        if(window.__boardGestureActive) return;
+        return original.startHandwritingStroke(e, st);
+      };
+    }
+    if(original.moveHandwritingStroke){
+      window.moveHandwritingStroke = function(e, st){
+        if(window.__boardGestureActive) return;
+        return original.moveHandwritingStroke(e, st);
+      };
+    }
+    if(original.endHandwritingStroke){
+      window.endHandwritingStroke = function(e, st){
+        if(window.__boardGestureActive) return;
+        return original.endHandwritingStroke(e, st);
+      };
+    }
+  }
+
+  function observeLayoutChanges(){
+    const ids = ['tableArea', 'attackTableArea', 'handwritingPopup'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      if(!mutationObserver && 'MutationObserver' in window){
+        mutationObserver = new MutationObserver(()=>requestBoardFit('current'));
+      }
+      try{ mutationObserver.observe(el, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] }); }catch(err){}
+    });
+    if('ResizeObserver' in window && !resizeObserver){
+      resizeObserver = new ResizeObserver(()=>requestBoardFit('current'));
+      ['verticalArea','attackVerticalArea'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el){
+          try{ resizeObserver.observe(el); }catch(err){}
+        }
+      });
+    }
   }
 
   function init(){
-    observeTarget('tableArea');
-    observeTarget('attackTableArea');
-    observeTarget('handwritingPopup');
-    scheduleFit();
+    bindBoardGesture('practice');
+    bindBoardGesture('attack');
+    wrapUpdates();
+    observeLayoutChanges();
+    requestBoardFit('current', true);
+    setTimeout(()=>requestBoardFit('current', true), 300);
+    setTimeout(()=>requestBoardFit('current', true), 900);
   }
 
   window.__resetActiveBoardZoom = resetActiveBoardZoom;
-  window.__scheduleHandwritingBoardFit = scheduleFit;
+  window.__scheduleHandwritingBoardFit = function(){
+    requestBoardFit('current');
+  };
+  window.__triggerIpadLayoutRefresh = function(){
+    requestBoardFit('current');
+  };
 
-  window.addEventListener('resize', scheduleFit, { passive:true });
-  window.addEventListener('orientationchange', ()=>setTimeout(scheduleFit, 80), { passive:true });
-
-  document.addEventListener('DOMContentLoaded', init);
-  setTimeout(init, 600);
-
-  const oldShowPage = window.showPage;
-  if(typeof oldShowPage === 'function'){
-    window.showPage = function(pageId){
-      const result = oldShowPage(pageId);
-      scheduleFit();
-      return result;
-    };
+  window.addEventListener('resize', ()=>requestBoardFit('current'), { passive:true });
+  window.addEventListener('orientationchange', ()=>setTimeout(()=>requestBoardFit('current', true), 80), { passive:true });
+  document.addEventListener('DOMContentLoaded', init, { once:true });
+  if(document.readyState !== 'loading'){
+    init();
   }
 })();
 </script>
