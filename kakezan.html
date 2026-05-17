@@ -564,7 +564,6 @@ td{
   margin-top:12px;
 }
 
-
 .modeBadge{
   display:inline-flex;
   align-items:center;
@@ -801,7 +800,6 @@ td.wrong .handCanvas{
 .handwritingPopupCard{background:white;padding:18px;border-radius:24px;width:min(96vw,720px);box-shadow:0 20px 60px rgba(0,0,0,.28);}
 .handwritingPopupCanvas{width:100%;height:340px;background:transparent;border:3px solid #90caf9;border-radius:18px;touch-action:none;display:block;}
 
-
 #verticalArea table,
 #attackVerticalArea table{
   max-width: 100%;
@@ -821,7 +819,6 @@ body.handwritingMode td{
   text-align: center;
   letter-spacing: .04em;
 }
-
 
 @media (max-width:720px){
   .handwritingPopupCard{width:min(96vw,720px);}
@@ -978,12 +975,11 @@ body.handwritingMode .handField.active .handCanvas{
   </div>
 </div>
 
-
 <div id="settingsPage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <button class="navBtn" onclick="openHome()">🏠</button>
     <div class="muted">設定ページ</div>
-    <button class="navBtn" onclick="openPractice()">🧩 自由練習へ</button>
+    <button class="navBtn" onclick="openPractice()" aria-label="自由練習へ">🧩</button>
   </div>
 
   <div class="sectionPanel">
@@ -1036,9 +1032,9 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="practicePage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <button class="navBtn" onclick="openHome()">🏠</button>
     <div class="muted">自由練習モード</div>
-    <button class="navBtn" onclick="openAttackSetup()">⏱️ タイムアタックへ</button>
+    <button class="navBtn" onclick="openAttackSetup()" aria-label="タイムアタックへ">⏱️</button>
   </div>
 
   <div class="sectionPanel">
@@ -1095,7 +1091,7 @@ body.handwritingMode .handField.active .handCanvas{
         <p>正誤判定と正解時に効果音を鳴らします。</p>
         <div class="toggleBar" style="justify-content:flex-start;">
           <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">
-            🔊 効果音
+            🔊
           </button>
         </div>
       </div>
@@ -1126,21 +1122,21 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="practicePlayPage" class="page handwritingFullscreen">
   <div class="handwritingTopBar practiceTopBar">
-    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
-    <div class="modeBadge">自由練習中</div>
+    <button class="navBtn" onclick="openHome()">🏠</button>
+    <div class="modeBadge">🧩</div>
     <div class="practiceTopActions">
-      <button class="navBtn" onclick="openSettings()">⚙️ 設定</button>
-      <button class="navBtn" onclick="returnToPracticeSetup()">🔁 別の問題</button>
+      <button class="navBtn" onclick="openSettings()">⚙️</button>
+      <button class="navBtn" onclick="returnToPracticeSetup()">🔁</button>
     </div>
   </div>
 
   <div class="toggleBar practiceMiniToolbar">
-    <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
-    <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
-    <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
-    <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
-    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
-    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊 効果音</button>
+    <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
+    <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵</button>
+    <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
+    <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
+    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
+    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
   </div>
 
   <div id="hint" style="margin-top:8px;"></div>
@@ -1157,9 +1153,9 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="attackSetupPage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <button class="navBtn" onclick="openHome()">🏠</button>
     <div class="muted">タイムアタック設定</div>
-    <button class="navBtn" onclick="openPractice()">🧩 自由練習へ</button>
+    <button class="navBtn" onclick="openPractice()" aria-label="自由練習へ">🧩</button>
   </div>
 
   <div class="sectionPanel">
@@ -1221,11 +1217,11 @@ body.handwritingMode .handField.active .handCanvas{
         <h4>ヒント</h4>
         <p>基本はヒントなしで始めます。</p>
         <div class="toggleBar" style="justify-content:flex-start;">
-          <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
-          <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
-          <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
-          <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
-          <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
+          <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
+          <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🎯</button>
+          <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">✅</button>
+          <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
+          <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
         </div>
       </div>
     </div>
@@ -1238,27 +1234,27 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="attackPlayPage" class="page handwritingFullscreen attackFullscreen">
   <div class="attackTopBar">
-    <button class="navBtn" onclick="confirmLeaveAttack()">🏠 ホーム</button>
+    <button class="navBtn" onclick="confirmLeaveAttack()">🏠</button>
 
     <div class="attackHud">
       <span>🕒 <b id="attackElapsed">00:00</b></span>
-      <span>残り <b id="attackProgress">0 / 0</b></span>
-      <span>正解 <b id="attackCorrectCount">0</b></span>
-      <span>ミス <b id="attackMissCount">0</b></span>
-      <span>目標 <b id="attackTargetDisplay">00:00</b></span>
-      <span>達成 <b id="attackGoalStatus">-</b></span>
+      <span>📊 <b id="attackProgress">0/0</b></span>
+      <span>✅ <b id="attackCorrectCount">0</b></span>
+      <span>❌ <b id="attackMissCount">0</b></span>
+      <span>🎯 <b id="attackTargetDisplay">00:00</b></span>
+      <span>🏁 <b id="attackGoalStatus">-</b></span>
     </div>
 
-    <button class="navBtn" onclick="openAttackSetup()">⚙️ 設定</button>
+    <button class="navBtn" onclick="openAttackSetup()">⚙️</button>
   </div>
 
   <div class="toggleBar attackMiniToolbar">
-    <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️ 矢印</button>
-    <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵 次マス</button>
-    <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩 判定</button>
-    <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝 式</button>
-    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄 超ヒント</button>
-    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊 効果音</button>
+    <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
+    <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵</button>
+    <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
+    <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
+    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
+    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
   </div>
 
   <div id="attackHint" class="attackHint"></div>
@@ -1290,9 +1286,9 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="recordPage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠 ホーム</button>
+    <button class="navBtn" onclick="openHome()">🏠</button>
     <div class="muted">記録ページ</div>
-    <button class="navBtn" onclick="openAttackSetup()">⏱️ タイムアタックへ</button>
+    <button class="navBtn" onclick="openAttackSetup()" aria-label="タイムアタックへ">⏱️</button>
   </div>
 
   <div class="sectionPanel">
@@ -1376,8 +1372,6 @@ function openHome(){
   appState.page = "home";
 }
 
-
-
 function openPractice(){
   stopAttackTimer();
   clearAttackWorkspace();
@@ -1402,8 +1396,6 @@ function enterPracticeFullscreen(){
   }
 }
 
-
-
 function openAttackSetup(){
   stopAttackTimer();
   clearPracticeWorkspace();
@@ -1423,15 +1415,11 @@ function openAttackSetup(){
   }
 }
 
-
-
 function openRecords(){
   stopAttackTimer();
   showPage("recordPage");
   renderRecords();
 }
-
-
 
 function confirmLeaveAttack(){
   if(appState.attackActive){
@@ -1442,7 +1430,6 @@ function confirmLeaveAttack(){
   clearAttackWorkspace();
   openHome();
 }
-
 
 function showPage(pageId){
   document.querySelectorAll(".page").forEach(page=>{
@@ -1471,7 +1458,6 @@ function clearPracticeWorkspace(){
   destroyHandwritingFields();
 }
 
-
 function clearAttackWorkspace(){
   const tableArea = document.getElementById("attackTableArea");
   const arrowSvg = document.getElementById("attackArrowSvg");
@@ -1485,7 +1471,6 @@ function clearAttackWorkspace(){
   if(finishPanel) finishPanel.style.display = "none";
   destroyHandwritingFields();
 }
-
 
 function rand(min, max){
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -1610,7 +1595,6 @@ function readSuperHintSetting(){
   }
 }
 
-
 function readInputModeSetting(){
   const raw = localStorage.getItem(STORAGE_KEYS.inputMode);
   if(raw === null) return "keyboard";
@@ -1655,7 +1639,6 @@ function saveInputModeFromSettings(){
   }
   alert(mode === "handwriting" ? "手書きモードに切り替えました。" : "キーボードモードに切り替えました。");
 }
-
 
 async function ensureHandwritingModel(){
   if(handwritingModel) return handwritingModel;
@@ -1724,7 +1707,6 @@ function buildFieldHtml(fieldId, correct, options={}){
   const inputClass = isMini ? "miniCarryInput" : "mainInput";
   return `<input class="${inputClass}" id="${fieldId}" maxlength="1" inputmode="numeric">`;
 }
-
 
 function getFieldNode(fieldId){
   return document.getElementById(fieldId);
@@ -1805,7 +1787,6 @@ function restoreCanvasContent(canvas, snapshot){
   }catch(e){}
 }
 
-
 function clearHandwritingField(fieldId){
   const st = handwritingFields[fieldId];
   if(st){
@@ -1853,7 +1834,6 @@ function initHandwritingFields(kind){
   });
 }
 
-
 function resizeHandwritingField(st){
   const rect = st.visibleCanvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -1869,7 +1849,6 @@ function resizeHandwritingField(st){
   st.penWidth = (st.field.classList.contains("miniCarryBox") ? 3 : 6) * dpr;
 }
 
-
 function bindHandwritingEvents(st){
   const canvas = st.visibleCanvas;
   canvas.addEventListener("pointerdown", e => startHandwritingStroke(e, st));
@@ -1878,7 +1857,6 @@ function bindHandwritingEvents(st){
   canvas.addEventListener("pointercancel", e => endHandwritingStroke(e, st));
   canvas.addEventListener("pointerleave", e => endHandwritingStroke(e, st));
 }
-
 
 function redrawCurrentHandwritingState(st){
   if(st.value){
@@ -1890,7 +1868,6 @@ function redrawCurrentHandwritingState(st){
     st.valueEl.style.display = "none";
   }
 }
-
 
 function getCanvasPoint(e, canvas){
   const rect = canvas.getBoundingClientRect();
@@ -1921,7 +1898,6 @@ function startHandwritingStroke(e, st){
   clearTimeout(handwritingPendingTimers[st.fieldId]);
 }
 
-
 function moveHandwritingStroke(e, st){
   if(!st.drawing || st.activePointerId !== e.pointerId) return;
   e.preventDefault();
@@ -1929,7 +1905,6 @@ function moveHandwritingStroke(e, st){
   drawHandwritingPoint(st, p, false);
   st.lastPoint = p;
 }
-
 
 function endHandwritingStroke(e, st){
   if(!st.drawing || st.activePointerId !== e.pointerId) return;
@@ -1948,7 +1923,6 @@ function endHandwritingStroke(e, st){
     }
   }, 250);
 }
-
 
 function drawHandwritingPoint(st, point, first){
   const c = st.visibleCtx;
@@ -1982,7 +1956,6 @@ function drawHandwritingPoint(st, point, first){
   r.lineTo(point.x, point.y);
   r.stroke();
 }
-
 
 function preprocessCanvas(canvas, invert=false){
   return tf.tidy(() => {
@@ -2230,7 +2203,6 @@ function generateProblem(preserveCustom=false){
   }
 }
 
-
 function generateCustomProblem(){
   const topStr = document.getElementById("customTopInput").value.trim();
   const bottomStr = document.getElementById("customBottomInput").value.trim();
@@ -2254,7 +2226,6 @@ function generateCustomProblem(){
   generateProblem(true);
   enterPracticeFullscreen();
 }
-
 
 function buildTable(kind){
   destroyHandwritingFields();
@@ -2396,7 +2367,6 @@ function buildTable(kind){
   reorderInputMap();
 }
 
-
 function reorderInputMap(){
   inputMap.sort((a,b)=>{
     if(a.row !== b.row) return a.row - b.row;
@@ -2426,8 +2396,6 @@ function appendCarryBox(rowIndex, destCol, sourceInputId, carryText=""){
   carryBoxByInput[sourceInputId] = box.id;
 }
 
-
-
 function rebuildCarryBoxes(){
   document.querySelectorAll(".miniCarryBox").forEach(box=>box.remove());
   document.querySelectorAll("td.hasCarryBox").forEach(td=>td.classList.remove("hasCarryBox"));
@@ -2435,7 +2403,6 @@ function rebuildCarryBoxes(){
   addCarryBoxes();
   addFinalCarryBoxes();
 }
-
 
 function addCarryBoxes(){
   const partialRows = answerRows.filter(row=>row.kind === "partial");
@@ -2455,7 +2422,6 @@ function addCarryBoxes(){
     }
   });
 }
-
 
 function addFinalCarryBoxes(){
   if(bottomDigits.length <= 1) return;
@@ -2480,7 +2446,6 @@ function addFinalCarryBoxes(){
   }
 }
 
-
 function addEvents(kind){
   if(appState.inputMode === "handwriting"){
     requestAnimationFrame(()=>{
@@ -2503,7 +2468,6 @@ function addEvents(kind){
     });
   });
 }
-
 
 function checkInputs(kind){
   const shouldSound = uiState.sound;
@@ -2563,7 +2527,6 @@ function checkInputs(kind){
   });
 }
 
-
 function advanceStep(kind){
   while(currentStep < inputMap.length){
     const item = inputMap[currentStep];
@@ -2581,7 +2544,6 @@ function advanceStep(kind){
     updateHints();
   }
 }
-
 
 function clearHighlights(){
   document.querySelectorAll("td, .handField, .miniCarryBox, .mainInput, .miniCarryInput").forEach(el=>{
@@ -2602,8 +2564,17 @@ function drawArrow(item, kind){
   const svgId = kind === "attack" ? "attackArrowSvg" : "arrowSvg";
   const areaId = kind === "attack" ? "attackVerticalArea" : "verticalArea";
   const svg = document.getElementById(svgId);
-  if(!svg) return;
+  const area = document.getElementById(areaId);
+  if(!svg || !area) return;
 
+  const topCell = document.getElementById(topCellIds[item.topIndex]);
+  const bottomCell = document.getElementById(bottomCellIds[bottomDigits.length - 1 - item.bottomIndex]);
+  if(!topCell || !bottomCell) return;
+
+  const naturalW = Math.max(1, area.scrollWidth || area.offsetWidth || area.getBoundingClientRect().width || 1);
+  const naturalH = Math.max(1, area.scrollHeight || area.offsetHeight || area.getBoundingClientRect().height || 1);
+  svg.setAttribute("viewBox", `0 0 ${naturalW} ${naturalH}`);
+  svg.setAttribute("preserveAspectRatio", "none");
   svg.innerHTML = `
     <defs>
       <marker id="${kind}ArrowHead" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto">
@@ -2612,21 +2583,29 @@ function drawArrow(item, kind){
     </defs>
   `;
 
-  const topCell = document.getElementById(topCellIds[item.topIndex]);
-  const bottomCell = document.getElementById(bottomCellIds[bottomDigits.length - 1 - item.bottomIndex]);
-  if(!topCell || !bottomCell) return;
+  const localPos = (el, root) => {
+    let left = 0;
+    let top = 0;
+    let node = el;
+    while(node && node !== root){
+      left += node.offsetLeft || 0;
+      top += node.offsetTop || 0;
+      node = node.offsetParent;
+    }
+    return {
+      left,
+      top,
+      width: el.offsetWidth || el.getBoundingClientRect().width || 0,
+      height: el.offsetHeight || el.getBoundingClientRect().height || 0
+    };
+  };
 
-  const area = document.getElementById(areaId);
-  if(!area) return;
-
-  const base = area.getBoundingClientRect();
-  const from = bottomCell.getBoundingClientRect();
-  const to = topCell.getBoundingClientRect();
-
-  const x1 = from.left + from.width/2 - base.left;
-  const y1 = from.top - base.top + 8;
-  const x2 = to.left + to.width/2 - base.left;
-  const y2 = to.bottom - base.top - 8;
+  const from = localPos(bottomCell, area);
+  const to = localPos(topCell, area);
+  const x1 = from.left + from.width / 2;
+  const y1 = from.top + 8;
+  const x2 = to.left + to.width / 2;
+  const y2 = to.top + to.height - 8;
 
   const path = `M ${x1} ${y1} L ${x2} ${y2}`;
   const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -2785,7 +2764,6 @@ function checkFinal(kind){
   }
 }
 
-
 function updatePracticeResultIfComplete(){
   if(finalShown) return;
 }
@@ -2835,7 +2813,6 @@ function startAttack(){
   nextAttackQuestion(true);
   startAttackTimer();
 }
-
 
 function attackQuestionMatchesCarry(top, bottom){
   const bottomLen = String(bottom).length;
@@ -2890,7 +2867,6 @@ function nextAttackQuestion(initial=false){
   }
   updateAttackStats();
 }
-
 
 function startAttackTimer(){
   stopAttackTimer();
@@ -3171,7 +3147,6 @@ function initFromStorage(){
   populateWheelSelect(document.getElementById("attackTargetMinTens"));
   populateWheelSelect(document.getElementById("attackTargetMinOnes"));
 }
-
 
 document.addEventListener("DOMContentLoaded", ()=>{
   initFromStorage();
@@ -3674,7 +3649,6 @@ document.addEventListener("DOMContentLoaded", ()=>{
 })();
 </script>
 
-
 <div id="handwritingPopup" class="handwritingPopup">
 <div class="handwritingPopupCard">
 <div style="font-size:24px;font-weight:700;margin-bottom:10px;">✏️ 大きく書こう</div>
@@ -3733,7 +3707,6 @@ body.handwritingMode .miniCarryBox.handField .ghostDigit{
   touch-action:none !important;
 }
 </style>
-
 
 <style id="ipadOnlyFixes">
 body.ipadDevice.handwritingMode #practicePlayPage .handwritingBoardWrap #verticalArea{
@@ -4024,7 +3997,6 @@ body.ipadDevice .handwritingPopupCanvas{
 })();
 </script>
 
-
 <style id="handwritingResponsiveFixes">
 body.handwritingMode .practiceBoardWrap,
 body.handwritingMode .attackBoardShell{
@@ -4161,27 +4133,8 @@ body.handwritingMode .miniCarryBox.handField{
     scheduleFit();
   }
 
-  window.__resetActiveBoardZoom = resetActiveBoardZoom;
-  window.__scheduleHandwritingBoardFit = scheduleFit;
-
-  window.addEventListener('resize', scheduleFit, { passive:true });
-  window.addEventListener('orientationchange', ()=>setTimeout(scheduleFit, 80), { passive:true });
-
-  document.addEventListener('DOMContentLoaded', init);
-  setTimeout(init, 600);
-
-  const oldShowPage = window.showPage;
-  if(typeof oldShowPage === 'function'){
-    window.showPage = function(pageId){
-      const result = oldShowPage(pageId);
-      scheduleFit();
-      return result;
-    };
-  }
-})();
+  
 </script>
-
-
 
 <style id="explicitBoardControlStyles">
 :root{
@@ -4276,27 +4229,71 @@ body.boardMoveMode .boardPannable{
   #practicePlayPage.page.handwritingFullscreen.active,
   #attackPlayPage.page.handwritingFullscreen.active{
     display:grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(190px, 230px);
+    grid-template-columns: 62px minmax(0,1fr) minmax(148px, 180px);
     grid-template-rows: auto auto auto auto auto auto;
-    column-gap: 12px;
-    row-gap: 8px;
+    column-gap: 8px;
+    row-gap: 6px;
     align-items:start;
-    padding:8px 8px 8px 12px;
+    padding:6px 6px 6px 8px;
+  }
+
+  #practicePlayPage .boardControlOverlay,
+  #attackPlayPage .boardControlOverlay{
+    grid-column:1;
+    grid-row:1 / span 6;
+    position:sticky;
+    top:6px;
+    align-self:start;
+    justify-content:flex-start;
+    width:100%;
+    margin:0;
+  }
+
+  #practicePlayPage .boardControlPanel,
+  #attackPlayPage .boardControlPanel{
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    gap:5px;
+    padding:6px 4px;
+    border-radius:16px;
+    width:100%;
+  }
+
+  #practicePlayPage .boardControlBtn,
+  #attackPlayPage .boardControlBtn{
+    width:36px;
+    height:36px;
+    min-width:36px;
+    padding:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:18px;
+    border-radius:12px;
+  }
+
+  #practicePlayPage .boardControlLabel,
+  #attackPlayPage .boardControlLabel{
+    min-width:0;
+    font-size:12px;
+    line-height:1;
+    padding-top:2px;
   }
 
   #practicePlayPage .handwritingTopBar.practiceTopBar,
   #attackPlayPage .attackTopBar{
-    grid-column:2;
+    grid-column:3;
     width:100%;
     position:static;
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
-    gap:6px;
+    gap:4px;
     margin:0;
-    padding:8px;
+    padding:6px;
     overflow:hidden;
-    border-radius:16px;
+    border-radius:14px;
     border:1px solid #dbe4f0;
     background:white;
   }
@@ -4305,7 +4302,7 @@ body.boardMoveMode .boardPannable{
     flex-direction:column;
     justify-content:flex-start;
     align-items:stretch;
-    gap:6px;
+    gap:4px;
     width:100%;
   }
 
@@ -4313,8 +4310,9 @@ body.boardMoveMode .boardPannable{
   #practicePlayPage .handwritingTopBar .navBtn,
   #attackPlayPage .attackTopBar .navBtn{
     width:100%;
-    font-size:13px;
-    padding:8px 10px;
+    font-size:12px;
+    padding:6px 6px;
+    border-radius:10px;
   }
 
   #attackPlayPage .attackHud{
@@ -4324,8 +4322,8 @@ body.boardMoveMode .boardPannable{
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
-    gap:6px;
-    font-size:11px;
+    gap:3px;
+    font-size:10px;
     white-space:normal;
     overflow:visible;
     text-align:left;
@@ -4335,22 +4333,24 @@ body.boardMoveMode .boardPannable{
     width:100%;
     justify-content:space-between;
     display:flex;
+    align-items:center;
+    gap:6px;
   }
 
   #attackPlayPage .attackHud b{
-    font-size:13px;
+    font-size:12px;
   }
 
   #practicePlayPage .practiceMiniToolbar,
   #attackPlayPage .attackMiniToolbar{
-    grid-column:2;
+    grid-column:3;
     width:100%;
     position:static;
     margin:0;
     justify-content:flex-start;
     align-items:stretch;
     flex-direction:column;
-    gap:6px;
+    gap:4px;
     padding:0;
   }
 
@@ -4358,59 +4358,22 @@ body.boardMoveMode .boardPannable{
   #attackPlayPage .attackMiniToolbar .toggleBtn{
     width:100%;
     font-size:12px;
-    padding:8px 10px;
-    border-radius:12px;
-    text-align:left;
-  }
-
-  #practicePlayPage .boardControlOverlay,
-  #attackPlayPage .boardControlOverlay{
-    grid-column:2;
-    position:static;
-    margin:0;
-    justify-content:flex-start;
-    width:100%;
-  }
-
-  #practicePlayPage .boardControlPanel,
-  #attackPlayPage .boardControlPanel{
-    width:100%;
-    flex-direction:column;
-    align-items:stretch;
-    gap:6px;
-    padding:8px;
-    border-radius:16px;
-  }
-
-  #practicePlayPage .boardControlBtn,
-  #attackPlayPage .boardControlBtn{
-    width:100%;
-    min-width:0;
-    font-size:13px;
-    padding:9px 10px;
-    border-radius:12px;
-    text-align:left;
-  }
-
-  #practicePlayPage .boardControlLabel,
-  #attackPlayPage .boardControlLabel{
-    width:100%;
-    min-width:0;
-    padding:8px 10px;
-    border-radius:12px;
-    background:#f8fafc;
+    padding:5px 6px;
+    border-radius:10px;
+    text-align:center;
+    min-height:32px;
   }
 
   #practicePlayPage #hint,
   #practicePlayPage #result,
   #attackPlayPage #attackHint,
   #attackPlayPage #attackResult{
-    grid-column:2;
+    grid-column:3;
     width:100%;
     position:static;
     margin:0;
-    padding:8px 10px;
-    border-radius:14px;
+    padding:7px 8px;
+    border-radius:12px;
     background:white;
     border:1px solid #dbe4f0;
     text-align:left;
@@ -4420,19 +4383,19 @@ body.boardMoveMode .boardPannable{
   #attackPlayPage #attackHint{
     grid-row:4;
     min-height:auto;
-    font-size:14px;
+    font-size:12px;
   }
 
   #practicePlayPage #result,
   #attackPlayPage #attackResult{
     grid-row:5;
     min-height:auto;
-    font-size:16px;
+    font-size:13px;
   }
 
   #practicePlayPage .practiceBoardWrap,
   #attackPlayPage .attackBoardShell{
-    grid-column:1;
+    grid-column:2;
     grid-row:1 / span 6;
     min-height:0;
     overflow:auto;
@@ -4450,7 +4413,7 @@ body.boardMoveMode .boardPannable{
   }
 
   #attackPlayPage #attackFinishPanel{
-    grid-column:2;
+    grid-column:3;
     grid-row:6;
     width:100%;
     margin:0;
@@ -4533,7 +4496,6 @@ body.boardMoveMode .boardPannable{
     board.setAttribute(info(key).manualAttr, st.manual ? 'true' : 'false');
     const label = labelEl(key);
     if(label) label.textContent = `${Math.round(st.scale * 100)}%`;
-    if(options.redraw) refreshGuides(key);
   }
 
   function fitBoard(key, options = {}){
@@ -4564,10 +4526,7 @@ body.boardMoveMode .boardPannable{
     board.style.transition = '';
 
     const viewportRect = viewport.getBoundingClientRect();
-    const landscapeSidebar = (window.matchMedia && window.matchMedia('(orientation: landscape) and (min-width: 721px)').matches)
-      ? Math.min(230, Math.max(190, viewportRect.width * 0.22))
-      : 0;
-    const availableW = Math.max(260, viewportRect.width - landscapeSidebar - 16);
+    const availableW = Math.max(260, viewportRect.width - 16);
     const occupiedTop = (topBar?.getBoundingClientRect().height || 0) + (toolbar?.getBoundingClientRect().height || 0) + (hint?.getBoundingClientRect().height || 0) + (result?.getBoundingClientRect().height || 0);
     const availableH = Math.max(180, viewportRect.height - occupiedTop - 18);
 
@@ -4579,7 +4538,7 @@ body.boardMoveMode .boardPannable{
     st.panX = 0;
     st.panY = 0;
     st.manual = false;
-    applyTransform(key, { redraw: true });
+    applyTransform(key);
   }
 
   function fitActiveBoard(force = false){
@@ -4591,7 +4550,7 @@ body.boardMoveMode .boardPannable{
     const st = state(key);
     st.manual = true;
     st.scale = clamp(Math.round((st.scale + delta) * 100) / 100, 0.6, 2.4);
-    applyTransform(key, { redraw: true });
+    applyTransform(key);
   }
 
   function setMode(mode){
@@ -4626,11 +4585,11 @@ body.boardMoveMode .boardPannable{
     bar.id = meta.controlsId;
     bar.innerHTML = `
       <div class="boardControlPanel" role="toolbar" aria-label="ボード操作">
-        <button type="button" class="boardControlBtn" data-action="fit" aria-label="画面にフィット">📐 FIT</button>
+        <button type="button" class="boardControlBtn" data-action="fit" aria-label="画面にフィット">📐</button>
         <button type="button" class="boardControlBtn" data-action="zoom-out" aria-label="縮小">➖</button>
         <button type="button" class="boardControlBtn" data-action="zoom-in" aria-label="拡大">➕</button>
-        <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動モード">✋ 移動</button>
-        <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画モード">✍️ 描画</button>
+        <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動モード">🖐️</button>
+        <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画モード">✍️</button>
         <div class="boardControlLabel" id="${meta.labelId}">100%</div>
       </div>
     `;
