@@ -773,8 +773,8 @@ td.wrong .handCanvas{
 .page.active.handwritingFullscreen{display:flex;}
 .handwritingTopBar{padding:10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
 .practiceTopBar .practiceTopActions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
-.practiceMiniToolbar,.attackMiniToolbar{margin:8px 0 0;justify-content:center;gap:4px;}
-.practiceMiniToolbar .toggleBtn,.attackMiniToolbar .toggleBtn{font-size:11px;padding:4px 7px;border-radius:999px;}
+.practiceMiniToolbar,.attackMiniToolbar{margin:6px 0 0;justify-content:center;gap:3px;}
+.practiceMiniToolbar .toggleBtn,.attackMiniToolbar .toggleBtn{font-size:11px;padding:4px 6px;border-radius:999px;}
 .practiceBoardWrap,.attackBoardShell{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;}
 .practiceBoardWrap{padding:18px 12px 10px;}
 .attackBoardShell{padding:8px 12px 12px;}
@@ -784,11 +784,11 @@ td.wrong .handCanvas{
 #practicePlayPage.page,#attackPlayPage.page{max-width:none;width:100%;margin:0;padding:0;}
 #practicePlayPage #hint,#practicePlayPage #result{width:100%;text-align:center;}
 .practiceResult{margin-top:10px;min-height:40px;}
-.attackFullscreen .attackTopBar{padding:6px 10px;background:white;border-bottom:2px solid #dbe4f0;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;overflow:hidden;}
-.attackFullscreen .attackHud{flex:1;display:flex;align-items:center;justify-content:center;gap:12px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.attackFullscreen .attackHud span{display:inline-flex;align-items:baseline;gap:4px;}
-.attackFullscreen .attackHud b{font-size:14px;}
-.attackFullscreen .navBtn{padding:5px 8px;font-size:12px;border-radius:8px;min-width:0;}
+.attackFullscreen .attackTopBar{padding:4px 8px;background:white;border-bottom:2px solid #dbe4f0;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow:hidden;}
+.attackFullscreen .attackHud{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.attackFullscreen .attackHud span{display:inline-flex;align-items:baseline;gap:3px;}
+.attackFullscreen .attackHud b{font-size:12px;}
+.attackFullscreen .navBtn{padding:4px 7px;font-size:12px;border-radius:8px;min-width:0;}
 .attackHint{font-size:14px;margin-top:4px;min-height:20px;text-align:center;}
 .attackVerticalArea{position:relative;display:inline-block;margin-top:8px;}
 .attackResult{margin-top:8px;font-size:20px;min-height:24px;color:#d84315;font-weight:bold;text-align:center;}
@@ -4298,8 +4298,8 @@ body.boardDrawMode .boardControlBtn[data-mode="draw"]{
   display:flex;
   align-items:center;
   flex-wrap:wrap;
-  gap:8px;
-  padding:8px 10px;
+  gap:6px;
+  padding:7px 8px;
   border-radius:18px;
   background:var(--board-control-bg);
   border:1px solid var(--board-control-border);
@@ -4312,11 +4312,11 @@ body.boardDrawMode .boardControlBtn[data-mode="draw"]{
   background:white;
   color:#1f2937;
   border-radius:14px;
-  padding:10px 12px;
+  padding:9px 10px;
   font-size:16px;
   line-height:1;
   cursor:pointer;
-  min-width:48px;
+  min-width:44px;
   box-shadow:none;
 }
 
@@ -4351,16 +4351,17 @@ body.boardMoveMode .boardPannable{
   cursor: grabbing;
 }
 
+
 @media (orientation: landscape) and (min-width: 721px){
   #practicePlayPage.page.handwritingFullscreen.active,
   #attackPlayPage.page.handwritingFullscreen.active{
     display:grid !important;
-    grid-template-columns: 56px minmax(0,1fr) 92px 136px;
-    grid-template-rows: auto auto auto auto auto auto;
+    grid-template-columns: 54px minmax(0,1fr) 44px 92px;
+    grid-template-rows: auto auto minmax(0,1fr) auto auto auto;
     column-gap: 6px;
     row-gap: 6px;
     align-items:start;
-    padding:6px 6px 6px 6px;
+    padding:6px;
   }
 
   #practicePlayPage .boardControlOverlay,
@@ -4381,28 +4382,28 @@ body.boardMoveMode .boardPannable{
     align-items:center;
     justify-content:flex-start;
     gap:4px;
-    padding:6px 4px;
+    padding:6px 3px;
     border-radius:14px;
     width:100%;
   }
 
   #practicePlayPage .boardControlBtn,
   #attackPlayPage .boardControlBtn{
-    width:32px;
-    height:32px;
-    min-width:32px;
+    width:30px;
+    height:30px;
+    min-width:30px;
     padding:0;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    font-size:16px;
+    font-size:15px;
     border-radius:10px;
   }
 
   #practicePlayPage .boardControlLabel,
   #attackPlayPage .boardControlLabel{
     min-width:0;
-    font-size:11px;
+    font-size:10px;
     line-height:1;
     padding-top:1px;
   }
@@ -4410,6 +4411,7 @@ body.boardMoveMode .boardPannable{
   #practicePlayPage .handwritingTopBar.practiceTopBar,
   #attackPlayPage .attackTopBar{
     grid-column:4;
+    grid-row:1;
     width:100%;
     position:static;
     flex-direction:column;
@@ -4449,10 +4451,10 @@ body.boardMoveMode .boardPannable{
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
-    gap:2px;
-    font-size:9px;
+    gap:1px;
+    font-size:8px;
     white-space:normal;
-    overflow:visible;
+    overflow:hidden;
     text-align:left;
   }
 
@@ -4461,16 +4463,17 @@ body.boardMoveMode .boardPannable{
     justify-content:space-between;
     display:flex;
     align-items:center;
-    gap:4px;
+    gap:3px;
   }
 
   #attackPlayPage .attackHud b{
-    font-size:11px;
+    font-size:10px;
   }
 
   #practicePlayPage .practiceMiniToolbar,
   #attackPlayPage .attackMiniToolbar{
     grid-column:3;
+    grid-row:1;
     width:100%;
     position:static;
     margin:0;
@@ -4485,7 +4488,7 @@ body.boardMoveMode .boardPannable{
   #attackPlayPage .attackMiniToolbar .toggleBtn{
     width:100%;
     font-size:11px;
-    padding:4px 4px;
+    padding:4px 2px;
     border-radius:10px;
     text-align:center;
     min-height:28px;
@@ -4494,25 +4497,26 @@ body.boardMoveMode .boardPannable{
 
   #practicePlayPage #hint,
   #attackPlayPage #attackHint{
-    grid-column:3;
-    grid-row:4;
+    grid-column:2;
+    grid-row:2;
     width:100%;
     position:static;
     margin:0;
-    padding:6px 6px;
+    padding:5px 8px;
     border-radius:10px;
     background:white;
     border:1px solid #dbe4f0;
-    text-align:left;
+    text-align:center;
     font-size:11px;
     min-height:auto;
+    box-sizing:border-box;
   }
 
   #practicePlayPage #result,
   #attackPlayPage #attackResult,
   #attackPlayPage #attackAnswerBar,
   #attackPlayPage #attackFinishPanel{
-    grid-column:4;
+    grid-column:2;
     width:100%;
     position:static;
     margin:0;
@@ -4530,7 +4534,7 @@ body.boardMoveMode .boardPannable{
   }
 
   #attackPlayPage #attackResult{
-    grid-row:5;
+    grid-row:4;
     padding:6px 6px;
     border-radius:10px;
     background:white;
@@ -4541,7 +4545,7 @@ body.boardMoveMode .boardPannable{
   }
 
   #attackPlayPage #attackAnswerBar{
-    grid-row:6;
+    grid-row:5;
     display:flex;
     flex-direction:column;
     align-items:stretch;
@@ -4559,7 +4563,7 @@ body.boardMoveMode .boardPannable{
   #practicePlayPage .practiceBoardWrap,
   #attackPlayPage .attackBoardShell{
     grid-column:2;
-    grid-row:1 / span 6;
+    grid-row:3;
     min-height:0;
     overflow:auto;
     padding:0;
@@ -4580,7 +4584,6 @@ body.boardMoveMode .boardPannable{
     padding:8px 8px;
   }
 }
-
 
 @media (max-width:720px){
   .boardControlPanel{
