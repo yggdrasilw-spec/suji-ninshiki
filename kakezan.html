@@ -3815,15 +3815,6 @@ body.handwritingMode .handField.active .handCanvas{
         </div>
       </div>
 
-      <div class="attackHud" aria-label="タイムアタック情報">
-        <span>経過 <b id="attackElapsed">00:00</b></span>
-        <span>問題 <b id="attackProgress">1 / 10</b></span>
-        <span>正解 <b id="attackCorrectCount">0</b></span>
-        <span>ミス <b id="attackMissCount">0</b></span>
-        <span>目標 <b id="attackTargetDisplay">00:00</b></span>
-        <span>判定 <b id="attackGoalStatus">◯</b></span>
-      </div>
-
       <div id="attackBoardControls" class="boardControlOverlay attackZoomCard">
         <div class="boardControlPanel" role="toolbar" aria-label="ボード操作">
           <button type="button" class="boardControlBtn" data-action="fit" aria-label="画面にフィット">📐</button>
@@ -7698,50 +7689,6 @@ body.boardMoveMode .boardPannable{
   });
 })();
 </script>
-
-
-<style id="attackHudUnifiedFix">
-@media (orientation: landscape) and (min-width: 721px){
-  #attackPlayPage .attackLeftRail .attackHud{
-    width:100% !important;
-    display:grid !important;
-    grid-template-columns:repeat(2, minmax(0, 1fr)) !important;
-    gap:4px !important;
-    padding:6px !important;
-    border-radius:14px !important;
-    background:rgba(255,255,255,.94) !important;
-    border:1px solid #e3eaf4 !important;
-    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
-    box-sizing:border-box !important;
-  }
-
-  #attackPlayPage .attackLeftRail .attackHud span{
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:flex-start !important;
-    justify-content:center !important;
-    gap:2px !important;
-    padding:5px 6px !important;
-    border-radius:10px !important;
-    background:white !important;
-    border:1px solid #eef3f8 !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    min-width:0 !important;
-  }
-
-  #attackPlayPage .attackLeftRail .attackHud b{
-    font-size:11px !important;
-    line-height:1 !important;
-  }
-}
-
-@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
-  #attackPlayPage .attackLeftRail .attackHud{
-    grid-template-columns:1fr !important;
-  }
-}
-</style>
 
 </body>
 </html>
