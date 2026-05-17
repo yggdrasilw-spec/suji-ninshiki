@@ -4130,6 +4130,7 @@ body.handwritingMode .handwritingPopupCanvas{
 }
 </style>
 
+
 <script id="boardManagedZoom">
 (function(){
   const MIN_SCALE = 0.42;
@@ -4145,8 +4146,13 @@ body.handwritingMode .handwritingPopupCanvas{
   let overlayTimer = 0;
   let arrowTimer = 0;
   let resizeObserver = null;
-  let mutationObserver = null;
+  let pendingFitKind = null;
+  let pendingFitForce = false;
+  let overlayScheduled = false;
+  let overlayPendingKind = null;
+  let boardReadyTimer = 0;
   let activeGestureCount = 0;
+
   window.__boardGestureActive = false;
   window.__boardZoomMode = 'managed';
 
@@ -4182,12 +4188,11 @@ body.handwritingMode .handwritingPopupCanvas{
       gesture: false,
       pointers: new Map(),
       gestureStart: null,
-      pendingPointerStyle: false,
       fitScheduled: false,
       arrowScheduled: false,
       latestArrowItem: null,
       latestArrowKind: kind,
-      boardMutationSeen: false
+      lastGestureAt: 0
     };
   }
 
@@ -4223,7 +4228,7 @@ body.handwritingMode .handwritingPopupCanvas{
     board.el.style.transformOrigin = '0 0';
     board.el.style.transform = transform;
     board.el.style.webkitTransform = transform;
-    board.el.style.zoom = '1';
+    board.el.style.willChange = 'transform';
     board.el.dataset.fitScale = String(board.fitScale || 1);
   }
 
@@ -4233,13 +4238,16 @@ body.handwritingMode .handwritingPopupCanvas{
     const prevTransform = el.style.transform;
     const prevOrigin = el.style.transformOrigin;
     const prevZoom = el.style.zoom;
+    const prevTransition = el.style.transition;
     el.style.transform = 'none';
     el.style.transformOrigin = '0 0';
     el.style.zoom = '1';
+    el.style.transition = 'none';
     const rect = el.getBoundingClientRect();
     el.style.transform = prevTransform;
     el.style.transformOrigin = prevOrigin;
     el.style.zoom = prevZoom;
+    el.style.transition = prevTransition;
     return rect;
   }
 
@@ -4263,6 +4271,8 @@ body.handwritingMode .handwritingPopupCanvas{
     if(typeof appState !== 'undefined' && appState.inputMode !== 'handwriting') return;
     const popup = document.getElementById('handwritingPopup');
     if(popup && popup.classList.contains('active') && !force) return;
+    if(board.gesture && !force) return;
+    if(!force && Date.now() - board.lastGestureAt < 250) return;
 
     const viewport = getViewport(kind);
     const natural = readNaturalRect(board);
@@ -4283,24 +4293,38 @@ body.handwritingMode .handwritingPopupCanvas{
   }
 
   function requestBoardFit(kind = 'current', force=false){
+    pendingFitKind = kind;
+    pendingFitForce = pendingFitForce || force;
     clearTimeout(fitTimer);
     fitTimer = setTimeout(()=>{
-      const target = kind === 'current' ? currentKind() : kind;
+      const target = pendingFitKind;
+      const doForce = pendingFitForce;
+      pendingFitKind = null;
+      pendingFitForce = false;
+      if(target === 'current'){
+        const active = currentKind();
+        if(active === 'practice' || active === 'attack'){
+          applyBoardFit(active, doForce);
+          requestOverlayRefresh(active);
+        }
+        return;
+      }
       if(target === 'practice' || target === 'attack'){
-        applyBoardFit(target, force);
+        applyBoardFit(target, doForce);
         requestOverlayRefresh(target);
       }else{
-        applyBoardFit('practice', force);
-        applyBoardFit('attack', force);
+        applyBoardFit('practice', doForce);
+        applyBoardFit('attack', doForce);
         requestOverlayRefresh('all');
       }
-    }, 24);
+    }, 32);
   }
 
   function resetActiveBoardZoom(){
     const kind = currentKind();
     if(!kind) return;
     applyBoardFit(kind, true);
+    requestOverlayRefresh(kind);
   }
 
   function beginGesture(board){
@@ -4331,6 +4355,7 @@ body.handwritingMode .handwritingPopupCanvas{
     if(!board || !board.gesture) return;
     board.gesture = false;
     board.gestureStart = null;
+    board.lastGestureAt = Date.now();
     activeGestureCount = Math.max(0, activeGestureCount - 1);
     window.__boardGestureActive = activeGestureCount > 0;
   }
@@ -4414,9 +4439,13 @@ body.handwritingMode .handwritingPopupCanvas{
   }
 
   function requestOverlayRefresh(kind='current'){
-    clearTimeout(overlayTimer);
-    overlayTimer = setTimeout(()=>{
-      const target = kind === 'current' ? currentKind() : kind;
+    overlayPendingKind = kind;
+    if(overlayScheduled) return;
+    overlayScheduled = true;
+    requestAnimationFrame(()=>{
+      overlayScheduled = false;
+      const target = overlayPendingKind;
+      overlayPendingKind = null;
       if(target === 'practice' && original.updateHints){
         try{ original.updateHints(); }catch(err){}
       }else if(target === 'attack' && original.updateAttackHints){
@@ -4425,7 +4454,7 @@ body.handwritingMode .handwritingPopupCanvas{
         if(original.updateHints){ try{ original.updateHints(); }catch(err){} }
         if(original.updateAttackHints){ try{ original.updateAttackHints(); }catch(err){} }
       }
-    }, 16);
+    });
   }
 
   function scheduleArrowDraw(kind, item){
@@ -4443,6 +4472,17 @@ body.handwritingMode .handwritingPopupCanvas{
         original.drawArrowDeferred(latest, kind);
       }catch(err){}
     });
+  }
+
+  function scheduleFitAfterLayout(kind, force=false){
+    clearTimeout(boardReadyTimer);
+    boardReadyTimer = setTimeout(()=>{
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          requestBoardFit(kind, force);
+        });
+      });
+    }, 24);
   }
 
   function wrapUpdates(){
@@ -4464,14 +4504,14 @@ body.handwritingMode .handwritingPopupCanvas{
     if(original.showPage){
       window.showPage = function(pageId){
         const result = original.showPage(pageId);
-        requestBoardFit('current');
+        scheduleFitAfterLayout('current', true);
         return result;
       };
     }
     if(original.buildTable){
       window.buildTable = function(kind){
         const result = original.buildTable(kind);
-        requestBoardFit(kind);
+        scheduleFitAfterLayout(kind, true);
         return result;
       };
     }
@@ -4479,7 +4519,7 @@ body.handwritingMode .handwritingPopupCanvas{
       window.initHandwritingFields = function(kind){
         const result = original.initHandwritingFields(kind);
         bindBoardGesture(kind === 'attack' ? 'attack' : 'practice');
-        requestBoardFit(kind);
+        scheduleFitAfterLayout(kind, false);
         return result;
       };
     }
@@ -4488,14 +4528,13 @@ body.handwritingMode .handwritingPopupCanvas{
         const result = original.closePopup();
         activeGestureCount = 0;
         window.__boardGestureActive = false;
-        requestBoardFit('current', true);
+        scheduleFitAfterLayout('current', true);
         return result;
       };
     }
     if(original.resizeAllHandwritingFields){
       window.resizeAllHandwritingFields = function(){
         const result = original.resizeAllHandwritingFields();
-        requestBoardFit('current');
         return result;
       };
     }
@@ -4525,17 +4564,21 @@ body.handwritingMode .handwritingPopupCanvas{
   }
 
   function observeLayoutChanges(){
-    const ids = ['tableArea', 'attackTableArea', 'handwritingPopup'];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if(!el) return;
-      if(!mutationObserver && 'MutationObserver' in window){
-        mutationObserver = new MutationObserver(()=>requestBoardFit('current'));
-      }
-      try{ mutationObserver.observe(el, { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] }); }catch(err){}
-    });
     if('ResizeObserver' in window && !resizeObserver){
-      resizeObserver = new ResizeObserver(()=>requestBoardFit('current'));
+      resizeObserver = new ResizeObserver(entries => {
+        let needsRefresh = false;
+        for(const entry of entries){
+          const target = entry.target;
+          if(!target || !target.id) continue;
+          if(target.id === 'verticalArea' || target.id === 'attackVerticalArea'){
+            needsRefresh = true;
+            break;
+          }
+        }
+        if(needsRefresh){
+          scheduleFitAfterLayout('current', false);
+        }
+      });
       ['verticalArea','attackVerticalArea'].forEach(id => {
         const el = document.getElementById(id);
         if(el){
@@ -4550,27 +4593,25 @@ body.handwritingMode .handwritingPopupCanvas{
     bindBoardGesture('attack');
     wrapUpdates();
     observeLayoutChanges();
-    requestBoardFit('current', true);
-    setTimeout(()=>requestBoardFit('current', true), 300);
-    setTimeout(()=>requestBoardFit('current', true), 900);
+    scheduleFitAfterLayout('current', true);
+    setTimeout(()=>scheduleFitAfterLayout('current', true), 250);
+    setTimeout(()=>scheduleFitAfterLayout('current', true), 850);
   }
 
   window.__resetActiveBoardZoom = resetActiveBoardZoom;
   window.__scheduleHandwritingBoardFit = function(){
-    requestBoardFit('current');
+    scheduleFitAfterLayout('current', true);
   };
   window.__triggerIpadLayoutRefresh = function(){
-    requestBoardFit('current');
+    scheduleFitAfterLayout('current', false);
   };
 
-  window.addEventListener('resize', ()=>requestBoardFit('current'), { passive:true });
-  window.addEventListener('orientationchange', ()=>setTimeout(()=>requestBoardFit('current', true), 80), { passive:true });
+  window.addEventListener('resize', ()=>scheduleFitAfterLayout('current', false), { passive:true });
+  window.addEventListener('orientationchange', ()=>scheduleFitAfterLayout('current', true), { passive:true });
   document.addEventListener('DOMContentLoaded', init, { once:true });
-  if(document.readyState !== 'loading'){
-    init();
-  }
 })();
 </script>
+
 
 </body>
 </html>
