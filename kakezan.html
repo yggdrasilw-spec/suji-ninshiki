@@ -125,9 +125,9 @@ small, .muted{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  gap:10px;
+  gap:8px;
   flex-wrap:wrap;
-  margin-bottom:10px;
+  margin-bottom:8px;
 }
 
 .navBtn{
@@ -135,8 +135,8 @@ small, .muted{
   background:#d9e7ff;
   color:#1f3f80;
   border-radius:10px;
-  padding:8px 12px;
-  font-size:16px;
+  padding:7px 10px;
+  font-size:15px;
   cursor:pointer;
 }
 
@@ -261,12 +261,12 @@ input.shortInput{
   justify-content:center;
   flex-wrap:wrap;
   gap:6px;
-  margin:10px 0 6px;
+  margin:8px 0 4px;
 }
 
 .toggleBtn{
-  font-size:13px;
-  padding:6px 9px;
+  font-size:12px;
+  padding:5px 7px;
   border-radius:999px;
   min-width:0;
   line-height:1;
@@ -793,6 +793,22 @@ td.wrong .handCanvas{
 .attackVerticalArea{position:relative;display:inline-block;margin-top:8px;}
 .attackResult{margin-top:8px;font-size:20px;min-height:24px;color:#d84315;font-weight:bold;text-align:center;}
 .attackFinishPanel{margin-top:12px;width:min(100%, 1100px);}
+.attackAnswerBar{
+  margin-top:8px;
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+}
+
+.compactAction{
+  padding:8px 10px;
+  font-size:14px;
+  border-radius:12px;
+  min-width:0;
+}
+
 .miniCarryBox{width:22px!important;height:22px!important;top:-1px!important;right:-1px!important;border:2px dashed #666!important;border-radius:6px;background:#fffde7!important;z-index:50!important;overflow:hidden!important;}
 .miniCarryInput{font-size:11px!important;}
 .handwritingPopup{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100000;}
@@ -977,7 +993,7 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="settingsPage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠</button>
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
     <div class="muted">設定ページ</div>
     <button class="navBtn" onclick="openPractice()" aria-label="自由練習へ">🧩</button>
   </div>
@@ -1032,7 +1048,7 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="practicePage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠</button>
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
     <div class="muted">自由練習モード</div>
     <button class="navBtn" onclick="openAttackSetup()" aria-label="タイムアタックへ">⏱️</button>
   </div>
@@ -1085,16 +1101,6 @@ body.handwritingMode .handField.active .handCanvas{
           <button class="primaryBtn" onclick="generateCustomProblem()">この式で練習</button>
         </div>
       </div>
-
-      <div class="setupCard">
-        <h4>音</h4>
-        <p>正誤判定と正解時に効果音を鳴らします。</p>
-        <div class="toggleBar" style="justify-content:flex-start;">
-          <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">
-            🔊
-          </button>
-        </div>
-      </div>
     </div>
 
     <div id="carrySettings">
@@ -1122,11 +1128,11 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="practicePlayPage" class="page handwritingFullscreen">
   <div class="handwritingTopBar practiceTopBar">
-    <button class="navBtn" onclick="openHome()">🏠</button>
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
     <div class="modeBadge">🧩</div>
     <div class="practiceTopActions">
-      <button class="navBtn" onclick="openSettings()">⚙️</button>
-      <button class="navBtn" onclick="returnToPracticeSetup()">🔁</button>
+      <button class="navBtn" onclick="openSettings()" aria-label="設定">⚙️</button>
+      <button class="navBtn" onclick="returnToPracticeSetup()" aria-label="別の問題">🔁</button>
     </div>
   </div>
 
@@ -1153,7 +1159,7 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="attackSetupPage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠</button>
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
     <div class="muted">タイムアタック設定</div>
     <button class="navBtn" onclick="openPractice()" aria-label="自由練習へ">🧩</button>
   </div>
@@ -1212,18 +1218,6 @@ body.handwritingMode .handField.active .handCanvas{
         </div>
         <div id="attackCarryChecks" style="margin-top:8px;"></div>
       </div>
-
-      <div class="setupCard">
-        <h4>ヒント</h4>
-        <p>基本はヒントなしで始めます。</p>
-        <div class="toggleBar" style="justify-content:flex-start;">
-          <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
-          <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🎯</button>
-          <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">✅</button>
-          <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
-          <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
-        </div>
-      </div>
     </div>
 
     <div class="footerActions">
@@ -1234,7 +1228,7 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="attackPlayPage" class="page handwritingFullscreen attackFullscreen">
   <div class="attackTopBar">
-    <button class="navBtn" onclick="confirmLeaveAttack()">🏠</button>
+    <button class="navBtn" onclick="confirmLeaveAttack()" aria-label="ホーム">🏠</button>
 
     <div class="attackHud">
       <span>🕒 <b id="attackElapsed">00:00</b></span>
@@ -1245,7 +1239,7 @@ body.handwritingMode .handField.active .handCanvas{
       <span>🏁 <b id="attackGoalStatus">-</b></span>
     </div>
 
-    <button class="navBtn" onclick="openAttackSetup()">⚙️</button>
+    <button class="navBtn" onclick="openAttackSetup()" aria-label="設定">⚙️</button>
   </div>
 
   <div class="toggleBar attackMiniToolbar">
@@ -1267,6 +1261,12 @@ body.handwritingMode .handField.active .handCanvas{
 
     <div id="attackResult" class="attackResult"></div>
 
+    <div id="attackAnswerBar" class="attackAnswerBar" style="display:none;">
+      <button type="button" class="actionBtn secondary compactAction" onclick="evaluateAttackAnswer()">答え合わせ</button>
+      <button type="button" class="actionBtn secondary compactAction" onclick="retryAttackCurrent()" id="attackRetryBtn" style="display:none;">もう一度</button>
+      <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackAfterReview()" id="attackNextBtn" style="display:none;">次へ</button>
+    </div>
+
     <div id="attackFinishPanel" class="sectionPanel attackFinishPanel" style="display:none;">
       <h2>結果</h2>
       <div class="statGrid">
@@ -1286,7 +1286,7 @@ body.handwritingMode .handField.active .handCanvas{
 
 <div id="recordPage" class="page">
   <div class="topRow">
-    <button class="navBtn" onclick="openHome()">🏠</button>
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
     <div class="muted">記録ページ</div>
     <button class="navBtn" onclick="openAttackSetup()" aria-label="タイムアタックへ">⏱️</button>
   </div>
@@ -1345,6 +1345,11 @@ const appState = {
   customTop: null,
   customBottom: null,
   customEquationActive: false,
+  attackHintUsed: false,
+  attackHintWarningShown: false,
+  attackManualCheckMode: false,
+  attackQuestionState: "pending",
+  attackPendingScale: null,
   inputMode: "keyboard"
 };
 
@@ -1428,6 +1433,7 @@ function confirmLeaveAttack(){
   }
   stopAttackTimer();
   clearAttackWorkspace();
+  updateAttackAnswerBar();
   openHome();
 }
 
@@ -1469,6 +1475,8 @@ function clearAttackWorkspace(){
   if(hint) hint.innerHTML = "";
   if(result) result.innerHTML = "";
   if(finishPanel) finishPanel.style.display = "none";
+  const answerBar = document.getElementById("attackAnswerBar");
+  if(answerBar) answerBar.style.display = "none";
   destroyHandwritingFields();
 }
 
@@ -1554,14 +1562,51 @@ function toggleSound(){
   initAudio();
 }
 
+function attackHasAnyHintOn(){
+  return !!(uiState.arrow || uiState.target || uiState.correctness || uiState.text || uiState.superHint);
+}
+
+function updateAttackAnswerBar(){
+  const bar = document.getElementById("attackAnswerBar");
+  const retry = document.getElementById("attackRetryBtn");
+  const next = document.getElementById("attackNextBtn");
+  if(!bar) return;
+  const showManual = !!(appState.attackActive && appState.attackManualCheckMode);
+  bar.style.display = showManual ? "flex" : "none";
+  if(retry) retry.style.display = "none";
+  if(next) next.style.display = "none";
+}
+
+function setAttackAnswerBarState(state){
+  const retry = document.getElementById("attackRetryBtn");
+  const next = document.getElementById("attackNextBtn");
+  if(retry) retry.style.display = state === "wrong" ? "inline-flex" : "none";
+  if(next) next.style.display = state === "wrong" || state === "correctAfterWrong" || state === "correct" ? "inline-flex" : "none";
+}
+
+function updateAttackManualMode(){
+  appState.attackManualCheckMode = !!(appState.attackActive && !attackHasAnyHintOn());
+  updateAttackAnswerBar();
+}
+
 function toggleHint(key){
-  uiState[key] = !uiState[key];
+  const before = attackHasAnyHintOn();
+  const next = !uiState[key];
+  if(appState.attackActive && next && !before && !appState.attackHintWarningShown){
+    appState.attackHintWarningShown = true;
+    alert("⚠️ノーヒントの記録がつきません。");
+  }
+  uiState[key] = next;
   if(key === "superHint"){
     localStorage.setItem(STORAGE_KEYS.superHint, JSON.stringify(uiState.superHint));
+  }
+  if(appState.attackActive && next){
+    appState.attackHintUsed = true;
   }
   updateToggleButtons();
   updateHints();
   updateAttackHints();
+  updateAttackManualMode();
 }
 
 function updateToggleButtons(){
@@ -2690,6 +2735,7 @@ function updateAttackHints(){
   if(appState.page !== "attackPlayPage") return;
   clearHighlights();
   document.getElementById("attackArrowSvg").innerHTML = "";
+  updateAttackManualMode();
 
   if(currentStep >= inputMap.length){
     document.getElementById("attackHint").innerHTML = uiState.text ? "完成！" : "";
@@ -2759,6 +2805,7 @@ function checkFinal(kind){
       document.getElementById("result").innerHTML = "正解！";
       playQuestionClearSound();
     }else{
+      if(appState.attackManualCheckMode) return;
       finishAttackQuestion();
     }
   }
@@ -2779,6 +2826,11 @@ function startAttack(){
   appState.attackIndex = 0;
   appState.attackCorrect = 0;
   appState.attackMiss = 0;
+  appState.attackHintUsed = false;
+  appState.attackHintWarningShown = false;
+  appState.attackManualCheckMode = false;
+  appState.attackQuestionState = "pending";
+  appState.attackPendingScale = null;
   finalShown = false;
   currentStep = 0;
 
@@ -2811,6 +2863,10 @@ function startAttack(){
 
   showPage("attackPlayPage");
   nextAttackQuestion(true);
+  if(typeof window.__fitActiveBoard === 'function'){
+    window.__fitActiveBoard(true);
+  }
+  updateAttackManualMode();
   startAttackTimer();
 }
 
@@ -2839,8 +2895,10 @@ function nextAttackQuestion(initial=false){
   finalShown = false;
   clearPracticeWorkspace();
   currentStep = 0;
+  appState.attackQuestionState = "pending";
   document.getElementById("attackResult").innerHTML = "";
   document.getElementById("attackFinishPanel").style.display = "none";
+  updateAttackAnswerBar();
 
   const q = currentAttackQuestion();
   if(!q){
@@ -2858,9 +2916,15 @@ function nextAttackQuestion(initial=false){
   addEvents("attack");
   checkInputs("attack");
   updateToggleButtons();
+  updateAttackManualMode();
   updateAttackHints();
-  if(typeof window.__fitActiveBoard === 'function'){
+  if(initial && typeof window.__fitActiveBoard === 'function'){
     window.__fitActiveBoard(true);
+  }
+  if(!initial && appState.attackPendingScale != null && typeof window.__applyBoardScaleOnce === 'function'){
+    const pending = appState.attackPendingScale;
+    appState.attackPendingScale = null;
+    window.__applyBoardScaleOnce('attack', pending);
   }
   if(typeof window.__triggerIpadLayoutRefresh === 'function'){
     window.__triggerIpadLayoutRefresh();
@@ -2893,6 +2957,9 @@ function updateAttackTimer(){
 function finishAttackQuestion(){
   if(!appState.attackActive) return;
   appState.attackCorrect++;
+  if(typeof window.__getBoardScale === 'function'){
+    appState.attackPendingScale = window.__getBoardScale('attack');
+  }
   updateAttackStats();
   playQuestionClearSound();
   document.getElementById("attackResult").innerHTML = "正解！";
@@ -2910,7 +2977,64 @@ function updateAttackStats(){
   document.getElementById("attackProgress").textContent = `${Math.min(appState.attackIndex + 1, appState.attackQuestionCount)} / ${appState.attackQuestionCount}`;
   document.getElementById("attackCorrectCount").textContent = String(appState.attackCorrect);
   document.getElementById("attackMissCount").textContent = String(appState.attackMiss);
+  updateAttackManualMode();
 }
+
+function evaluateAttackAnswer(){
+  if(!appState.attackActive) return;
+  const ok = inputMap.every(item => getFieldValue(item.id) === item.correct);
+  if(ok){
+    if(appState.attackQuestionState === "wrong"){
+      document.getElementById("attackResult").innerHTML = "正解ですが、記録は不正解のままです。";
+      setAttackAnswerBarState("correctAfterWrong");
+      updateAttackStats();
+      return;
+    }
+    appState.attackQuestionState = "correct";
+    appState.attackCorrect++;
+    updateAttackStats();
+    playQuestionClearSound();
+    document.getElementById("attackResult").innerHTML = "正解！";
+    setAttackAnswerBarState("correct");
+    setTimeout(()=>{
+      appState.attackIndex++;
+      if(appState.attackIndex >= appState.attackQuestions.length){
+        finishAttackSession();
+      }else{
+        nextAttackQuestion();
+      }
+    }, 450);
+  }else{
+    if(appState.attackQuestionState !== "wrong"){
+      appState.attackQuestionState = "wrong";
+      appState.attackMiss++;
+      updateAttackStats();
+    }
+    document.getElementById("attackResult").innerHTML = "不正解。もう一度考えるか、次へ進めます。";
+    setAttackAnswerBarState("wrong");
+  }
+}
+
+function retryAttackCurrent(){
+  if(!appState.attackActive) return;
+  inputMap.forEach(item => setFieldValue(item.id, ""));
+  checkInputs("attack");
+  currentStep = 0;
+  document.getElementById("attackResult").innerHTML = "";
+  setAttackAnswerBarState("pending");
+  updateAttackHints();
+}
+
+function nextAttackAfterReview(){
+  if(!appState.attackActive) return;
+  appState.attackIndex++;
+  if(appState.attackIndex >= appState.attackQuestions.length){
+    finishAttackSession();
+  }else{
+    nextAttackQuestion();
+  }
+}
+
 
 function finishAttackSession(){
   stopAttackTimer();
@@ -2934,7 +3058,8 @@ function finishAttackSession(){
     elapsedSec,
     targetMinutes: appState.attackTargetMinutes,
     targetClear,
-    hintsUsed: uiState.arrow || uiState.target || uiState.text || uiState.correctness
+    hintsUsed: !!appState.attackHintUsed,
+    noHintManualCheck: !!appState.attackManualCheckMode
   };
   saveRecord(record);
 
@@ -3090,6 +3215,7 @@ function renderRecords(){
     <div class="statBox"><div class="label">タイムアタック</div><div class="value">${attackRecords.length}</div></div>
     <div class="statBox"><div class="label">最速</div><div class="value">${attackRecords.length ? formatTime(Math.min(...attackRecords.map(r=>r.elapsedSec))) : "--:--"}</div></div>
     <div class="statBox"><div class="label">平均正答率</div><div class="value">${attackRecords.length ? Math.round(attackRecords.reduce((a,b)=>a+b.accuracy,0)/attackRecords.length) : 0}%</div></div>
+    <div class="statBox"><div class="label">ヒントあり</div><div class="value">${attackRecords.filter(r=>r.hintsUsed).length}</div></div>
   `;
 
   let html = `
@@ -3103,6 +3229,7 @@ function renderRecords(){
           <th>時間</th>
           <th>目標</th>
           <th>達成</th>
+          <th>ヒント</th>
         </tr>
       </thead>
       <tbody>
@@ -3117,6 +3244,7 @@ function renderRecords(){
         <td>${r.elapsedSec !== undefined ? formatTime(r.elapsedSec) : "-"}</td>
         <td>${r.targetMinutes !== undefined ? formatTime(r.targetMinutes * 60) : "-"}</td>
         <td>${r.targetClear !== undefined ? (r.targetClear ? "◯" : "×") : "-"}</td>
+        <td>${r.hintsUsed ? "あり" : "なし"}</td>
       </tr>
     `;
   });
@@ -4115,8 +4243,7 @@ body.handwritingMode .miniCarryBox.handField{
   }
 
   function scheduleFit(){
-    clearTimeout(fitTimer);
-    fitTimer = setTimeout(fitBoard, 60);
+    return;
   }
 
   function observeTarget(id){
@@ -4130,7 +4257,6 @@ body.handwritingMode .miniCarryBox.handField{
     observeTarget('tableArea');
     observeTarget('attackTableArea');
     observeTarget('handwritingPopup');
-    scheduleFit();
   }
 
   
@@ -4229,12 +4355,12 @@ body.boardMoveMode .boardPannable{
   #practicePlayPage.page.handwritingFullscreen.active,
   #attackPlayPage.page.handwritingFullscreen.active{
     display:grid !important;
-    grid-template-columns: 62px minmax(0,1fr) minmax(148px, 180px);
+    grid-template-columns: 56px minmax(0,1fr) 92px 136px;
     grid-template-rows: auto auto auto auto auto auto;
-    column-gap: 8px;
+    column-gap: 6px;
     row-gap: 6px;
     align-items:start;
-    padding:6px 6px 6px 8px;
+    padding:6px 6px 6px 6px;
   }
 
   #practicePlayPage .boardControlOverlay,
@@ -4254,36 +4380,36 @@ body.boardMoveMode .boardPannable{
     flex-direction:column;
     align-items:center;
     justify-content:flex-start;
-    gap:5px;
+    gap:4px;
     padding:6px 4px;
-    border-radius:16px;
+    border-radius:14px;
     width:100%;
   }
 
   #practicePlayPage .boardControlBtn,
   #attackPlayPage .boardControlBtn{
-    width:36px;
-    height:36px;
-    min-width:36px;
+    width:32px;
+    height:32px;
+    min-width:32px;
     padding:0;
     display:inline-flex;
     align-items:center;
     justify-content:center;
-    font-size:18px;
-    border-radius:12px;
+    font-size:16px;
+    border-radius:10px;
   }
 
   #practicePlayPage .boardControlLabel,
   #attackPlayPage .boardControlLabel{
     min-width:0;
-    font-size:12px;
+    font-size:11px;
     line-height:1;
-    padding-top:2px;
+    padding-top:1px;
   }
 
   #practicePlayPage .handwritingTopBar.practiceTopBar,
   #attackPlayPage .attackTopBar{
-    grid-column:3;
+    grid-column:4;
     width:100%;
     position:static;
     flex-direction:column;
@@ -4291,7 +4417,7 @@ body.boardMoveMode .boardPannable{
     justify-content:flex-start;
     gap:4px;
     margin:0;
-    padding:6px;
+    padding:5px;
     overflow:hidden;
     border-radius:14px;
     border:1px solid #dbe4f0;
@@ -4310,9 +4436,10 @@ body.boardMoveMode .boardPannable{
   #practicePlayPage .handwritingTopBar .navBtn,
   #attackPlayPage .attackTopBar .navBtn{
     width:100%;
-    font-size:12px;
-    padding:6px 6px;
-    border-radius:10px;
+    font-size:11px;
+    padding:5px 4px;
+    border-radius:9px;
+    min-width:0;
   }
 
   #attackPlayPage .attackHud{
@@ -4322,8 +4449,8 @@ body.boardMoveMode .boardPannable{
     flex-direction:column;
     align-items:stretch;
     justify-content:flex-start;
-    gap:3px;
-    font-size:10px;
+    gap:2px;
+    font-size:9px;
     white-space:normal;
     overflow:visible;
     text-align:left;
@@ -4334,11 +4461,11 @@ body.boardMoveMode .boardPannable{
     justify-content:space-between;
     display:flex;
     align-items:center;
-    gap:6px;
+    gap:4px;
   }
 
   #attackPlayPage .attackHud b{
-    font-size:12px;
+    font-size:11px;
   }
 
   #practicePlayPage .practiceMiniToolbar,
@@ -4357,40 +4484,76 @@ body.boardMoveMode .boardPannable{
   #practicePlayPage .practiceMiniToolbar .toggleBtn,
   #attackPlayPage .attackMiniToolbar .toggleBtn{
     width:100%;
-    font-size:12px;
-    padding:5px 6px;
+    font-size:11px;
+    padding:4px 4px;
     border-radius:10px;
     text-align:center;
-    min-height:32px;
-  }
-
-  #practicePlayPage #hint,
-  #practicePlayPage #result,
-  #attackPlayPage #attackHint,
-  #attackPlayPage #attackResult{
-    grid-column:3;
-    width:100%;
-    position:static;
-    margin:0;
-    padding:7px 8px;
-    border-radius:12px;
-    background:white;
-    border:1px solid #dbe4f0;
-    text-align:left;
+    min-height:28px;
+    line-height:1;
   }
 
   #practicePlayPage #hint,
   #attackPlayPage #attackHint{
+    grid-column:3;
     grid-row:4;
+    width:100%;
+    position:static;
+    margin:0;
+    padding:6px 6px;
+    border-radius:10px;
+    background:white;
+    border:1px solid #dbe4f0;
+    text-align:left;
+    font-size:11px;
     min-height:auto;
-    font-size:12px;
   }
 
   #practicePlayPage #result,
+  #attackPlayPage #attackResult,
+  #attackPlayPage #attackAnswerBar,
+  #attackPlayPage #attackFinishPanel{
+    grid-column:4;
+    width:100%;
+    position:static;
+    margin:0;
+  }
+
+  #practicePlayPage #result{
+    grid-row:4;
+    padding:6px 6px;
+    border-radius:10px;
+    background:white;
+    border:1px solid #dbe4f0;
+    text-align:left;
+    font-size:12px;
+    min-height:auto;
+  }
+
   #attackPlayPage #attackResult{
     grid-row:5;
+    padding:6px 6px;
+    border-radius:10px;
+    background:white;
+    border:1px solid #dbe4f0;
+    text-align:left;
+    font-size:12px;
     min-height:auto;
-    font-size:13px;
+  }
+
+  #attackPlayPage #attackAnswerBar{
+    grid-row:6;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    padding:0;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction{
+    width:100%;
+    padding:5px 4px;
+    font-size:11px;
+    border-radius:10px;
   }
 
   #practicePlayPage .practiceBoardWrap,
@@ -4413,12 +4576,11 @@ body.boardMoveMode .boardPannable{
   }
 
   #attackPlayPage #attackFinishPanel{
-    grid-column:3;
     grid-row:6;
-    width:100%;
-    margin:0;
+    padding:8px 8px;
   }
 }
+
 
 @media (max-width:720px){
   .boardControlPanel{
@@ -4496,6 +4658,9 @@ body.boardMoveMode .boardPannable{
     board.setAttribute(info(key).manualAttr, st.manual ? 'true' : 'false');
     const label = labelEl(key);
     if(label) label.textContent = `${Math.round(st.scale * 100)}%`;
+    if(options.redraw !== false){
+      refreshGuides(key);
+    }
   }
 
   function fitBoard(key, options = {}){
@@ -4571,6 +4736,9 @@ body.boardMoveMode .boardPannable{
         st.panActive = false;
         st.panPointerId = null;
       }
+    }
+    if(active === 'attack' && typeof updateAttackManualMode === 'function'){
+      updateAttackManualMode();
     }
   }
 
@@ -4665,6 +4833,15 @@ body.boardMoveMode .boardPannable{
   window.__scheduleHandwritingBoardFit = function(){};
   window.__setBoardInteractionMode = setMode;
   window.__zoomActiveBoard = zoomActive;
+  window.__getBoardScale = function(key){ return state(key).scale; };
+  window.__applyBoardScaleOnce = function(key, scale){
+    const st = state(key);
+    st.scale = clamp(Number(scale) || 1, 0.6, 2.4);
+    st.manual = true;
+    st.panX = 0;
+    st.panY = 0;
+    applyTransform(key);
+  };
 
   const oldShowPage = window.showPage;
   if(typeof oldShowPage === 'function'){
