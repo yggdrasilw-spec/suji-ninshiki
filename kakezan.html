@@ -4054,12 +4054,12 @@ body.handwritingMode .sign{
 
 body.handwritingMode .handField,
 body.handwritingMode .handCanvas{
-  touch-action: pinch-zoom !important;
+  touch-action: none !important;
   user-select:none !important;
 }
 
 body.handwritingMode .miniCarryBox.handField{
-  touch-action: pinch-zoom !important;
+  touch-action: none !important;
 }
 
 .popupCanvasWrap{
@@ -4086,532 +4086,529 @@ body.handwritingMode .miniCarryBox.handField{
 }
 </style>
 
-
-<style id="boardGestureFixes">
-body.handwritingMode .practiceBoardWrap,
-body.handwritingMode .attackBoardShell{
-  overflow:hidden !important;
-}
-
-body.handwritingMode #verticalArea,
-body.handwritingMode #attackVerticalArea{
-  display:inline-block !important;
-  width:fit-content !important;
-  max-width:none !important;
-  overflow:visible !important;
-  margin:0 !important;
-  align-self:flex-start !important;
-  transform-origin:0 0 !important;
-  will-change:transform !important;
-  touch-action:none !important;
-  user-select:none !important;
-}
-
-body.handwritingMode #verticalArea table,
-body.handwritingMode #attackVerticalArea table{
-  transform:none !important;
-}
-
-body.handwritingMode .handField,
-body.handwritingMode .handCanvas,
-body.handwritingMode .miniCarryBox.handField{
-  touch-action:none !important;
-  user-select:none !important;
-}
-
-body.handwritingMode .practiceBoardWrap,
-body.handwritingMode .attackBoardShell,
-body.handwritingMode .handwritingBoardWrap{
-  touch-action:none !important;
-}
-
-body.handwritingMode .handwritingPopupCanvas{
-  touch-action:none !important;
-}
-</style>
-
-
-<script id="boardManagedZoom">
+<script id="handwritingAutoFitFix">
 (function(){
-  const MIN_SCALE = 0.42;
-  const MAX_SCALE = 2.50;
-  const FIT_MARGIN = 0.94;
-
-  const boardState = {
-    practice: createBoardState('practice', 'verticalArea', '.practiceBoardWrap', '.practiceTopBar', '.practiceMiniToolbar', '#hint', '#result'),
-    attack: createBoardState('attack', 'attackVerticalArea', '.attackBoardShell', '.attackTopBar', '.attackMiniToolbar', '#attackHint', '#attackResult')
-  };
-
+  const MIN_SCALE = 0.62;
   let fitTimer = 0;
-  let overlayTimer = 0;
-  let arrowTimer = 0;
-  let resizeObserver = null;
-  let pendingFitKind = null;
-  let pendingFitForce = false;
-  let overlayScheduled = false;
-  let overlayPendingKind = null;
-  let boardReadyTimer = 0;
-  let activeGestureCount = 0;
 
-  window.__boardGestureActive = false;
-  window.__boardZoomMode = 'managed';
-
-  const original = {
-    updateHints: typeof window.updateHints === 'function' ? window.updateHints : null,
-    updateAttackHints: typeof window.updateAttackHints === 'function' ? window.updateAttackHints : null,
-    drawArrowDeferred: typeof window.drawArrowDeferred === 'function' ? window.drawArrowDeferred : null,
-    showPage: typeof window.showPage === 'function' ? window.showPage : null,
-    buildTable: typeof window.buildTable === 'function' ? window.buildTable : null,
-    initHandwritingFields: typeof window.initHandwritingFields === 'function' ? window.initHandwritingFields : null,
-    closePopup: typeof window.closePopup === 'function' ? window.closePopup : null,
-    resizeAllHandwritingFields: typeof window.resizeAllHandwritingFields === 'function' ? window.resizeAllHandwritingFields : null,
-    refreshHandwritingDisplays: typeof window.refreshHandwritingDisplays === 'function' ? window.refreshHandwritingDisplays : null,
-    startHandwritingStroke: typeof window.startHandwritingStroke === 'function' ? window.startHandwritingStroke : null,
-    moveHandwritingStroke: typeof window.moveHandwritingStroke === 'function' ? window.moveHandwritingStroke : null,
-    endHandwritingStroke: typeof window.endHandwritingStroke === 'function' ? window.endHandwritingStroke : null
-  };
-
-  function createBoardState(kind, id, viewportSelector, topBarSelector, toolbarSelector, hintSelector, resultSelector){
-    return {
-      kind,
-      id,
-      el: null,
-      viewportSelector,
-      topBarSelector,
-      toolbarSelector,
-      hintSelector,
-      resultSelector,
-      fitScale: 1,
-      scale: 1,
-      panX: 0,
-      panY: 0,
-      gesture: false,
-      pointers: new Map(),
-      gestureStart: null,
-      fitScheduled: false,
-      arrowScheduled: false,
-      latestArrowItem: null,
-      latestArrowKind: kind,
-      lastGestureAt: 0
-    };
-  }
-
-  function currentKind(){
-    if(typeof appState === 'undefined') return null;
-    if(appState.page === 'practicePlayPage') return 'practice';
-    if(appState.page === 'attackPlayPage') return 'attack';
+  function getActiveBoard(){
+    if(typeof appState === 'undefined' || appState.inputMode !== 'handwriting') return null;
+    if(appState.page === 'practicePlayPage') return document.getElementById('verticalArea');
+    if(appState.page === 'attackPlayPage') return document.getElementById('attackVerticalArea');
     return null;
   }
 
-  function getBoard(kind){
-    const board = boardState[kind];
-    if(!board) return null;
-    if(!board.el){
-      board.el = document.getElementById(board.id);
-    }
-    return board.el ? board : null;
-  }
-
-  function getViewport(kind){
-    const board = getBoard(kind);
-    if(!board) return null;
-    return board.el.parentElement || null;
-  }
-
-  function clamp(value, min, max){
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function setBoardTransform(board){
-    if(!board || !board.el) return;
-    const transform = `translate(${board.panX}px, ${board.panY}px) scale(${board.scale})`;
-    board.el.style.transformOrigin = '0 0';
-    board.el.style.transform = transform;
-    board.el.style.webkitTransform = transform;
-    board.el.style.willChange = 'transform';
-    board.el.dataset.fitScale = String(board.fitScale || 1);
-  }
-
-  function readNaturalRect(board){
-    const el = board?.el;
-    if(!el) return null;
-    const prevTransform = el.style.transform;
-    const prevOrigin = el.style.transformOrigin;
-    const prevZoom = el.style.zoom;
-    const prevTransition = el.style.transition;
-    el.style.transform = 'none';
-    el.style.transformOrigin = '0 0';
-    el.style.zoom = '1';
-    el.style.transition = 'none';
-    const rect = el.getBoundingClientRect();
-    el.style.transform = prevTransform;
-    el.style.transformOrigin = prevOrigin;
-    el.style.zoom = prevZoom;
-    el.style.transition = prevTransition;
-    return rect;
-  }
-
-  function getAvailableHeight(kind){
-    const board = getBoard(kind);
-    if(!board) return 0;
-    const topBar = document.querySelector(board.topBarSelector);
-    const toolbar = document.querySelector(board.toolbarSelector);
-    const hint = document.querySelector(board.hintSelector);
-    const result = document.querySelector(board.resultSelector);
-    const occupiedTop = (topBar?.getBoundingClientRect().height || 0)
-      + (toolbar?.getBoundingClientRect().height || 0)
-      + (hint?.getBoundingClientRect().height || 0)
-      + (result?.getBoundingClientRect().height || 0);
-    return Math.max(180, (window.innerHeight || document.documentElement.clientHeight) - occupiedTop - 16);
-  }
-
-  function applyBoardFit(kind, force=false){
-    const board = getBoard(kind);
-    if(!board) return;
-    if(typeof appState !== 'undefined' && appState.inputMode !== 'handwriting') return;
-    const popup = document.getElementById('handwritingPopup');
-    if(popup && popup.classList.contains('active') && !force) return;
-    if(board.gesture && !force) return;
-    if(!force && Date.now() - board.lastGestureAt < 250) return;
-
-    const viewport = getViewport(kind);
-    const natural = readNaturalRect(board);
-    if(!viewport || !natural || natural.width < 2 || natural.height < 2) return;
-
-    const availW = Math.max(220, (window.innerWidth || document.documentElement.clientWidth) - 18);
-    const availH = getAvailableHeight(kind);
-
-    let scale = Math.min(availW / natural.width, availH / natural.height, 1);
-    if(!Number.isFinite(scale) || scale <= 0) scale = 1;
-    scale = clamp(scale * FIT_MARGIN, MIN_SCALE, MAX_SCALE);
-
-    board.fitScale = scale;
-    board.scale = scale;
-    board.panX = Math.max(0, Math.round((availW - (natural.width * scale)) / 2));
-    board.panY = 0;
-    setBoardTransform(board);
-  }
-
-  function requestBoardFit(kind = 'current', force=false){
-    pendingFitKind = kind;
-    pendingFitForce = pendingFitForce || force;
-    clearTimeout(fitTimer);
-    fitTimer = setTimeout(()=>{
-      const target = pendingFitKind;
-      const doForce = pendingFitForce;
-      pendingFitKind = null;
-      pendingFitForce = false;
-      if(target === 'current'){
-        const active = currentKind();
-        if(active === 'practice' || active === 'attack'){
-          applyBoardFit(active, doForce);
-          requestOverlayRefresh(active);
-        }
-        return;
-      }
-      if(target === 'practice' || target === 'attack'){
-        applyBoardFit(target, doForce);
-        requestOverlayRefresh(target);
-      }else{
-        applyBoardFit('practice', doForce);
-        applyBoardFit('attack', doForce);
-        requestOverlayRefresh('all');
-      }
-    }, 32);
-  }
-
   function resetActiveBoardZoom(){
-    const kind = currentKind();
-    if(!kind) return;
-    applyBoardFit(kind, true);
-    requestOverlayRefresh(kind);
-  }
-
-  function beginGesture(board){
-    if(!board || !board.el || board.pointers.size < 2) return;
-    const pts = Array.from(board.pointers.values()).slice(0, 2);
-    const p1 = pts[0];
-    const p2 = pts[1];
-    const center = {
-      x: (p1.x + p2.x) / 2,
-      y: (p1.y + p2.y) / 2
-    };
-    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-    board.gesture = true;
-    board.gestureStart = {
-      scale: board.scale,
-      panX: board.panX,
-      panY: board.panY,
-      center,
-      dist,
-      worldX: (center.x - board.panX) / Math.max(board.scale, 0.0001),
-      worldY: (center.y - board.panY) / Math.max(board.scale, 0.0001)
-    };
-    activeGestureCount += 1;
-    window.__boardGestureActive = true;
-  }
-
-  function endGesture(board){
-    if(!board || !board.gesture) return;
-    board.gesture = false;
-    board.gestureStart = null;
-    board.lastGestureAt = Date.now();
-    activeGestureCount = Math.max(0, activeGestureCount - 1);
-    window.__boardGestureActive = activeGestureCount > 0;
-  }
-
-  function updateGesture(board){
-    if(!board || !board.gesture || !board.gestureStart || board.pointers.size < 2) return;
-    const pts = Array.from(board.pointers.values()).slice(0, 2);
-    const p1 = pts[0];
-    const p2 = pts[1];
-    const center = {
-      x: (p1.x + p2.x) / 2,
-      y: (p1.y + p2.y) / 2
-    };
-    const dist = Math.max(1, Math.hypot(p2.x - p1.x, p2.y - p1.y));
-    const start = board.gestureStart;
-    const scale = clamp(start.scale * (dist / Math.max(1, start.dist)), MIN_SCALE, MAX_SCALE);
-    board.scale = scale;
-    board.panX = center.x - (start.worldX * scale);
-    board.panY = center.y - (start.worldY * scale);
-    setBoardTransform(board);
-  }
-
-  function boardLocalPoint(board, e){
-    const rect = board.el.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
-  }
-
-  function boardPointerDown(kind, e){
-    if(typeof appState !== 'undefined' && appState.inputMode !== 'handwriting') return;
-    if(e.pointerType !== 'touch') return;
-    const board = getBoard(kind);
-    if(!board || !board.el) return;
-    if(!board.el.contains(e.target)) return;
-    const p = boardLocalPoint(board, e);
-    board.pointers.set(e.pointerId, { x: p.x, y: p.y });
-    try{ board.el.setPointerCapture(e.pointerId); }catch(err){}
-    if(board.pointers.size >= 2 && !board.gesture){
-      beginGesture(board);
-    }
-  }
-
-  function boardPointerMove(kind, e){
-    const board = getBoard(kind);
-    if(!board || !board.el) return;
-    if(!board.pointers.has(e.pointerId)) return;
-    const p = boardLocalPoint(board, e);
-    board.pointers.set(e.pointerId, { x: p.x, y: p.y });
-    if(board.gesture){
-      e.preventDefault();
-      updateGesture(board);
-    }
-  }
-
-  function boardPointerUp(kind, e){
-    const board = getBoard(kind);
-    if(!board || !board.el) return;
-    if(!board.pointers.has(e.pointerId)) return;
-    board.pointers.delete(e.pointerId);
-    if(board.gesture){
-      e.preventDefault();
-      if(board.pointers.size < 2){
-        endGesture(board);
-      }else{
-        updateGesture(board);
-      }
-    }
-  }
-
-  function bindBoardGesture(kind){
-    const board = getBoard(kind);
-    if(!board || !board.el || board.el.__gestureBound) return;
-    board.el.__gestureBound = true;
-    board.el.addEventListener('pointerdown', e => boardPointerDown(kind, e), { passive:false });
-    board.el.addEventListener('pointermove', e => boardPointerMove(kind, e), { passive:false });
-    board.el.addEventListener('pointerup', e => boardPointerUp(kind, e), { passive:false });
-    board.el.addEventListener('pointercancel', e => boardPointerUp(kind, e), { passive:false });
-    board.el.addEventListener('pointerleave', e => boardPointerUp(kind, e), { passive:false });
-  }
-
-  function requestOverlayRefresh(kind='current'){
-    overlayPendingKind = kind;
-    if(overlayScheduled) return;
-    overlayScheduled = true;
-    requestAnimationFrame(()=>{
-      overlayScheduled = false;
-      const target = overlayPendingKind;
-      overlayPendingKind = null;
-      if(target === 'practice' && original.updateHints){
-        try{ original.updateHints(); }catch(err){}
-      }else if(target === 'attack' && original.updateAttackHints){
-        try{ original.updateAttackHints(); }catch(err){}
-      }else if(target === 'all'){
-        if(original.updateHints){ try{ original.updateHints(); }catch(err){} }
-        if(original.updateAttackHints){ try{ original.updateAttackHints(); }catch(err){} }
-      }
-    });
-  }
-
-  function scheduleArrowDraw(kind, item){
-    const board = getBoard(kind);
+    const board = getActiveBoard();
     if(!board) return;
-    board.latestArrowItem = item;
-    if(board.arrowScheduled) return;
-    board.arrowScheduled = true;
-    requestAnimationFrame(()=>{
-      board.arrowScheduled = false;
-      const latest = board.latestArrowItem;
-      board.latestArrowItem = null;
-      if(!latest || !original.drawArrowDeferred || !board.el) return;
-      try{
-        original.drawArrowDeferred(latest, kind);
-      }catch(err){}
-    });
+    board.style.zoom = '1';
+    board.dataset.fitScale = '1';
   }
 
-  function scheduleFitAfterLayout(kind, force=false){
-    clearTimeout(boardReadyTimer);
-    boardReadyTimer = setTimeout(()=>{
-      requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          requestBoardFit(kind, force);
-        });
-      });
-    }, 24);
-  }
+  function fitBoard(){
+    const board = getActiveBoard();
+    if(!board) return;
 
-  function wrapUpdates(){
-    if(original.updateHints){
-      window.updateHints = function(){
-        requestOverlayRefresh('practice');
-      };
+    const popup = document.getElementById('handwritingPopup');
+    if(popup && popup.classList.contains('active')) return;
+
+    const prevZoom = board.style.zoom;
+    board.style.zoom = '1';
+    const naturalRect = board.getBoundingClientRect();
+    board.style.zoom = prevZoom || '';
+
+    const topBar = document.querySelector(appState.page === 'practicePlayPage' ? '.practiceTopBar' : '.attackTopBar');
+    const toolbar = document.querySelector(appState.page === 'practicePlayPage' ? '.practiceMiniToolbar' : '.attackMiniToolbar');
+    const hint = document.getElementById(appState.page === 'practicePlayPage' ? 'hint' : 'attackHint');
+    const result = document.getElementById(appState.page === 'practicePlayPage' ? 'result' : 'attackResult');
+
+    const availW = Math.max(320, (window.innerWidth || document.documentElement.clientWidth) - 18);
+    const occupiedTop = (topBar?.getBoundingClientRect().height || 0) + (toolbar?.getBoundingClientRect().height || 0) + (hint?.getBoundingClientRect().height || 0) + (result?.getBoundingClientRect().height || 0);
+    const boardTop = board.parentElement?.getBoundingClientRect().top || 0;
+    const availH = Math.max(220, (window.innerHeight || document.documentElement.clientHeight) - boardTop - occupiedTop - 16);
+
+    let scale = Math.min(1, availW / Math.max(1, naturalRect.width), availH / Math.max(1, naturalRect.height));
+    if(!Number.isFinite(scale) || scale <= 0) scale = 1;
+    scale = Math.max(MIN_SCALE, Math.min(1, scale));
+
+    board.style.zoom = String(scale);
+    board.dataset.fitScale = String(scale);
+
+    if(typeof resizeAllHandwritingFields === 'function'){
+      resizeAllHandwritingFields();
     }
-    if(original.updateAttackHints){
-      window.updateAttackHints = function(){
-        requestOverlayRefresh('attack');
-      };
-    }
-    if(original.drawArrowDeferred){
-      window.drawArrowDeferred = function(item, kind){
-        scheduleArrowDraw(kind, item);
-      };
-    }
-    if(original.showPage){
-      window.showPage = function(pageId){
-        const result = original.showPage(pageId);
-        scheduleFitAfterLayout('current', true);
-        return result;
-      };
-    }
-    if(original.buildTable){
-      window.buildTable = function(kind){
-        const result = original.buildTable(kind);
-        scheduleFitAfterLayout(kind, true);
-        return result;
-      };
-    }
-    if(original.initHandwritingFields){
-      window.initHandwritingFields = function(kind){
-        const result = original.initHandwritingFields(kind);
-        bindBoardGesture(kind === 'attack' ? 'attack' : 'practice');
-        scheduleFitAfterLayout(kind, false);
-        return result;
-      };
-    }
-    if(original.closePopup){
-      window.closePopup = function(){
-        const result = original.closePopup();
-        activeGestureCount = 0;
-        window.__boardGestureActive = false;
-        scheduleFitAfterLayout('current', true);
-        return result;
-      };
-    }
-    if(original.resizeAllHandwritingFields){
-      window.resizeAllHandwritingFields = function(){
-        const result = original.resizeAllHandwritingFields();
-        return result;
-      };
-    }
-    if(original.refreshHandwritingDisplays){
-      window.refreshHandwritingDisplays = function(){
-        return original.refreshHandwritingDisplays();
-      };
-    }
-    if(original.startHandwritingStroke){
-      window.startHandwritingStroke = function(e, st){
-        if(window.__boardGestureActive) return;
-        return original.startHandwritingStroke(e, st);
-      };
-    }
-    if(original.moveHandwritingStroke){
-      window.moveHandwritingStroke = function(e, st){
-        if(window.__boardGestureActive) return;
-        return original.moveHandwritingStroke(e, st);
-      };
-    }
-    if(original.endHandwritingStroke){
-      window.endHandwritingStroke = function(e, st){
-        if(window.__boardGestureActive) return;
-        return original.endHandwritingStroke(e, st);
-      };
+    if(typeof refreshHandwritingDisplays === 'function'){
+      refreshHandwritingDisplays();
     }
   }
 
-  function observeLayoutChanges(){
-    if('ResizeObserver' in window && !resizeObserver){
-      resizeObserver = new ResizeObserver(entries => {
-        let needsRefresh = false;
-        for(const entry of entries){
-          const target = entry.target;
-          if(!target || !target.id) continue;
-          if(target.id === 'verticalArea' || target.id === 'attackVerticalArea'){
-            needsRefresh = true;
-            break;
-          }
-        }
-        if(needsRefresh){
-          scheduleFitAfterLayout('current', false);
-        }
-      });
-      ['verticalArea','attackVerticalArea'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el){
-          try{ resizeObserver.observe(el); }catch(err){}
-        }
-      });
-    }
+  function scheduleFit(){
+    clearTimeout(fitTimer);
+    fitTimer = setTimeout(fitBoard, 60);
+  }
+
+  function observeTarget(id){
+    const el = document.getElementById(id);
+    if(!el || el.__handwritingFitObserved) return;
+    el.__handwritingFitObserved = true;
+    new MutationObserver(scheduleFit).observe(el, { childList:true, subtree:true });
   }
 
   function init(){
-    bindBoardGesture('practice');
-    bindBoardGesture('attack');
-    wrapUpdates();
-    observeLayoutChanges();
-    scheduleFitAfterLayout('current', true);
-    setTimeout(()=>scheduleFitAfterLayout('current', true), 250);
-    setTimeout(()=>scheduleFitAfterLayout('current', true), 850);
+    observeTarget('tableArea');
+    observeTarget('attackTableArea');
+    observeTarget('handwritingPopup');
+    scheduleFit();
   }
 
   window.__resetActiveBoardZoom = resetActiveBoardZoom;
-  window.__scheduleHandwritingBoardFit = function(){
-    scheduleFitAfterLayout('current', true);
-  };
-  window.__triggerIpadLayoutRefresh = function(){
-    scheduleFitAfterLayout('current', false);
-  };
+  window.__scheduleHandwritingBoardFit = scheduleFit;
 
-  window.addEventListener('resize', ()=>scheduleFitAfterLayout('current', false), { passive:true });
-  window.addEventListener('orientationchange', ()=>scheduleFitAfterLayout('current', true), { passive:true });
-  document.addEventListener('DOMContentLoaded', init, { once:true });
+  window.addEventListener('resize', scheduleFit, { passive:true });
+  window.addEventListener('orientationchange', ()=>setTimeout(scheduleFit, 80), { passive:true });
+
+  document.addEventListener('DOMContentLoaded', init);
+  setTimeout(init, 600);
+
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(pageId){
+      const result = oldShowPage(pageId);
+      scheduleFit();
+      return result;
+    };
+  }
 })();
 </script>
 
 
+
+<style id="explicitBoardControlStyles">
+:root{
+  --board-control-bg: rgba(255,255,255,.94);
+  --board-control-border: rgba(148,163,184,.45);
+  --board-control-shadow: 0 12px 32px rgba(15,23,42,.14);
+}
+
+body.boardMoveMode .handCanvas,
+body.boardMoveMode .handField,
+body.boardMoveMode .miniCarryBox{
+  pointer-events:none !important;
+}
+
+body.boardMoveMode .boardControlBtn[data-mode="move"],
+body.boardDrawMode .boardControlBtn[data-mode="draw"]{
+  background:var(--primary);
+  color:white;
+  border-color:transparent;
+}
+
+.boardControlOverlay{
+  position:sticky;
+  top:8px;
+  z-index:10020;
+  width:100%;
+  display:flex;
+  justify-content:center;
+  pointer-events:none;
+  margin:0 0 8px;
+}
+
+.boardControlPanel{
+  pointer-events:auto;
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:6px;
+  padding:7px 8px;
+  border-radius:18px;
+  background:var(--board-control-bg);
+  border:1px solid var(--board-control-border);
+  box-shadow:var(--board-control-shadow);
+  backdrop-filter: blur(10px);
+}
+
+.boardControlBtn{
+  border:1px solid #d5ddeb;
+  background:white;
+  color:#1f2937;
+  border-radius:12px;
+  width:38px;
+  height:38px;
+  padding:0;
+  font-size:19px;
+  line-height:1;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:none;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.boardControlBtn[data-mode]{
+  width:auto;
+  min-width:44px;
+  padding:0 9px;
+  font-size:15px;
+  font-weight:800;
+}
+
+.boardControlBtn:active{ transform:scale(.98); }
+
+.boardControlLabel{
+  min-width:54px;
+  text-align:center;
+  font-weight:800;
+  font-size:13px;
+  color:#334155;
+  padding:0 4px;
+}
+
+body.boardMoveMode .practiceBoardWrap,
+body.boardMoveMode .attackBoardShell,
+body.boardDrawMode .practiceBoardWrap,
+body.boardDrawMode .attackBoardShell{
+  touch-action:none;
+}
+
+#verticalArea,
+#attackVerticalArea{
+  transform-origin: top center;
+  will-change: transform;
+}
+
+#verticalArea[data-manual-zoom="true"],
+#attackVerticalArea[data-manual-zoom="true"]{
+  transition: transform .08s linear;
+}
+
+.boardPannable{
+  cursor: grab;
+}
+
+body.boardMoveMode .boardPannable{
+  cursor: grabbing;
+}
+
+@media (max-width:720px){
+  .boardControlPanel{
+    gap:5px;
+    padding:6px 7px;
+    border-radius:16px;
+  }
+  .boardControlBtn{
+    width:34px;
+    height:34px;
+    font-size:18px;
+    border-radius:11px;
+  }
+  .boardControlBtn[data-mode]{
+    min-width:42px;
+    padding:0 8px;
+    font-size:12px;
+  }
+  .boardControlLabel{
+    font-size:12px;
+    min-width:48px;
+  }
+}
+
+@media (orientation: landscape){
+  .boardControlOverlay{
+    position:fixed;
+    top:50%;
+    right:10px;
+    left:auto;
+    width:auto;
+    transform:translateY(-50%);
+    justify-content:flex-end;
+    align-items:center;
+    margin:0;
+  }
+  .boardControlPanel{
+    flex-direction:column;
+    align-items:stretch;
+    gap:7px;
+    padding:8px;
+    border-radius:20px;
+  }
+  .boardControlBtn{
+    width:44px;
+    height:44px;
+    font-size:20px;
+  }
+  .boardControlBtn[data-mode]{
+    width:44px;
+    min-width:44px;
+    padding:0;
+    font-size:11px;
+    line-height:1.05;
+    white-space:normal;
+  }
+  .boardControlLabel{
+    min-width:44px;
+    font-size:12px;
+  }
+  body.boardMoveMode .practiceBoardWrap,
+  body.boardMoveMode .attackBoardShell,
+  body.boardDrawMode .practiceBoardWrap,
+  body.boardDrawMode .attackBoardShell{
+    padding-right:76px;
+  }
+}
+</style>
+
+<script id="explicitBoardControls">
+(function(){
+  const BOARD_INFO = {
+    practice: {
+      pageId: 'practicePlayPage',
+      boardId: 'verticalArea',
+      viewportSelector: '.practiceBoardWrap',
+      overlayAnchorSelector: '.practiceMiniToolbar',
+      controlsId: 'practiceBoardControls',
+      labelId: 'practiceBoardScaleLabel',
+      manualAttr: 'data-manual-zoom'
+    },
+    attack: {
+      pageId: 'attackPlayPage',
+      boardId: 'attackVerticalArea',
+      viewportSelector: '.attackBoardShell',
+      overlayAnchorSelector: '.attackMiniToolbar',
+      controlsId: 'attackBoardControls',
+      labelId: 'attackBoardScaleLabel',
+      manualAttr: 'data-manual-zoom'
+    }
+  };
+
+  const viewState = {
+    practice: { scale: 1, panX: 0, panY: 0, manual: false, panActive: false, panPointerId: null, panStartX: 0, panStartY: 0, panBaseX: 0, panBaseY: 0 },
+    attack: { scale: 1, panX: 0, panY: 0, manual: false, panActive: false, panPointerId: null, panStartX: 0, panStartY: 0, panBaseX: 0, panBaseY: 0 }
+  };
+
+  function activeKey(){
+    if(typeof appState !== 'undefined' && appState.page === 'attackPlayPage') return 'attack';
+    return 'practice';
+  }
+
+  function getInfo(key){ return BOARD_INFO[key]; }
+  function getState(key){ return viewState[key]; }
+
+  function clamp(value, min, max){
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function boardEl(key){
+    const info = getInfo(key);
+    return document.getElementById(info.boardId);
+  }
+
+  function viewportEl(key){
+    const info = getInfo(key);
+    return document.querySelector(info.viewportSelector);
+  }
+
+  function labelEl(key){
+    const info = getInfo(key);
+    return document.getElementById(info.labelId);
+  }
+
+  function setMode(mode){
+    const normalized = mode === 'move' ? 'move' : 'draw';
+    document.body.classList.toggle('boardMoveMode', normalized === 'move');
+    document.body.classList.toggle('boardDrawMode', normalized === 'draw');
+    document.querySelectorAll('.boardControlBtn[data-mode]').forEach(btn => {
+      btn.classList.toggle('on', btn.dataset.mode === normalized);
+    });
+    const active = activeKey();
+    const vp = viewportEl(active);
+    if(vp){
+      vp.classList.toggle('boardPannable', normalized === 'move');
+    }
+  }
+
+  function applyTransform(key){
+    const board = boardEl(key);
+    if(!board) return;
+    const st = getState(key);
+    board.style.transform = `translate(${st.panX}px, ${st.panY}px) scale(${st.scale})`;
+    board.setAttribute(BOARD_INFO[key].manualAttr, st.manual ? 'true' : 'false');
+    const label = labelEl(key);
+    if(label) label.textContent = `${Math.round(st.scale * 100)}%`;
+  }
+
+  function fitBoard(key, options = {}){
+    const board = boardEl(key);
+    if(!board) return;
+    const st = getState(key);
+    if(st.manual && !options.force) return;
+    const info = getInfo(key);
+    const page = document.getElementById(info.pageId);
+    if(!page || !page.classList.contains('active')) return;
+
+    const viewport = viewportEl(key);
+    if(!viewport) return;
+
+    const topBar = document.querySelector(key === 'practice' ? '.practiceTopBar' : '.attackTopBar');
+    const toolbar = document.querySelector(key === 'practice' ? '.practiceMiniToolbar' : '.attackMiniToolbar');
+    const hint = document.getElementById(key === 'practice' ? 'hint' : 'attackHint');
+    const result = document.getElementById(key === 'practice' ? 'result' : 'attackResult');
+
+    const oldTransform = board.style.transform;
+    board.style.transform = 'none';
+    board.style.transition = 'none';
+    const naturalW = Math.max(1, board.offsetWidth || board.getBoundingClientRect().width || 1);
+    const naturalH = Math.max(1, board.offsetHeight || board.getBoundingClientRect().height || 1);
+    board.style.transform = oldTransform;
+    board.style.transition = '';
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const occupiedTop = (topBar?.getBoundingClientRect().height || 0) + (toolbar?.getBoundingClientRect().height || 0) + (hint?.getBoundingClientRect().height || 0) + (result?.getBoundingClientRect().height || 0);
+    const availableW = Math.max(260, viewportRect.width - 16);
+    const availableH = Math.max(180, viewportRect.height - occupiedTop - 18);
+    let scale = Math.min(1, availableW / naturalW, availableH / naturalH);
+    if(!Number.isFinite(scale) || scale <= 0) scale = 1;
+    scale = clamp(scale, 0.6, 1);
+    st.scale = scale;
+    st.panX = 0;
+    st.panY = 0;
+    st.manual = false;
+    applyTransform(key);
+  }
+
+  function scheduleFit(){
+    clearTimeout(scheduleFit._timer);
+    scheduleFit._timer = setTimeout(() => {
+      fitBoard(activeKey());
+    }, 60);
+  }
+
+  function zoomActive(delta){
+    const key = activeKey();
+    const st = getState(key);
+    st.manual = true;
+    st.scale = clamp(Math.round((st.scale + delta) * 100) / 100, 0.6, 2.4);
+    applyTransform(key);
+  }
+
+  function resetActiveBoardZoom(){
+    const key = activeKey();
+    const st = getState(key);
+    st.manual = false;
+    scheduleFit();
+  }
+
+  function ensureControlBar(key){
+    const info = getInfo(key);
+    const page = document.getElementById(info.pageId);
+    if(!page) return;
+    if(document.getElementById(info.controlsId)) return;
+
+    const anchor = page.querySelector(info.overlayAnchorSelector);
+    const bar = document.createElement('div');
+    bar.className = 'boardControlOverlay';
+    bar.id = info.controlsId;
+    bar.innerHTML = `
+      <div class="boardControlPanel" role="toolbar" aria-label="ボード操作">
+        <button type="button" class="boardControlBtn" data-action="zoom-out" aria-label="縮小 10%" title="縮小 10%">➖</button>
+        <button type="button" class="boardControlBtn" data-action="zoom-in" aria-label="拡大 10%" title="拡大 10%">➕</button>
+        <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動" title="移動">🖐️</button>
+        <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画" title="描画">✍️</button>
+        <div class="boardControlLabel" id="${info.labelId}" title="現在の拡大率">100%</div>
+      </div>
+    `;
+    if(anchor && anchor.parentNode){
+      anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }else{
+      page.insertBefore(bar, page.firstChild);
+    }
+
+    bar.querySelector('[data-action="zoom-out"]').addEventListener('click', () => zoomActive(-0.1));
+    bar.querySelector('[data-action="zoom-in"]').addEventListener('click', () => zoomActive(0.1));
+    bar.querySelector('[data-mode="move"]').addEventListener('click', () => setMode('move'));
+    bar.querySelector('[data-mode="draw"]').addEventListener('click', () => setMode('draw'));
+  }
+
+  function bindPan(key){
+    const vp = viewportEl(key);
+    const board = boardEl(key);
+    if(!vp || !board || vp.__boardPanBound) return;
+    vp.__boardPanBound = true;
+
+    const st = getState(key);
+
+    vp.addEventListener('pointerdown', (e) => {
+      if(document.body.classList.contains('boardMoveMode') === false) return;
+      if(e.target.closest('button, input, select, textarea, label, .toggleBtn, .navBtn, .cardBtn')) return;
+      st.panActive = true;
+      st.panPointerId = e.pointerId;
+      st.panStartX = e.clientX;
+      st.panStartY = e.clientY;
+      st.panBaseX = st.panX;
+      st.panBaseY = st.panY;
+      try{ vp.setPointerCapture(e.pointerId); }catch(err){}
+      e.preventDefault();
+    }, { passive:false });
+
+    vp.addEventListener('pointermove', (e) => {
+      if(!st.panActive || st.panPointerId !== e.pointerId) return;
+      st.panX = st.panBaseX + (e.clientX - st.panStartX);
+      st.panY = st.panBaseY + (e.clientY - st.panStartY);
+      applyTransform(key);
+      e.preventDefault();
+    }, { passive:false });
+
+    const endPan = (e) => {
+      if(!st.panActive || st.panPointerId !== e.pointerId) return;
+      st.panActive = false;
+      st.panPointerId = null;
+      e.preventDefault();
+    };
+
+    vp.addEventListener('pointerup', endPan, { passive:false });
+    vp.addEventListener('pointercancel', endPan, { passive:false });
+    vp.addEventListener('pointerleave', endPan, { passive:false });
+
+    board.classList.add('boardPannable');
+  }
+
+  function initKey(key){
+    ensureControlBar(key);
+    bindPan(key);
+    applyTransform(key);
+  }
+
+  function init(){
+    initKey('practice');
+    initKey('attack');
+    setMode('draw');
+    scheduleFit();
+  }
+
+  window.__resetActiveBoardZoom = resetActiveBoardZoom;
+  window.__scheduleHandwritingBoardFit = scheduleFit;
+  window.__setBoardInteractionMode = setMode;
+  window.__zoomActiveBoard = zoomActive;
+
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(pageId){
+      const result = oldShowPage(pageId);
+      if(pageId === 'practicePlayPage' || pageId === 'attackPlayPage'){
+        setMode('draw');
+        scheduleFit();
+      }
+      return result;
+    };
+  }
+
+  window.addEventListener('resize', scheduleFit, { passive:true });
+  window.addEventListener('orientationchange', () => setTimeout(scheduleFit, 80), { passive:true });
+  document.addEventListener('DOMContentLoaded', init);
+  setTimeout(init, 300);
+})();
+</script>
 </body>
 </html>
