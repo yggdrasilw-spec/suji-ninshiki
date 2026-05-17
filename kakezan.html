@@ -957,6 +957,2575 @@ body.handwritingMode .handField.active .handCanvas{
   }
 }
 </style>
+
+
+<style id="landscapeAbsoluteLayoutFix_v8">
+@media (orientation: landscape) and (min-width: 721px){
+  #practicePlayPage.page.handwritingFullscreen.active,
+  #attackPlayPage.page.handwritingFullscreen.active{
+    display:flex !important;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    box-sizing:border-box;
+    padding:clamp(136px, 18vh, 160px) clamp(252px, 25vw, 300px) 10px clamp(68px, 6vw, 80px);
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar,
+  #attackPlayPage .attackTopBar{
+    position:absolute;
+    left:6px;
+    top:6px;
+    width:clamp(54px, 5.4vw, 64px);
+    margin:0;
+    padding:0;
+    background:transparent;
+    border:none;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    pointer-events:none;
+    z-index:10050;
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar > *,
+  #attackPlayPage .attackTopBar > *{
+    pointer-events:auto;
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar .navBtn,
+  #attackPlayPage .attackTopBar .navBtn{
+    width:100%;
+    min-width:0;
+    padding:4px 2px;
+    font-size:10px;
+    border-radius:8px;
+    box-shadow:none;
+  }
+
+  #practicePlayPage .modeBadge{
+    width:100%;
+    justify-content:center;
+    padding:4px 6px;
+    font-size:10px;
+    border-radius:9px;
+    line-height:1.1;
+  }
+
+  #practicePlayPage .practiceTopActions{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  #practicePlayPage .practiceTopActions .navBtn{
+    width:100%;
+  }
+
+  #attackPlayPage .attackHud{
+    position:absolute;
+    top:6px;
+    right:6px;
+    width:clamp(92px, 10vw, 122px);
+    margin:0;
+    padding:4px 6px;
+    background:white;
+    border:1px solid #dbe4f0;
+    border-radius:10px;
+    box-shadow:none;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    font-size:7px;
+    line-height:1.05;
+    text-align:left;
+    overflow:hidden;
+    z-index:10045;
+  }
+
+  #attackPlayPage .attackHud span{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:3px;
+    width:100%;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:9px;
+  }
+
+  #practicePlayPage .practiceMiniToolbar,
+  #attackPlayPage .attackMiniToolbar{
+    position:absolute;
+    top:6px;
+    right:calc(clamp(92px, 10vw, 122px) + 8px);
+    width:clamp(106px, 11vw, 136px);
+    margin:0;
+    padding:0;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:4px;
+    justify-content:stretch;
+    align-items:stretch;
+    z-index:10045;
+  }
+
+  #practicePlayPage .practiceMiniToolbar .toggleBtn,
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    width:100%;
+    min-width:0;
+    min-height:24px;
+    padding:4px 2px;
+    font-size:10px;
+    border-radius:9px;
+    line-height:1;
+  }
+
+  #practicePlayPage #hint,
+  #attackPlayPage #attackHint{
+    position:absolute;
+    top:108px;
+    right:calc(clamp(92px, 10vw, 122px) + 8px);
+    width:clamp(106px, 11vw, 136px);
+    margin:0;
+    padding:5px 6px;
+    min-height:0;
+    border:1px solid #dbe4f0;
+    border-radius:10px;
+    background:white;
+    font-size:11px;
+    line-height:1.25;
+    text-align:center;
+    word-break:break-word;
+    overflow:hidden;
+    z-index:10045;
+  }
+
+  #practicePlayPage #result{
+    position:absolute;
+    top:6px;
+    right:6px;
+    width:clamp(92px, 10vw, 122px);
+    margin:0;
+    padding:4px 6px;
+    min-height:0;
+    border:1px solid #dbe4f0;
+    border-radius:10px;
+    background:white;
+    font-size:11px;
+    line-height:1.25;
+    text-align:left;
+    overflow:hidden;
+    z-index:10045;
+  }
+
+  #practicePlayPage .practiceBoardWrap,
+  #attackPlayPage .attackBoardShell{
+    flex:1 1 auto;
+    min-height:0;
+    overflow:auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:0;
+    margin:0;
+  }
+
+  #practicePlayPage #verticalArea,
+  #attackPlayPage #attackVerticalArea{
+    max-width:100%;
+    width:fit-content;
+    margin:0 auto;
+    transform-origin:top center;
+  }
+
+  #attackPlayPage #attackResult{
+    width:100%;
+    margin:0;
+    padding:5px 6px;
+    border:1px solid #dbe4f0;
+    border-radius:10px;
+    background:white;
+    font-size:11px;
+    line-height:1.25;
+    text-align:left;
+    min-height:0;
+  }
+
+  #attackPlayPage #attackAnswerBar{
+    width:100%;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction{
+    width:100%;
+    padding:5px 4px;
+    font-size:10px;
+    border-radius:9px;
+  }
+
+  #attackPlayPage #attackFinishPanel{
+    width:100%;
+    margin:0;
+    padding:8px;
+  }
+
+  #attackPlayPage #attackFinishPanel .statGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #practicePlayPage.page.handwritingFullscreen.active,
+  #attackPlayPage.page.handwritingFullscreen.active{
+    padding:clamp(124px, 16vh, 146px) clamp(240px, 23vw, 280px) 8px clamp(60px, 5.5vw, 72px);
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar,
+  #attackPlayPage .attackTopBar{
+    top:4px;
+    left:4px;
+    width:clamp(50px, 5vw, 58px);
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar .navBtn,
+  #attackPlayPage .attackTopBar .navBtn{
+    padding:3px 2px;
+    font-size:9px;
+    border-radius:7px;
+  }
+
+  #practicePlayPage .modeBadge{
+    padding:3px 4px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .attackHud{
+    top:4px;
+    right:4px;
+    width:clamp(84px, 9.2vw, 112px);
+    font-size:6px;
+    padding:4px 5px;
+  }
+
+  #practicePlayPage .practiceMiniToolbar,
+  #attackPlayPage .attackMiniToolbar{
+    top:4px;
+    right:calc(clamp(84px, 9.2vw, 112px) + 6px);
+    width:clamp(96px, 10vw, 124px);
+    gap:3px;
+  }
+
+  #practicePlayPage .practiceMiniToolbar .toggleBtn,
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    min-height:22px;
+    font-size:9px;
+    padding:3px 2px;
+    border-radius:8px;
+  }
+
+  #practicePlayPage #hint,
+  #attackPlayPage #attackHint{
+    top:96px;
+    right:calc(clamp(84px, 9.2vw, 112px) + 6px);
+    width:clamp(96px, 10vw, 124px);
+    padding:4px 5px;
+    font-size:10px;
+  }
+
+  #practicePlayPage #result{
+    width:clamp(84px, 9.2vw, 112px);
+    padding:4px 5px;
+    font-size:10px;
+  }
+
+  #attackPlayPage #attackHud b{
+    font-size:8px;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction{
+    padding:4px 3px;
+    font-size:9px;
+  }
+}
+
+@media (max-width:720px){
+  #practicePlayPage .practiceMiniToolbar,
+  #attackPlayPage .attackMiniToolbar{
+    position:static;
+    width:auto;
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+  }
+}
+</style>
+
+<style id="practiceSafeAreaLayout_v1">
+@media (orientation: landscape) and (min-width: 721px){
+  #practicePlayPage.page.handwritingFullscreen.active{
+    position:fixed;
+    inset:0;
+    display:block !important;
+    overflow:hidden;
+    padding:0 !important;
+    background:#f4f7fb;
+    --practice-left-rail: clamp(66px, 6vw, 80px);
+    --practice-right-rail: clamp(112px, 12vw, 144px);
+  }
+
+  #practicePlayPage .practiceLandscapeLayout{
+    position:absolute;
+    inset:0;
+  }
+
+  #practicePlayPage .practiceLeftRail,
+  #practicePlayPage .practiceCenterArea,
+  #practicePlayPage .practiceRightRail{
+    position:absolute;
+    top:0;
+    bottom:0;
+    box-sizing:border-box;
+  }
+
+  #practicePlayPage .practiceLeftRail{
+    left:0;
+    width:var(--practice-left-rail);
+    padding:8px 4px 8px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #practicePlayPage .practiceCenterArea{
+    left:var(--practice-left-rail);
+    right:var(--practice-right-rail);
+    padding:8px 10px 8px 10px;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    overflow:hidden;
+    z-index:10;
+  }
+
+  #practicePlayPage .practiceRightRail{
+    right:0;
+    width:var(--practice-right-rail);
+    padding:8px 4px 8px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar{
+    position:static !important;
+    width:100%;
+    margin:0;
+    padding:0 !important;
+    background:transparent !important;
+    border:none !important;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    pointer-events:none;
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar > *{
+    pointer-events:auto;
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar .navBtn{
+    width:100%;
+    min-width:0;
+    padding:5px 2px;
+    font-size:10px;
+    border-radius:8px;
+    box-shadow:none;
+  }
+
+  #practicePlayPage .modeBadge{
+    width:100%;
+    justify-content:center;
+    padding:5px 6px;
+    font-size:10px;
+    border-radius:9px;
+    line-height:1.1;
+  }
+
+  #practicePlayPage .practiceTopActions{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  #practicePlayPage .practiceTopActions .navBtn{
+    width:100%;
+  }
+
+  #practicePlayPage .boardControlOverlay{
+    position:static !important;
+    width:100%;
+    margin:0;
+    display:flex;
+    justify-content:flex-start;
+    pointer-events:none;
+    z-index:35;
+  }
+
+  #practicePlayPage .boardControlPanel{
+    pointer-events:auto;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    padding:6px 4px;
+    border-radius:14px;
+  }
+
+  #practicePlayPage .boardControlBtn{
+    width:100%;
+    min-width:0;
+    padding:7px 0;
+    font-size:14px;
+    border-radius:12px;
+  }
+
+  #practicePlayPage .boardControlLabel{
+    width:100%;
+    min-width:0;
+    font-size:12px;
+  }
+
+  #practicePlayPage .practiceMiniToolbar{
+    position:static !important;
+    width:100%;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    justify-content:flex-start;
+    align-items:stretch;
+  }
+
+  #practicePlayPage .practiceMiniToolbar .toggleBtn{
+    width:100%;
+    min-width:0;
+    padding:6px 0;
+    font-size:11px;
+    border-radius:12px;
+    line-height:1.05;
+  }
+
+  #practicePlayPage #hint{
+    position:static !important;
+    margin:0 0 8px;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    font-size:clamp(16px, 2.2vw, 24px);
+    line-height:1.35;
+    text-align:center;
+    word-break:break-word;
+    font-weight:700;
+  }
+
+  #practicePlayPage .practiceBoardWrap{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    overflow:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0;
+    margin:0;
+  }
+
+  #practicePlayPage #verticalArea{
+    margin:0 auto;
+    transform-origin:top center;
+    width:fit-content;
+    max-width:100%;
+  }
+
+  #practicePlayPage #result{
+    position:static !important;
+    margin:6px 0 0;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    font-size:clamp(18px, 2.5vw, 28px);
+    line-height:1.25;
+    text-align:center;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #practicePlayPage.page.handwritingFullscreen.active{
+    --practice-left-rail: clamp(60px, 5.5vw, 72px);
+    --practice-right-rail: clamp(96px, 10vw, 124px);
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar .navBtn{
+    padding:4px 2px;
+    font-size:9px;
+  }
+
+  #practicePlayPage .modeBadge{
+    padding:4px 5px;
+    font-size:9px;
+  }
+
+  #practicePlayPage .boardControlBtn{
+    padding:6px 0;
+    font-size:12px;
+  }
+
+  #practicePlayPage .practiceMiniToolbar .toggleBtn{
+    padding:5px 0;
+    font-size:10px;
+  }
+
+  #practicePlayPage #hint{
+    font-size:clamp(14px, 2vw, 20px);
+  }
+
+  #practicePlayPage #result{
+    font-size:clamp(16px, 2.2vw, 24px);
+  }
+}
+
+@media (max-width:720px){
+  #practicePlayPage .practiceLandscapeLayout,
+  #practicePlayPage .practiceLeftRail,
+  #practicePlayPage .practiceCenterArea,
+  #practicePlayPage .practiceRightRail{
+    display:contents;
+  }
+}
+</style>
+
+
+<style id="attackSafeAreaLayout_v1">
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.active{
+    position:fixed;
+    inset:0;
+    display:block !important;
+    overflow:hidden;
+    padding:0 !important;
+    background:#f4f7fb;
+    --attack-left-rail: clamp(92px, 9vw, 122px);
+    --attack-right-rail: clamp(98px, 9.5vw, 124px);
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute;
+    inset:0;
+  }
+
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    position:absolute;
+    top:0;
+    bottom:0;
+    box-sizing:border-box;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    left:0;
+    width:var(--attack-left-rail);
+    padding:8px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackTopButtons{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    width:100%;
+    min-width:0;
+    padding:6px 2px;
+    font-size:10px;
+    border-radius:10px;
+  }
+
+  #attackPlayPage .attackHud{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    padding:6px 4px;
+    border-radius:14px;
+    background:rgba(255,255,255,.9);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+  }
+
+  #attackPlayPage .attackHud span{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    justify-content:flex-start;
+    width:100%;
+    padding:4px 5px;
+    font-size:10px;
+    line-height:1.15;
+    border-radius:10px;
+    background:white;
+    border:1px solid #eef3f8;
+    overflow:hidden;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:11px;
+    line-height:1;
+  }
+
+  #attackPlayPage .boardControlOverlay{
+    position:static !important;
+    width:100%;
+    margin:0;
+    display:flex;
+    justify-content:stretch;
+    pointer-events:none;
+    z-index:35;
+  }
+
+  #attackPlayPage .boardControlPanel{
+    pointer-events:auto;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    padding:6px 4px;
+    border-radius:14px;
+  }
+
+  #attackPlayPage .boardControlBtn{
+    width:100%;
+    min-width:0;
+    padding:7px 0;
+    font-size:13px;
+    border-radius:12px;
+  }
+
+  #attackPlayPage .boardControlLabel{
+    width:100%;
+    min-width:0;
+    font-size:11px;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    left:var(--attack-left-rail);
+    right:var(--attack-right-rail);
+    padding:8px 10px 8px 10px;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    overflow:hidden;
+    z-index:10;
+  }
+
+  #attackPlayPage #attackHint{
+    position:static !important;
+    margin:0 0 8px;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    font-size:clamp(16px, 2.2vw, 24px);
+    line-height:1.35;
+    text-align:center;
+    word-break:break-word;
+    font-weight:700;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    overflow:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0;
+    margin:0;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto;
+    transform-origin:top center;
+    width:fit-content;
+    max-width:100%;
+  }
+
+  #attackPlayPage #attackResult{
+    position:static !important;
+    margin:6px 0 0;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    font-size:clamp(18px, 2.4vw, 28px);
+    line-height:1.25;
+    text-align:center;
+  }
+
+  #attackPlayPage #attackFinishPanel{
+    position:static !important;
+    width:100%;
+    margin-top:8px;
+    flex-shrink:0;
+  }
+
+  #attackPlayPage .attackRightRail{
+    right:0;
+    width:var(--attack-right-rail);
+    padding:8px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackMiniToolbar{
+    position:static !important;
+    width:100%;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    justify-content:flex-start;
+    align-items:stretch;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    width:100%;
+    min-width:0;
+    padding:6px 0;
+    font-size:11px;
+    border-radius:12px;
+    line-height:1.05;
+  }
+
+  #attackPlayPage #attackAnswerBar{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    align-items:stretch;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction{
+    width:100%;
+    padding:8px 6px;
+    font-size:12px;
+    border-radius:12px;
+    min-width:0;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction:first-child{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction:nth-child(2){
+    background:#eef4ff;
+    color:#1f3f80;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction:nth-child(3){
+    background:#fff3e0;
+    color:#8a4b00;
+  }
+
+  #attackPlayPage .attackFinishPanel .statGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage.page.handwritingFullscreen.active{
+    --attack-left-rail: clamp(84px, 8.5vw, 108px);
+    --attack-right-rail: clamp(88px, 9vw, 112px);
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    padding:5px 2px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .attackHud{
+    gap:3px;
+    padding:5px 4px;
+  }
+
+  #attackPlayPage .attackHud span{
+    padding:3px 4px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .boardControlBtn{
+    padding:6px 0;
+    font-size:12px;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    padding:5px 0;
+    font-size:10px;
+  }
+
+  #attackPlayPage #attackHint{
+    font-size:clamp(14px, 1.9vw, 20px);
+  }
+
+  #attackPlayPage #attackResult{
+    font-size:clamp(16px, 2.1vw, 24px);
+  }
+}
+
+@media (max-width:720px){
+  #attackPlayPage .attackLandscapeLayout,
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    display:contents;
+  }
+}
+</style>
+
+
+<style id="attackLandscapeRequestedLayout_v1">
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.active{
+    position:fixed;
+    inset:0;
+    display:block !important;
+    overflow:hidden;
+    padding:0 !important;
+    background:#f4f7fb;
+    --attack-left-rail: clamp(108px, 9vw, 140px);
+    --attack-right-rail: clamp(118px, 10vw, 160px);
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute;
+    inset:0;
+  }
+
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    position:absolute;
+    top:0;
+    bottom:0;
+    box-sizing:border-box;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    left:0;
+    width:var(--attack-left-rail);
+    padding:8px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackTopButtons{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    width:100%;
+    min-width:0;
+    padding:6px 2px;
+    font-size:10px;
+    border-radius:10px;
+  }
+
+  #attackPlayPage .attackHud{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:6px 4px;
+    border-radius:14px;
+    background:rgba(255,255,255,.92);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+  }
+
+  #attackPlayPage .attackHud span{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:4px;
+    width:100%;
+    padding:4px 5px;
+    font-size:10px;
+    line-height:1.15;
+    border-radius:10px;
+    background:white;
+    border:1px solid #eef3f8;
+    overflow:hidden;
+    white-space:nowrap;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:11px;
+    line-height:1;
+  }
+
+  #attackPlayPage .boardControlOverlay{
+    position:static !important;
+    width:100%;
+    margin:0;
+    display:flex;
+    justify-content:flex-start;
+    pointer-events:none;
+    z-index:35;
+  }
+
+  #attackPlayPage .boardControlPanel{
+    pointer-events:auto;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    padding:6px 4px;
+    border-radius:14px;
+    background:rgba(255,255,255,.92);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+  }
+
+  #attackPlayPage .boardControlBtn{
+    width:100%;
+    min-width:0;
+    padding:7px 0;
+    font-size:13px;
+    border-radius:12px;
+  }
+
+  #attackPlayPage .boardControlLabel{
+    width:100%;
+    min-width:0;
+    font-size:11px;
+    text-align:center;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    left:var(--attack-left-rail);
+    right:var(--attack-right-rail);
+    padding:8px 10px;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    overflow:hidden;
+    z-index:10;
+  }
+
+  #attackPlayPage #attackHint{
+    position:static !important;
+    margin:0 0 8px;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    font-size:clamp(16px, 2.2vw, 24px);
+    line-height:1.35;
+    text-align:center;
+    word-break:break-word;
+    font-weight:700;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    overflow:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0;
+    margin:0;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto;
+    transform-origin:top center;
+    width:fit-content;
+    max-width:100%;
+  }
+
+  #attackPlayPage #attackResult{
+    position:static !important;
+    margin:6px 0 0;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    font-size:clamp(18px, 2.4vw, 28px);
+    line-height:1.25;
+    text-align:center;
+  }
+
+  #attackPlayPage #attackFinishPanel{
+    position:static !important;
+    width:100%;
+    margin-top:8px;
+    flex-shrink:0;
+  }
+
+  #attackPlayPage .attackRightRail{
+    right:0;
+    width:var(--attack-right-rail);
+    padding:8px 4px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackMiniToolbar{
+    position:static !important;
+    width:100%;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    justify-content:flex-start;
+    align-items:stretch;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    width:100%;
+    min-width:0;
+    padding:6px 0;
+    font-size:11px;
+    border-radius:12px;
+    line-height:1.05;
+  }
+
+  #attackPlayPage .attackAnswerBar{
+    width:100%;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction{
+    width:100%;
+    padding:8px 6px;
+    font-size:12px;
+    border-radius:12px;
+    min-width:0;
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction:first-child{
+    background:var(--primary);
+    color:#fff;
+    border:none;
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction:nth-child(2){
+    background:#eef4ff;
+    color:#1f3f80;
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction:nth-child(3){
+    background:#fff3e0;
+    color:#8a4b00;
+  }
+
+  #attackPlayPage .attackFinishPanel .statGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage.page.handwritingFullscreen.active{
+    --attack-left-rail: clamp(96px, 8.4vw, 120px);
+    --attack-right-rail: clamp(104px, 9vw, 132px);
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    padding:5px 2px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .attackHud{
+    gap:3px;
+    padding:5px 4px;
+  }
+
+  #attackPlayPage .attackHud span{
+    padding:3px 4px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .boardControlBtn{
+    padding:6px 0;
+    font-size:12px;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    padding:5px 0;
+    font-size:10px;
+  }
+
+  #attackPlayPage #attackHint{
+    font-size:clamp(14px, 1.9vw, 20px);
+  }
+
+  #attackPlayPage #attackResult{
+    font-size:clamp(16px, 2.1vw, 24px);
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction{
+    padding:7px 5px;
+    font-size:11px;
+  }
+}
+
+@media (max-width:720px){
+  #attackPlayPage .attackLandscapeLayout,
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    display:contents;
+  }
+}
+</style>
+
+
+
+<style id="attackLayoutAlignment_v2">
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage .attackLeftRail{
+    display:flex;
+    flex-direction:column;
+    height:100%;
+  }
+
+  #attackPlayPage .attackHud{ order:0; }
+  #attackPlayPage .attackTopButtons{ order:1; }
+  #attackPlayPage .boardControlOverlay{
+    order:2;
+    margin-top:auto;
+  }
+
+  #attackPlayPage .attackRightRail{
+    display:flex;
+    flex-direction:column;
+  }
+
+  #attackPlayPage #attackHint{
+    order:0;
+    position:static !important;
+    margin:0;
+    padding:8px 6px;
+    border-radius:14px;
+    background:rgba(255,255,255,.92);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+    font-size:clamp(12px, 1.4vw, 20px);
+    line-height:1.35;
+    text-align:center;
+    word-break:break-word;
+    overflow:hidden;
+  }
+
+  #attackPlayPage .attackMiniToolbar{ order:1; }
+  #attackPlayPage #attackAnswerBar{ order:2; }
+}
+</style>
+
+<style id="attackLandscapeFinalFix_v2">
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    padding:0 !important;
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute;
+    inset:0;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:stretch;
+    overflow:hidden;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    position:static;
+    width:clamp(92px, 9vw, 122px);
+    padding:8px 4px;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackHud{
+    order:0 !important;
+    flex:0 0 auto !important;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  #attackPlayPage .attackTopButtons{
+    order:1 !important;
+    flex:0 0 auto !important;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  #attackPlayPage #attackBoardControls,
+  #attackPlayPage .boardControlOverlay{
+    order:2 !important;
+    flex:0 0 auto !important;
+    margin-top:auto !important;
+    width:100%;
+  }
+
+  #attackPlayPage .boardControlPanel{
+    width:100%;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    position:static;
+    flex:1 1 auto;
+    min-width:0;
+    padding:8px 10px;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch;
+    overflow:hidden;
+  }
+
+  #attackPlayPage #attackHint{
+    order:0 !important;
+    position:static !important;
+    margin:0 0 8px;
+    padding:8px 6px;
+    min-height:0;
+    width:100%;
+    border-radius:14px;
+    background:rgba(255,255,255,.92);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+    font-size:clamp(14px, 1.6vw, 22px);
+    line-height:1.35;
+    text-align:center;
+    word-break:break-word;
+    overflow:hidden;
+    font-weight:700;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    order:1 !important;
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    overflow:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0;
+    margin:0;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto;
+    transform-origin:top center;
+    width:fit-content;
+    max-width:100%;
+  }
+
+  #attackPlayPage #attackResult{
+    order:2 !important;
+    width:100%;
+    margin:6px 0 0;
+    padding:0;
+    min-height:1.4em;
+    font-size:clamp(16px, 2.3vw, 26px);
+    line-height:1.25;
+    text-align:center;
+  }
+
+  #attackPlayPage .attackRightRail{
+    position:static;
+    width:clamp(98px, 9.5vw, 124px);
+    padding:8px 4px;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackMiniToolbar{
+    order:0 !important;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    align-items:stretch;
+  }
+
+  #attackPlayPage #attackAnswerBar{
+    order:1 !important;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn,
+  #attackPlayPage #attackAnswerBar .compactAction{
+    width:100%;
+    min-width:0;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage .attackLeftRail{
+    width:clamp(84px, 8.5vw, 112px);
+    gap:6px;
+  }
+
+  #attackPlayPage .attackHud span{
+    padding:3px 4px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    padding:5px 2px;
+    font-size:9px;
+  }
+
+  #attackPlayPage #attackHint{
+    font-size:clamp(12px, 1.4vw, 18px);
+    padding:6px 5px;
+  }
+
+  #attackPlayPage .attackRightRail{
+    width:clamp(88px, 9vw, 116px);
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    padding:5px 0;
+    font-size:10px;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction{
+    padding:6px 4px;
+    font-size:10px;
+  }
+
+  #attackPlayPage #attackResult{
+    font-size:clamp(14px, 1.8vw, 22px);
+  }
+}
+</style>
+
+
+<style id="attackLandscapeRebuild_v1">
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    padding:0 !important;
+    overflow:hidden !important;
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute !important;
+    inset:0 !important;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:stretch !important;
+    overflow:hidden !important;
+    min-width:0 !important;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    flex:0 0 clamp(112px, 10vw, 146px) !important;
+    width:clamp(112px, 10vw, 146px) !important;
+    min-width:0 !important;
+    max-width:none !important;
+    padding:8px 6px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    overflow:auto !important;
+    box-sizing:border-box !important;
+    z-index:30 !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackHud{
+    order:0 !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:4px !important;
+    padding:8px 6px !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackHud span{
+    width:100% !important;
+    display:flex !important;
+    justify-content:flex-start !important;
+    align-items:center !important;
+    gap:4px !important;
+    padding:5px 6px !important;
+    font-size:10px !important;
+    line-height:1.15 !important;
+    white-space:nowrap !important;
+    border-radius:10px !important;
+    background:white !important;
+    border:1px solid #eef3f8 !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackHud b{
+    font-size:11px !important;
+    line-height:1 !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackTopButtons{
+    order:1 !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackTopButtons .navBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 2px !important;
+    font-size:10px !important;
+    border-radius:10px !important;
+  }
+
+  #attackPlayPage #attackBoardControls,
+  #attackPlayPage .boardControlOverlay{
+    order:2 !important;
+    flex:0 0 auto !important;
+    margin-top:0 !important;
+    width:100% !important;
+    position:static !important;
+  }
+
+  #attackPlayPage #attackBoardControls .boardControlPanel,
+  #attackPlayPage .boardControlOverlay .boardControlPanel{
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    padding:6px 4px !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage #attackBoardControls .boardControlBtn,
+  #attackPlayPage .boardControlOverlay .boardControlBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 0 !important;
+    font-size:11px !important;
+    border-radius:12px !important;
+  }
+
+  #attackPlayPage #attackBoardControls .boardControlLabel,
+  #attackPlayPage .boardControlOverlay .boardControlLabel{
+    width:100% !important;
+    font-size:11px !important;
+    text-align:center !important;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    padding:8px 10px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+    z-index:10 !important;
+  }
+
+  #attackPlayPage #attackHint{
+    order:0 !important;
+    flex:0 0 auto !important;
+    position:static !important;
+    margin:0 0 8px !important;
+    padding:8px 10px !important;
+    min-height:0 !important;
+    width:100% !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+    font-size:clamp(16px, 2.0vw, 24px) !important;
+    line-height:1.35 !important;
+    text-align:center !important;
+    word-break:break-word !important;
+    overflow:visible !important;
+    font-weight:700 !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    order:1 !important;
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    width:100% !important;
+    overflow:auto !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:center !important;
+    padding:0 !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto !important;
+    transform-origin:top center !important;
+    width:fit-content !important;
+    max-width:100% !important;
+  }
+
+  #attackPlayPage #attackResult{
+    order:2 !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    margin:6px 0 0 !important;
+    padding:0 !important;
+    min-height:1.4em !important;
+    font-size:clamp(18px, 2.3vw, 28px) !important;
+    line-height:1.25 !important;
+    text-align:center !important;
+  }
+
+  #attackPlayPage #attackFinishPanel{
+    order:3 !important;
+    position:static !important;
+    width:100% !important;
+    margin-top:8px !important;
+    flex-shrink:0 !important;
+  }
+
+  #attackPlayPage .attackRightRail{
+    flex:0 0 clamp(116px, 10vw, 144px) !important;
+    width:clamp(116px, 10vw, 144px) !important;
+    min-width:0 !important;
+    max-width:none !important;
+    padding:8px 6px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px !important;
+    overflow:auto !important;
+    box-sizing:border-box !important;
+    z-index:30 !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackMiniToolbar{
+    order:0 !important;
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    margin:0 !important;
+    padding:0 !important;
+    align-items:stretch !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackMiniToolbar .toggleBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 0 !important;
+    font-size:11px !important;
+    border-radius:12px !important;
+    line-height:1.05 !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackAnswerBar{
+    order:1 !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:4px !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackAnswerBar .compactAction{
+    width:100% !important;
+    min-width:0 !important;
+    padding:8px 6px !important;
+    font-size:12px !important;
+    border-radius:12px !important;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage .attackLeftRail{
+    flex-basis:clamp(102px, 9.5vw, 132px) !important;
+    width:clamp(102px, 9.5vw, 132px) !important;
+  }
+
+  #attackPlayPage .attackRightRail{
+    flex-basis:clamp(108px, 9.5vw, 132px) !important;
+    width:clamp(108px, 9.5vw, 132px) !important;
+  }
+
+  #attackPlayPage #attackHint{
+    font-size:clamp(14px, 1.8vw, 20px) !important;
+  }
+}
+</style>
+
+
+<style id="attackLandscapeRewrite_v1">
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    padding:0 !important;
+    overflow:hidden !important;
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute !important;
+    inset:0 !important;
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:stretch !important;
+    overflow:hidden !important;
+    min-width:0 !important;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    flex:0 0 clamp(90px, 8vw, 118px) !important;
+    width:clamp(90px, 8vw, 118px) !important;
+    min-width:0 !important;
+    max-width:none !important;
+    padding:8px 4px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    justify-content:flex-start !important;
+    gap:8px !important;
+    overflow:auto !important;
+    box-sizing:border-box !important;
+    z-index:30 !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackHud{
+    order:0 !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    align-self:stretch !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    padding:6px 4px !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+    white-space:normal !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackHud span{
+    width:100% !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    gap:4px !important;
+    padding:4px 5px !important;
+    font-size:10px !important;
+    line-height:1.15 !important;
+    border-radius:10px !important;
+    background:white !important;
+    border:1px solid #eef3f8 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+    text-overflow:ellipsis !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackHud b{
+    font-size:11px !important;
+    line-height:1 !important;
+    min-width:0 !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackTopButtons{
+    order:1 !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    align-items:stretch !important;
+  }
+
+  #attackPlayPage .attackLeftRail .attackTopButtons .navBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 2px !important;
+    font-size:10px !important;
+    border-radius:10px !important;
+  }
+
+  #attackPlayPage #attackBoardControls{
+    order:2 !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    position:static !important;
+    margin:0 !important;
+  }
+
+  #attackPlayPage #attackBoardControls .boardControlPanel{
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    padding:6px 4px !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage #attackBoardControls .boardControlBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 0 !important;
+    font-size:11px !important;
+    border-radius:12px !important;
+  }
+
+  #attackPlayPage #attackBoardControls .boardControlLabel{
+    width:100% !important;
+    font-size:11px !important;
+    text-align:center !important;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    padding:8px 10px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    overflow:hidden !important;
+    box-sizing:border-box !important;
+    z-index:10 !important;
+  }
+
+  #attackPlayPage #attackHint{
+    order:0 !important;
+    flex:0 0 auto !important;
+    position:static !important;
+    width:100% !important;
+    margin:0 0 8px !important;
+    padding:8px 10px !important;
+    min-height:0 !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+    font-size:clamp(16px, 2vw, 24px) !important;
+    line-height:1.35 !important;
+    text-align:center !important;
+    word-break:break-word !important;
+    overflow:visible !important;
+    font-weight:700 !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    order:1 !important;
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    width:100% !important;
+    overflow:auto !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:center !important;
+    padding:0 !important;
+    margin:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto !important;
+    transform-origin:top center !important;
+    width:fit-content !important;
+    max-width:100% !important;
+  }
+
+  #attackPlayPage #attackResult{
+    order:2 !important;
+    flex:0 0 auto !important;
+    width:100% !important;
+    margin:6px 0 0 !important;
+    padding:0 !important;
+    min-height:1.4em !important;
+    font-size:clamp(16px, 2.3vw, 26px) !important;
+    line-height:1.25 !important;
+    text-align:center !important;
+  }
+
+  #attackPlayPage #attackFinishPanel{
+    order:3 !important;
+    position:static !important;
+    width:100% !important;
+    margin-top:8px !important;
+    flex-shrink:0 !important;
+  }
+
+  #attackPlayPage .attackRightRail{
+    flex:0 0 clamp(108px, 9vw, 132px) !important;
+    width:clamp(108px, 9vw, 132px) !important;
+    min-width:0 !important;
+    max-width:none !important;
+    padding:8px 4px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    overflow:auto !important;
+    box-sizing:border-box !important;
+    z-index:30 !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackHintBar{
+    order:0 !important;
+    width:100% !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackMiniToolbar{
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    margin:0 !important;
+    padding:0 !important;
+    align-items:stretch !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackMiniToolbar .toggleBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 0 !important;
+    font-size:11px !important;
+    border-radius:12px !important;
+    line-height:1.05 !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackAnswerBar{
+    order:1 !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:4px !important;
+  }
+
+  #attackPlayPage .attackRightRail .attackAnswerBar .compactAction{
+    width:100% !important;
+    min-width:0 !important;
+    padding:8px 6px !important;
+    font-size:12px !important;
+    border-radius:12px !important;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage .attackLeftRail{
+    flex-basis:clamp(84px, 7.5vw, 108px) !important;
+    width:clamp(84px, 7.5vw, 108px) !important;
+  }
+
+  #attackPlayPage .attackRightRail{
+    flex-basis:clamp(96px, 8vw, 120px) !important;
+    width:clamp(96px, 8vw, 120px) !important;
+  }
+
+  #attackPlayPage #attackHint{
+    font-size:clamp(14px, 1.8vw, 20px) !important;
+  }
+}
+</style>
+
+
+
+<style id="attackLayoutRebuild_v2">
+/* タイムアタック：横長レイアウトをゼロから再定義 */
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100vh;
+    overflow:hidden;
+    padding:0 !important;
+    background:#f4f7fb;
+    --attack-left-rail: clamp(120px, 11vw, 150px);
+    --attack-right-rail: clamp(118px, 11vw, 148px);
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute;
+    inset:0;
+    display:grid !important;
+    grid-template-columns: var(--attack-left-rail) minmax(0, 1fr) var(--attack-right-rail);
+    grid-template-areas: "left center right";
+    overflow:hidden;
+  }
+
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    position:static !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    box-sizing:border-box;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    grid-area:left;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    padding:8px 4px !important;
+    overflow:auto !important;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackHud{
+    order:0;
+    flex:none !important;
+    width:100% !important;
+    max-width:100% !important;
+    align-self:stretch !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:4px !important;
+    padding:6px 4px !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+  }
+
+  #attackPlayPage .attackHud span{
+    display:flex !important;
+    width:100% !important;
+    justify-content:flex-start !important;
+    align-items:center !important;
+    gap:4px !important;
+    padding:4px 5px !important;
+    font-size:10px !important;
+    line-height:1.15 !important;
+    border-radius:10px !important;
+    background:white !important;
+    border:1px solid #eef3f8 !important;
+    box-sizing:border-box !important;
+    overflow:hidden !important;
+    white-space:nowrap !important;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:11px !important;
+    line-height:1 !important;
+  }
+
+  #attackPlayPage .attackTopButtons{
+    order:1;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:4px !important;
+    width:100% !important;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 2px !important;
+    font-size:10px !important;
+    border-radius:10px !important;
+  }
+
+  #attackPlayPage #attackBoardControls,
+  #attackPlayPage .boardControlOverlay{
+    order:2;
+    width:100% !important;
+    margin:0 !important;
+    display:flex !important;
+    justify-content:stretch !important;
+    pointer-events:none;
+    z-index:35;
+  }
+
+  #attackPlayPage .boardControlPanel{
+    pointer-events:auto;
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:4px !important;
+    padding:6px 4px !important;
+    border-radius:14px !important;
+    background:rgba(255,255,255,.94) !important;
+    border:1px solid #e3eaf4 !important;
+    box-shadow:0 8px 24px rgba(33,52,74,.06) !important;
+  }
+
+  #attackPlayPage .boardControlBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:7px 0 !important;
+    font-size:13px !important;
+    border-radius:12px !important;
+  }
+
+  #attackPlayPage .boardControlLabel{
+    width:100% !important;
+    min-width:0 !important;
+    text-align:center !important;
+    font-size:11px !important;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    grid-area:center;
+    display:flex !important;
+    flex-direction:column !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+    padding:8px 10px !important;
+    z-index:10;
+  }
+
+  #attackPlayPage #attackHint{
+    order:0;
+    position:static !important;
+    margin:0 0 8px !important;
+    padding:0 !important;
+    min-height:1.4em !important;
+    width:100% !important;
+    font-size:clamp(16px, 2.2vw, 24px) !important;
+    line-height:1.35 !important;
+    text-align:center !important;
+    word-break:break-word !important;
+    font-weight:700 !important;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    order:1;
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    width:100% !important;
+    overflow:auto !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:center !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto !important;
+    transform-origin:top center !important;
+    width:fit-content !important;
+    max-width:100% !important;
+  }
+
+  #attackPlayPage #attackResult{
+    order:2;
+    margin:6px 0 0 !important;
+    min-height:1.4em !important;
+    width:100% !important;
+    font-size:clamp(18px, 2.3vw, 26px) !important;
+    line-height:1.25 !important;
+    text-align:center !important;
+  }
+
+  #attackPlayPage .attackRightRail{
+    grid-area:right;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:8px !important;
+    padding:8px 4px !important;
+    overflow:auto !important;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackHintBar{
+    width:100% !important;
+  }
+
+  #attackPlayPage .attackMiniToolbar{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    gap:4px !important;
+    align-items:stretch !important;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:6px 0 !important;
+    font-size:11px !important;
+    border-radius:12px !important;
+    line-height:1.05 !important;
+  }
+
+  #attackPlayPage #attackAnswerBar{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    gap:4px !important;
+    align-items:stretch !important;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction{
+    width:100% !important;
+    padding:8px 6px !important;
+    font-size:12px !important;
+    border-radius:12px !important;
+    min-width:0 !important;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction:first-child{
+    background:var(--primary) !important;
+    color:#fff !important;
+    border:none !important;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction:nth-child(2){
+    background:#eef4ff !important;
+    color:#1f3f80 !important;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction:nth-child(3){
+    background:#fff3e0 !important;
+    color:#8a4b00 !important;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    --attack-left-rail: clamp(108px, 10vw, 132px);
+    --attack-right-rail: clamp(108px, 10vw, 132px);
+  }
+
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackRightRail{
+    padding:6px 3px !important;
+    gap:6px !important;
+  }
+
+  #attackPlayPage .attackHud span{
+    padding:3px 4px !important;
+    font-size:9px !important;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    padding:5px 2px !important;
+    font-size:9px !important;
+  }
+
+  #attackPlayPage .boardControlBtn{
+    padding:6px 0 !important;
+    font-size:11px !important;
+  }
+
+  #attackPlayPage #attackHint{
+    font-size:clamp(14px, 1.9vw, 20px) !important;
+  }
+
+  #attackPlayPage #attackResult{
+    font-size:clamp(16px, 2.1vw, 24px) !important;
+  }
+}
+
+@media (max-width:720px){
+  #attackPlayPage .attackLandscapeLayout{
+    display:block !important;
+    position:static !important;
+  }
+
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    position:static !important;
+    width:100% !important;
+  }
+}
+</style>
+
+
+
+<style id="attackLayoutFinalOverride_v1">
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    position:fixed !important;
+    inset:0 !important;
+    width:100vw !important;
+    height:100vh !important;
+    overflow:hidden !important;
+    padding:0 !important;
+    background:#f4f7fb !important;
+    --attack-left-rail: clamp(168px, 15vw, 214px) !important;
+    --attack-right-rail: clamp(126px, 11vw, 156px) !important;
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute !important;
+    inset:0 !important;
+    display:grid !important;
+    grid-template-columns: var(--attack-left-rail) minmax(0, 1fr) var(--attack-right-rail) !important;
+    grid-template-areas: "left center right" !important;
+    overflow:hidden !important;
+  }
+
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    position:static !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    grid-area:left !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:10px !important;
+    padding:10px !important;
+    overflow:auto !important;
+  }
+
+  #attackPlayPage .attackHudCard,
+  #attackPlayPage .attackNavCard,
+  #attackPlayPage .attackZoomCard,
+  #attackPlayPage .attackHintBar,
+  #attackPlayPage .attackAnswerBar,
+  #attackPlayPage .attackHud,
+  #attackPlayPage #attackHint{
+    background:rgba(255,255,255,.96) !important;
+    border:1px solid #e3eaf4 !important;
+    border-radius:18px !important;
+    box-shadow:0 10px 26px rgba(33,52,74,.06) !important;
+  }
+
+  #attackPlayPage .attackHudCard,
+  #attackPlayPage .attackNavCard,
+  #attackPlayPage .attackZoomCard{
+    width:100% !important;
+    max-width:100% !important;
+    padding:10px !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackHud{
+    width:100% !important;
+    max-width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:6px !important;
+  }
+
+  #attackPlayPage .attackHud span{
+    display:flex !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:8px !important;
+    width:100% !important;
+    padding:6px 10px !important;
+    line-height:1.2 !important;
+    font-size:12px !important;
+    white-space:nowrap !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:13px !important;
+    line-height:1 !important;
+  }
+
+  #attackPlayPage .attackTopButtons{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px !important;
+    width:100% !important;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:10px 0 !important;
+    font-size:14px !important;
+    border-radius:14px !important;
+  }
+
+  #attackPlayPage .boardControlOverlay{
+    width:100% !important;
+    margin:0 !important;
+    display:flex !important;
+    justify-content:stretch !important;
+    pointer-events:none !important;
+  }
+
+  #attackPlayPage .boardControlPanel{
+    pointer-events:auto !important;
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:6px !important;
+    padding:10px !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .boardControlBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:10px 0 !important;
+    font-size:14px !important;
+    border-radius:14px !important;
+  }
+
+  #attackPlayPage .boardControlLabel{
+    width:100% !important;
+    text-align:center !important;
+    font-size:12px !important;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    grid-area:center !important;
+    display:flex !important;
+    flex-direction:column !important;
+    min-width:0 !important;
+    overflow:hidden !important;
+    padding:10px 12px 8px !important;
+    gap:10px !important;
+  }
+
+  #attackPlayPage #attackHint{
+    order:0 !important;
+    position:static !important;
+    margin:0 !important;
+    padding:10px 12px !important;
+    min-height:0 !important;
+    width:100% !important;
+    font-size:clamp(16px, 2vw, 24px) !important;
+    line-height:1.35 !important;
+    text-align:center !important;
+    word-break:break-word !important;
+    font-weight:800 !important;
+    box-sizing:border-box !important;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    order:1 !important;
+    flex:1 1 auto !important;
+    min-height:0 !important;
+    width:100% !important;
+    overflow:auto !important;
+    display:flex !important;
+    align-items:flex-start !important;
+    justify-content:center !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto !important;
+    transform-origin:top center !important;
+    width:fit-content !important;
+    max-width:100% !important;
+  }
+
+  #attackPlayPage #attackResult{
+    order:2 !important;
+    width:100% !important;
+    margin:0 !important;
+    min-height:0 !important;
+    font-size:clamp(16px, 2.2vw, 26px) !important;
+    line-height:1.25 !important;
+    text-align:center !important;
+  }
+
+  #attackPlayPage .attackRightRail{
+    grid-area:right !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:10px !important;
+    padding:10px !important;
+    overflow:auto !important;
+  }
+
+  #attackPlayPage .attackHintBar,
+  #attackPlayPage .attackAnswerBar{
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    padding:10px !important;
+  }
+
+  #attackPlayPage .attackMiniToolbar{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    margin:0 !important;
+    gap:6px !important;
+    align-items:stretch !important;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    width:100% !important;
+    min-width:0 !important;
+    padding:8px 0 !important;
+    font-size:12px !important;
+    border-radius:12px !important;
+    line-height:1.05 !important;
+  }
+
+  #attackPlayPage #attackAnswerBar{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100% !important;
+    margin:0 !important;
+    padding:10px !important;
+    gap:6px !important;
+    align-items:stretch !important;
+  }
+
+  #attackPlayPage #attackAnswerBar .compactAction{
+    width:100% !important;
+    min-width:0 !important;
+    padding:12px 8px !important;
+    font-size:14px !important;
+    border-radius:14px !important;
+  }
+
+  #attackPlayPage #attackFinishPanel{
+    width:100% !important;
+    margin-top:8px !important;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    --attack-left-rail: clamp(148px, 13vw, 190px) !important;
+    --attack-right-rail: clamp(116px, 10vw, 142px) !important;
+  }
+
+  #attackPlayPage .attackHud span{padding:5px 8px !important;font-size:11px !important;}
+  #attackPlayPage .attackTopButtons .navBtn{padding:8px 0 !important;font-size:12px !important;}
+  #attackPlayPage .boardControlBtn{padding:8px 0 !important;font-size:12px !important;}
+  #attackPlayPage #attackHint{font-size:clamp(14px, 1.8vw, 20px) !important;}
+}
+
+@media (max-width:720px){
+  #attackPlayPage .attackLandscapeLayout{
+    display:block !important;
+    position:static !important;
+  }
+}
+</style>
+
 </head>
 <body>
 
@@ -1127,34 +3696,42 @@ body.handwritingMode .handField.active .handCanvas{
 </div>
 
 <div id="practicePlayPage" class="page handwritingFullscreen">
-  <div class="handwritingTopBar practiceTopBar">
-    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
-    <div class="modeBadge">🧩</div>
-    <div class="practiceTopActions">
-      <button class="navBtn" onclick="openSettings()" aria-label="設定">⚙️</button>
-      <button class="navBtn" onclick="returnToPracticeSetup()" aria-label="別の問題">🔁</button>
+  <div class="practiceLandscapeLayout">
+    <div class="practiceLeftRail">
+      <div class="handwritingTopBar practiceTopBar">
+        <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
+        <div class="modeBadge">🧩</div>
+        <div class="practiceTopActions">
+          <button class="navBtn" onclick="openSettings()" aria-label="設定">⚙️</button>
+          <button class="navBtn" onclick="returnToPracticeSetup()" aria-label="別の問題">🔁</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="practiceCenterArea">
+      <div id="hint" style="margin-top:8px;"></div>
+
+      <div class="handwritingBoardWrap practiceBoardWrap">
+        <div id="verticalArea">
+          <svg id="arrowSvg"></svg>
+          <div id="tableArea"></div>
+        </div>
+      </div>
+
+      <div id="result" class="practiceResult"></div>
+    </div>
+
+    <div class="practiceRightRail">
+      <div class="toggleBar practiceMiniToolbar">
+        <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
+        <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵</button>
+        <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
+        <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
+        <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
+        <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
+      </div>
     </div>
   </div>
-
-  <div class="toggleBar practiceMiniToolbar">
-    <button type="button" class="toggleBtn on" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
-    <button type="button" class="toggleBtn on" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵</button>
-    <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
-    <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
-    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
-    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
-  </div>
-
-  <div id="hint" style="margin-top:8px;"></div>
-
-  <div class="handwritingBoardWrap practiceBoardWrap">
-    <div id="verticalArea">
-      <svg id="arrowSvg"></svg>
-      <div id="tableArea"></div>
-    </div>
-  </div>
-
-  <div id="result" class="practiceResult"></div>
 </div>
 
 <div id="attackSetupPage" class="page">
@@ -1226,65 +3803,80 @@ body.handwritingMode .handField.active .handCanvas{
   </div>
 </div>
 
+
 <div id="attackPlayPage" class="page handwritingFullscreen attackFullscreen">
-  <div class="attackTopBar">
-    <button class="navBtn" onclick="confirmLeaveAttack()" aria-label="ホーム">🏠</button>
+  <div class="attackLandscapeLayout">
+    <div class="attackLeftRail">
 
-    <div class="attackHud">
-      <span>🕒 <b id="attackElapsed">00:00</b></span>
-      <span>📊 <b id="attackProgress">0/0</b></span>
-      <span>✅ <b id="attackCorrectCount">0</b></span>
-      <span>❌ <b id="attackMissCount">0</b></span>
-      <span>🎯 <b id="attackTargetDisplay">00:00</b></span>
-      <span>🏁 <b id="attackGoalStatus">-</b></span>
-    </div>
-
-    <button class="navBtn" onclick="openAttackSetup()" aria-label="設定">⚙️</button>
-  </div>
-
-  <div class="toggleBar attackMiniToolbar">
-    <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
-    <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵</button>
-    <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
-    <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
-    <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
-    <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
-  </div>
-
-  <div id="attackHint" class="attackHint"></div>
-
-  <div class="attackBoardShell">
-    <div id="attackVerticalArea" class="attackVerticalArea">
-      <svg id="attackArrowSvg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:9999;"></svg>
-      <div id="attackTableArea"></div>
-    </div>
-
-    <div id="attackResult" class="attackResult"></div>
-
-    <div id="attackAnswerBar" class="attackAnswerBar" style="display:none;">
-      <button type="button" class="actionBtn secondary compactAction" onclick="evaluateAttackAnswer()">答え合わせ</button>
-      <button type="button" class="actionBtn secondary compactAction" onclick="retryAttackCurrent()" id="attackRetryBtn" style="display:none;">もう一度</button>
-      <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackAfterReview()" id="attackNextBtn" style="display:none;">次へ</button>
-    </div>
-
-    <div id="attackFinishPanel" class="sectionPanel attackFinishPanel" style="display:none;">
-      <h2>結果</h2>
-      <div class="statGrid">
-        <div class="statBox"><div class="label">正解率</div><div class="value" id="finishAccuracy">0%</div></div>
-        <div class="statBox"><div class="label">かかった時間</div><div class="value" id="finishTime">00:00</div></div>
-        <div class="statBox"><div class="label">目標時間</div><div class="value" id="finishTarget">00:00</div></div>
-        <div class="statBox"><div class="label">達成</div><div class="value" id="finishGoal">-</div></div>
+      <div class="attackNavCard">
+        <div class="attackTopButtons">
+          <button class="navBtn" onclick="confirmLeaveAttack()" aria-label="ホーム">🏠</button>
+          <button class="navBtn" onclick="openAttackSetup()" aria-label="設定">⚙️</button>
+        </div>
       </div>
-      <div class="footerActions">
-        <button class="primaryBtn" onclick="repeatAttack()">もう一度</button>
-        <button class="actionBtn secondary" onclick="openAttackSetup()">設定へ戻る</button>
-        <button class="actionBtn secondary" onclick="openRecords()">記録を見る</button>
+
+      <div id="attackBoardControls" class="boardControlOverlay attackZoomCard">
+        <div class="boardControlPanel" role="toolbar" aria-label="ボード操作">
+          <button type="button" class="boardControlBtn" data-action="fit" aria-label="画面にフィット">📐</button>
+          <button type="button" class="boardControlBtn" data-action="zoom-out" aria-label="縮小">➖</button>
+          <button type="button" class="boardControlBtn" data-action="zoom-in" aria-label="拡大">➕</button>
+          <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動モード">🖐️</button>
+          <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画モード">✍️</button>
+          <div class="boardControlLabel" id="attackBoardScaleLabel">100%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="attackCenterArea">
+      <div id="attackHint" class="attackHint"></div>
+
+      <div class="attackBoardShell">
+        <div id="attackVerticalArea" class="attackVerticalArea">
+          <svg id="attackArrowSvg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:9999;"></svg>
+          <div id="attackTableArea"></div>
+        </div>
+      </div>
+
+      <div id="attackResult" class="attackResult"></div>
+
+      <div id="attackFinishPanel" class="sectionPanel attackFinishPanel" style="display:none;">
+        <h2>結果</h2>
+        <div class="statGrid">
+          <div class="statBox"><div class="label">正解率</div><div class="value" id="finishAccuracy">0%</div></div>
+          <div class="statBox"><div class="label">かかった時間</div><div class="value" id="finishTime">00:00</div></div>
+          <div class="statBox"><div class="label">目標時間</div><div class="value" id="finishTarget">00:00</div></div>
+          <div class="statBox"><div class="label">達成</div><div class="value" id="finishGoal">-</div></div>
+        </div>
+        <div class="footerActions">
+          <button class="primaryBtn" onclick="repeatAttack()">もう一度</button>
+          <button class="actionBtn secondary" onclick="openAttackSetup()">設定へ戻る</button>
+          <button class="actionBtn secondary" onclick="openRecords()">記録を見る</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="attackRightRail">
+      <div id="attackHintBar" class="attackHintBar">
+        <div class="toggleBar attackMiniToolbar">
+          <button type="button" class="toggleBtn off" data-toggle="arrow" onclick="toggleHint('arrow')" title="矢印">➡️</button>
+          <button type="button" class="toggleBtn off" data-toggle="target" onclick="toggleHint('target')" title="次に書くマス">🔵</button>
+          <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
+          <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
+          <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
+          <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
+        </div>
+      </div>
+
+      <div id="attackAnswerBar" class="attackAnswerBar" style="display:flex;">
+        <button type="button" class="actionBtn secondary compactAction" onclick="evaluateAttackAnswer()">答え合わせ</button>
+        <button type="button" class="actionBtn secondary compactAction" onclick="retryAttackCurrent()" id="attackRetryBtn" style="display:none;">もう一度</button>
+        <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackAfterReview()" id="attackNextBtn" style="display:none;">次へ</button>
       </div>
     </div>
   </div>
 </div>
-
 <div id="recordPage" class="page">
+
   <div class="topRow">
     <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
     <div class="muted">記録ページ</div>
@@ -1571,8 +4163,8 @@ function updateAttackAnswerBar(){
   const retry = document.getElementById("attackRetryBtn");
   const next = document.getElementById("attackNextBtn");
   if(!bar) return;
-  const showManual = !!(appState.attackActive && appState.attackManualCheckMode);
-  bar.style.display = showManual ? "flex" : "none";
+  const showBar = !!appState.attackActive;
+  bar.style.display = showBar ? "flex" : "none";
   if(retry) retry.style.display = "none";
   if(next) next.style.display = "none";
 }
@@ -1585,7 +4177,7 @@ function setAttackAnswerBarState(state){
 }
 
 function updateAttackManualMode(){
-  appState.attackManualCheckMode = !!(appState.attackActive && !attackHasAnyHintOn());
+  appState.attackManualCheckMode = !!appState.attackActive;
   updateAttackAnswerBar();
 }
 
@@ -2948,10 +5540,13 @@ function stopAttackTimer(){
 
 function updateAttackTimer(){
   const elapsedSec = Math.floor((Date.now() - appState.attackStartMs) / 1000);
-  document.getElementById("attackElapsed").textContent = formatTime(elapsedSec);
-  document.getElementById("attackTargetDisplay").textContent = formatTime(appState.attackTargetMinutes * 60);
+  const elapsedEl = document.getElementById("attackElapsed");
+  if(elapsedEl) elapsedEl.textContent = formatTime(elapsedSec);
+  const targetEl = document.getElementById("attackTargetDisplay");
+  if(targetEl) targetEl.textContent = formatTime(appState.attackTargetMinutes * 60);
   const goalOk = elapsedSec <= appState.attackTargetMinutes * 60 ? "◯" : "×";
-  document.getElementById("attackGoalStatus").textContent = goalOk;
+  const goalEl = document.getElementById("attackGoalStatus");
+  if(goalEl) goalEl.textContent = goalOk;
 }
 
 function finishAttackQuestion(){
@@ -2974,9 +5569,12 @@ function finishAttackQuestion(){
 }
 
 function updateAttackStats(){
-  document.getElementById("attackProgress").textContent = `${Math.min(appState.attackIndex + 1, appState.attackQuestionCount)} / ${appState.attackQuestionCount}`;
-  document.getElementById("attackCorrectCount").textContent = String(appState.attackCorrect);
-  document.getElementById("attackMissCount").textContent = String(appState.attackMiss);
+  const progressEl = document.getElementById("attackProgress");
+  if(progressEl) progressEl.textContent = `${Math.min(appState.attackIndex + 1, appState.attackQuestionCount)} / ${appState.attackQuestionCount}`;
+  const correctEl = document.getElementById("attackCorrectCount");
+  if(correctEl) correctEl.textContent = String(appState.attackCorrect);
+  const missEl = document.getElementById("attackMissCount");
+  if(missEl) missEl.textContent = String(appState.attackMiss);
   updateAttackManualMode();
 }
 
@@ -4186,81 +6784,6 @@ body.handwritingMode .miniCarryBox.handField{
 }
 </style>
 
-<script id="handwritingAutoFitFix">
-(function(){
-  const MIN_SCALE = 0.62;
-  let fitTimer = 0;
-
-  function getActiveBoard(){
-    if(typeof appState === 'undefined' || appState.inputMode !== 'handwriting') return null;
-    if(appState.page === 'practicePlayPage') return document.getElementById('verticalArea');
-    if(appState.page === 'attackPlayPage') return document.getElementById('attackVerticalArea');
-    return null;
-  }
-
-  function resetActiveBoardZoom(){
-    const board = getActiveBoard();
-    if(!board) return;
-    board.style.zoom = '1';
-    board.dataset.fitScale = '1';
-  }
-
-  function fitBoard(){
-    const board = getActiveBoard();
-    if(!board) return;
-
-    const popup = document.getElementById('handwritingPopup');
-    if(popup && popup.classList.contains('active')) return;
-
-    const prevZoom = board.style.zoom;
-    board.style.zoom = '1';
-    const naturalRect = board.getBoundingClientRect();
-    board.style.zoom = prevZoom || '';
-
-    const topBar = document.querySelector(appState.page === 'practicePlayPage' ? '.practiceTopBar' : '.attackTopBar');
-    const toolbar = document.querySelector(appState.page === 'practicePlayPage' ? '.practiceMiniToolbar' : '.attackMiniToolbar');
-    const hint = document.getElementById(appState.page === 'practicePlayPage' ? 'hint' : 'attackHint');
-    const result = document.getElementById(appState.page === 'practicePlayPage' ? 'result' : 'attackResult');
-
-    const availW = Math.max(320, (window.innerWidth || document.documentElement.clientWidth) - 18);
-    const occupiedTop = (topBar?.getBoundingClientRect().height || 0) + (toolbar?.getBoundingClientRect().height || 0) + (hint?.getBoundingClientRect().height || 0) + (result?.getBoundingClientRect().height || 0);
-    const boardTop = board.parentElement?.getBoundingClientRect().top || 0;
-    const availH = Math.max(220, (window.innerHeight || document.documentElement.clientHeight) - boardTop - occupiedTop - 16);
-
-    let scale = Math.min(1, availW / Math.max(1, naturalRect.width), availH / Math.max(1, naturalRect.height));
-    if(!Number.isFinite(scale) || scale <= 0) scale = 1;
-    scale = Math.max(MIN_SCALE, Math.min(1, scale));
-
-    board.style.zoom = String(scale);
-    board.dataset.fitScale = String(scale);
-
-    if(typeof resizeAllHandwritingFields === 'function'){
-      resizeAllHandwritingFields();
-    }
-    if(typeof refreshHandwritingDisplays === 'function'){
-      refreshHandwritingDisplays();
-    }
-  }
-
-  function scheduleFit(){
-    return;
-  }
-
-  function observeTarget(id){
-    const el = document.getElementById(id);
-    if(!el || el.__handwritingFitObserved) return;
-    el.__handwritingFitObserved = true;
-    new MutationObserver(scheduleFit).observe(el, { childList:true, subtree:true });
-  }
-
-  function init(){
-    observeTarget('tableArea');
-    observeTarget('attackTableArea');
-    observeTarget('handwritingPopup');
-  }
-
-  
-</script>
 
 <style id="explicitBoardControlStyles">
 :root{
@@ -4352,239 +6875,6 @@ body.boardMoveMode .boardPannable{
 }
 
 
-@media (orientation: landscape) and (min-width: 721px){
-  #practicePlayPage.page.handwritingFullscreen.active,
-  #attackPlayPage.page.handwritingFullscreen.active{
-    display:grid !important;
-    grid-template-columns: 54px minmax(0,1fr) 44px 92px;
-    grid-template-rows: auto auto minmax(0,1fr) auto auto auto;
-    column-gap: 6px;
-    row-gap: 6px;
-    align-items:start;
-    padding:6px;
-  }
-
-  #practicePlayPage .boardControlOverlay,
-  #attackPlayPage .boardControlOverlay{
-    grid-column:1;
-    grid-row:1 / span 6;
-    position:sticky;
-    top:6px;
-    align-self:start;
-    justify-content:flex-start;
-    width:100%;
-    margin:0;
-  }
-
-  #practicePlayPage .boardControlPanel,
-  #attackPlayPage .boardControlPanel{
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
-    gap:4px;
-    padding:6px 3px;
-    border-radius:14px;
-    width:100%;
-  }
-
-  #practicePlayPage .boardControlBtn,
-  #attackPlayPage .boardControlBtn{
-    width:30px;
-    height:30px;
-    min-width:30px;
-    padding:0;
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    font-size:15px;
-    border-radius:10px;
-  }
-
-  #practicePlayPage .boardControlLabel,
-  #attackPlayPage .boardControlLabel{
-    min-width:0;
-    font-size:10px;
-    line-height:1;
-    padding-top:1px;
-  }
-
-  #practicePlayPage .handwritingTopBar.practiceTopBar,
-  #attackPlayPage .attackTopBar{
-    grid-column:4;
-    grid-row:1;
-    width:100%;
-    position:static;
-    flex-direction:column;
-    align-items:stretch;
-    justify-content:flex-start;
-    gap:4px;
-    margin:0;
-    padding:5px;
-    overflow:hidden;
-    border-radius:14px;
-    border:1px solid #dbe4f0;
-    background:white;
-  }
-
-  #practicePlayPage .practiceTopActions{
-    flex-direction:column;
-    justify-content:flex-start;
-    align-items:stretch;
-    gap:4px;
-    width:100%;
-  }
-
-  #practicePlayPage .practiceTopActions .navBtn,
-  #practicePlayPage .handwritingTopBar .navBtn,
-  #attackPlayPage .attackTopBar .navBtn{
-    width:100%;
-    font-size:11px;
-    padding:5px 4px;
-    border-radius:9px;
-    min-width:0;
-  }
-
-  #attackPlayPage .attackHud{
-    flex:0 0 auto;
-    width:100%;
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    justify-content:flex-start;
-    gap:1px;
-    font-size:8px;
-    white-space:normal;
-    overflow:hidden;
-    text-align:left;
-  }
-
-  #attackPlayPage .attackHud span{
-    width:100%;
-    justify-content:space-between;
-    display:flex;
-    align-items:center;
-    gap:3px;
-  }
-
-  #attackPlayPage .attackHud b{
-    font-size:10px;
-  }
-
-  #practicePlayPage .practiceMiniToolbar,
-  #attackPlayPage .attackMiniToolbar{
-    grid-column:3;
-    grid-row:1;
-    width:100%;
-    position:static;
-    margin:0;
-    justify-content:flex-start;
-    align-items:stretch;
-    flex-direction:column;
-    gap:4px;
-    padding:0;
-  }
-
-  #practicePlayPage .practiceMiniToolbar .toggleBtn,
-  #attackPlayPage .attackMiniToolbar .toggleBtn{
-    width:100%;
-    font-size:11px;
-    padding:4px 2px;
-    border-radius:10px;
-    text-align:center;
-    min-height:28px;
-    line-height:1;
-  }
-
-  #practicePlayPage #hint,
-  #attackPlayPage #attackHint{
-    grid-column:2;
-    grid-row:2;
-    width:100%;
-    position:static;
-    margin:0;
-    padding:5px 8px;
-    border-radius:10px;
-    background:white;
-    border:1px solid #dbe4f0;
-    text-align:center;
-    font-size:11px;
-    min-height:auto;
-    box-sizing:border-box;
-  }
-
-  #practicePlayPage #result,
-  #attackPlayPage #attackResult,
-  #attackPlayPage #attackAnswerBar,
-  #attackPlayPage #attackFinishPanel{
-    grid-column:2;
-    width:100%;
-    position:static;
-    margin:0;
-  }
-
-  #practicePlayPage #result{
-    grid-row:4;
-    padding:6px 6px;
-    border-radius:10px;
-    background:white;
-    border:1px solid #dbe4f0;
-    text-align:left;
-    font-size:12px;
-    min-height:auto;
-  }
-
-  #attackPlayPage #attackResult{
-    grid-row:4;
-    padding:6px 6px;
-    border-radius:10px;
-    background:white;
-    border:1px solid #dbe4f0;
-    text-align:left;
-    font-size:12px;
-    min-height:auto;
-  }
-
-  #attackPlayPage #attackAnswerBar{
-    grid-row:5;
-    display:flex;
-    flex-direction:column;
-    align-items:stretch;
-    gap:4px;
-    padding:0;
-  }
-
-  #attackPlayPage #attackAnswerBar .compactAction{
-    width:100%;
-    padding:5px 4px;
-    font-size:11px;
-    border-radius:10px;
-  }
-
-  #practicePlayPage .practiceBoardWrap,
-  #attackPlayPage .attackBoardShell{
-    grid-column:2;
-    grid-row:3;
-    min-height:0;
-    overflow:auto;
-    padding:0;
-    display:flex;
-    align-items:flex-start;
-    justify-content:center;
-  }
-
-  #practicePlayPage #verticalArea,
-  #attackPlayPage #attackVerticalArea{
-    max-width:100%;
-    width:fit-content;
-    margin:0 auto;
-  }
-
-  #attackPlayPage #attackFinishPanel{
-    grid-row:6;
-    padding:8px 8px;
-  }
-}
-
 @media (max-width:720px){
   .boardControlPanel{
     gap:6px;
@@ -4603,6 +6893,11 @@ body.boardMoveMode .boardPannable{
 }
 </style>
 
+
+
+
+
+
 <script id="explicitBoardControls">
 (function(){
   const BOARD_INFO = {
@@ -4610,7 +6905,7 @@ body.boardMoveMode .boardPannable{
       pageId: 'practicePlayPage',
       boardId: 'verticalArea',
       viewportSelector: '.practiceBoardWrap',
-      overlayAnchorSelector: '.practiceMiniToolbar',
+      overlayAnchorSelector: '.handwritingTopBar.practiceTopBar',
       controlsId: 'practiceBoardControls',
       labelId: 'practiceBoardScaleLabel',
       manualAttr: 'data-manual-zoom'
@@ -4619,7 +6914,7 @@ body.boardMoveMode .boardPannable{
       pageId: 'attackPlayPage',
       boardId: 'attackVerticalArea',
       viewportSelector: '.attackBoardShell',
-      overlayAnchorSelector: '.attackMiniToolbar',
+      overlayAnchorSelector: '.attackTopButtons',
       controlsId: 'attackBoardControls',
       labelId: 'attackBoardScaleLabel',
       manualAttr: 'data-manual-zoom'
@@ -4680,10 +6975,9 @@ body.boardMoveMode .boardPannable{
     const viewport = viewportEl(key);
     if(!viewport) return;
 
-    const topBar = document.querySelector(key === 'practice' ? '.practiceTopBar' : '.attackTopBar');
-    const toolbar = document.querySelector(key === 'practice' ? '.practiceMiniToolbar' : '.attackMiniToolbar');
-    const hint = document.getElementById(key === 'practice' ? 'hint' : 'attackHint');
     const result = document.getElementById(key === 'practice' ? 'result' : 'attackResult');
+    const answerBar = key === 'attack' ? document.getElementById('attackAnswerBar') : null;
+    const finishPanel = key === 'attack' ? document.getElementById('attackFinishPanel') : null;
 
     const oldTransform = board.style.transform;
     board.style.transform = 'none';
@@ -4694,9 +6988,8 @@ body.boardMoveMode .boardPannable{
     board.style.transition = '';
 
     const viewportRect = viewport.getBoundingClientRect();
-    const availableW = Math.max(260, viewportRect.width - 16);
-    const occupiedTop = (topBar?.getBoundingClientRect().height || 0) + (toolbar?.getBoundingClientRect().height || 0) + (hint?.getBoundingClientRect().height || 0) + (result?.getBoundingClientRect().height || 0);
-    const availableH = Math.max(180, viewportRect.height - occupiedTop - 18);
+    const availableW = Math.max(260, viewportRect.width - 12);
+    const availableH = Math.max(180, viewportRect.height - 12);
 
     let scale = Math.min(1, availableW / naturalW, availableH / naturalH);
     if(!Number.isFinite(scale) || scale <= 0) scale = 1;
@@ -4861,5 +7154,541 @@ body.boardMoveMode .boardPannable{
   setTimeout(init, 300);
 })();
 </script>
+
+<style id="attackLayoutPatch_v1">
+/* タイムアタック：横長レイアウト */
+@media (orientation: landscape) and (min-width: 721px){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    padding:0 !important;
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:row;
+    align-items:stretch;
+    overflow:hidden;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    position:static;
+    width:clamp(96px, 9vw, 128px);
+    padding:8px 4px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackTopButtons{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    width:100%;
+    min-width:0;
+    padding:6px 2px;
+    font-size:10px;
+    border-radius:10px;
+  }
+
+  /* 情報表示バーは「経過時間」と「問題数」だけ */
+  #attackPlayPage .attackHud{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding:6px 4px;
+    border-radius:14px;
+    background:rgba(255,255,255,.92);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+  }
+
+  #attackPlayPage .attackHud span{
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:4px;
+    width:100%;
+    padding:4px 5px;
+    font-size:10px;
+    line-height:1.15;
+    border-radius:10px;
+    background:white;
+    border:1px solid #eef3f8;
+    overflow:hidden;
+    white-space:nowrap;
+  }
+
+  #attackPlayPage .attackHud span:nth-child(n+3){
+    display:none !important;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:11px;
+    line-height:1;
+  }
+
+  #attackPlayPage .boardControlOverlay{
+    position:static !important;
+    width:100%;
+    margin:0;
+    display:flex;
+    justify-content:flex-start;
+    pointer-events:none;
+    z-index:35;
+  }
+
+  #attackPlayPage .boardControlPanel{
+    pointer-events:auto;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+    padding:6px 4px;
+    border-radius:14px;
+    background:rgba(255,255,255,.92);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+  }
+
+  #attackPlayPage .boardControlBtn{
+    width:100%;
+    min-width:0;
+    padding:7px 0;
+    font-size:13px;
+    border-radius:12px;
+  }
+
+  #attackPlayPage .boardControlLabel{
+    width:100%;
+    min-width:0;
+    font-size:11px;
+    text-align:center;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    flex:1 1 auto;
+    min-width:0;
+    min-height:0;
+    padding:8px 10px 8px 10px;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  #attackPlayPage #attackHint{
+    position:static !important;
+    margin:0 0 8px;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    font-size:clamp(15px, 2vw, 24px);
+    line-height:1.35;
+    text-align:center;
+    word-break:break-word;
+    font-weight:700;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    overflow:auto;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:0;
+    margin:0;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto;
+    transform-origin:top center;
+    width:fit-content;
+    max-width:100%;
+  }
+
+  #attackPlayPage #attackResult{
+    width:100%;
+    margin:6px 0 0;
+    padding:0;
+    min-height:1.4em;
+    font-size:clamp(16px, 2.3vw, 26px);
+    line-height:1.25;
+    text-align:center;
+  }
+
+  #attackPlayPage .attackRightRail{
+    position:static;
+    width:clamp(110px, 10.5vw, 144px);
+    padding:8px 4px;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:8px;
+    overflow:auto;
+    z-index:30;
+  }
+
+  #attackPlayPage .attackMiniToolbar{
+    position:static !important;
+    width:100%;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    justify-content:flex-start;
+    align-items:stretch;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    width:100%;
+    min-width:0;
+    padding:6px 0;
+    font-size:11px;
+    border-radius:12px;
+    line-height:1.05;
+  }
+
+  #attackPlayPage .attackAnswerBar{
+    width:100%;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:4px;
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction{
+    width:100%;
+    padding:8px 6px;
+    font-size:12px;
+    border-radius:12px;
+    min-width:0;
+  }
+
+  #attackPlayPage .attackFinishPanel{
+    width:100%;
+    margin-top:8px;
+  }
+
+  #attackPlayPage .attackFinishPanel .statGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+
+@media (orientation: landscape) and (min-width: 721px) and (max-height: 540px){
+  #attackPlayPage .attackLeftRail{
+    width:clamp(84px, 8.5vw, 112px);
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    padding:5px 2px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .attackHud{
+    gap:3px;
+    padding:5px 4px;
+  }
+
+  #attackPlayPage .attackHud span{
+    padding:3px 4px;
+    font-size:9px;
+  }
+
+  #attackPlayPage .boardControlBtn{
+    padding:6px 0;
+    font-size:12px;
+  }
+
+  #attackPlayPage .attackRightRail{
+    width:clamp(96px, 9vw, 124px);
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    padding:5px 0;
+    font-size:10px;
+  }
+
+  #attackPlayPage #attackHint{
+    font-size:clamp(14px, 1.9vw, 20px);
+  }
+
+  #attackPlayPage #attackResult{
+    font-size:clamp(16px, 2.1vw, 24px);
+  }
+}
+
+/* タイムアタック：縦長レイアウト */
+@media (orientation: portrait){
+  #attackPlayPage.page.handwritingFullscreen.attackFullscreen{
+    padding:0 !important;
+  }
+
+  #attackPlayPage .attackLandscapeLayout{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    overflow:hidden;
+  }
+
+  #attackPlayPage .attackLeftRail,
+  #attackPlayPage .attackCenterArea,
+  #attackPlayPage .attackRightRail{
+    position:static;
+    width:100%;
+  }
+
+  #attackPlayPage .attackLeftRail{
+    padding:10px 10px 6px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    overflow:visible;
+  }
+
+  #attackPlayPage .attackTopButtons{
+    width:100%;
+    display:flex;
+    flex-direction:row;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  #attackPlayPage .attackTopButtons .navBtn{
+    width:auto;
+    min-width:56px;
+    padding:8px 10px;
+    font-size:14px;
+    border-radius:12px;
+  }
+
+  #attackPlayPage .attackHud{
+    width:100%;
+    max-width:min(980px, 100%);
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    align-items:center;
+    gap:6px;
+    padding:8px 10px;
+    border-radius:16px;
+    background:rgba(255,255,255,.94);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+  }
+
+  #attackPlayPage .attackHud span{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:6px 10px;
+    border-radius:999px;
+    background:white;
+    border:1px solid #eef3f8;
+    font-size:13px;
+    line-height:1.1;
+    white-space:nowrap;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:14px;
+  }
+
+  #attackPlayPage .boardControlOverlay{
+    position:static !important;
+    width:100%;
+    margin:0;
+    display:flex;
+    justify-content:center;
+    pointer-events:none;
+    z-index:35;
+  }
+
+  #attackPlayPage .boardControlPanel{
+    pointer-events:auto;
+    width:100%;
+    max-width:min(980px, 100%);
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    align-items:center;
+    gap:6px;
+    padding:8px 10px;
+    border-radius:16px;
+    background:rgba(255,255,255,.94);
+    border:1px solid #e3eaf4;
+    box-shadow:0 8px 24px rgba(33,52,74,.06);
+  }
+
+  #attackPlayPage .boardControlBtn{
+    min-width:64px;
+    padding:10px 12px;
+    font-size:14px;
+    border-radius:12px;
+  }
+
+  #attackPlayPage .boardControlLabel{
+    min-width:78px;
+    font-size:13px;
+    text-align:center;
+  }
+
+  #attackPlayPage .attackCenterArea{
+    flex:1 1 auto;
+    min-height:0;
+    padding:6px 10px 4px;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+
+  #attackPlayPage #attackHint{
+    position:static !important;
+    margin:0 0 8px;
+    padding:0;
+    min-height:1.4em;
+    width:100%;
+    text-align:center;
+    font-size:clamp(15px, 2.4vw, 22px);
+    line-height:1.35;
+    font-weight:700;
+    word-break:break-word;
+  }
+
+  #attackPlayPage .attackBoardShell{
+    flex:1 1 auto;
+    min-height:0;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:auto;
+    padding:0;
+    margin:0;
+  }
+
+  #attackPlayPage #attackVerticalArea{
+    margin:0 auto;
+    transform-origin:top center;
+    width:fit-content;
+    max-width:100%;
+  }
+
+  #attackPlayPage #attackResult{
+    width:100%;
+    margin:8px 0 0;
+    min-height:1.4em;
+    font-size:clamp(16px, 2.5vw, 24px);
+    line-height:1.25;
+    text-align:center;
+  }
+
+  #attackPlayPage .attackRightRail{
+    padding:6px 10px 12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+    overflow:visible;
+  }
+
+  #attackPlayPage .attackMiniToolbar{
+    width:100%;
+    max-width:min(980px, 100%);
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:center;
+    align-items:center;
+    gap:6px;
+  }
+
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    min-width:48px;
+    min-height:34px;
+    padding:8px 10px;
+    font-size:13px;
+    border-radius:12px;
+  }
+
+  #attackPlayPage .attackAnswerBar{
+    width:100%;
+    max-width:min(680px, 100%);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:8px;
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction{
+    width:100%;
+    min-height:52px;
+    padding:14px 14px;
+    font-size:clamp(17px, 4.2vw, 27px);
+    border-radius:18px;
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction:first-child{
+    background:var(--primary);
+    color:white;
+    font-weight:800;
+    box-shadow:0 10px 24px rgba(43,124,255,.22);
+  }
+
+  #attackPlayPage .attackAnswerBar .compactAction:nth-child(n+2){
+    font-size:14px;
+    min-height:40px;
+    padding:10px 12px;
+    border-radius:14px;
+  }
+
+  #attackPlayPage .attackFinishPanel{
+    width:100%;
+    margin-top:8px;
+  }
+
+  #attackPlayPage .attackFinishPanel .statGrid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+</style>
+
+<script id="attackLayoutPatchRefresh_v1">
+(function(){
+  function refitActiveBoard(){
+    try{
+      if(typeof window.__fitActiveBoard === 'function' &&
+         typeof window.appState !== 'undefined' &&
+         (appState.page === 'attackPlayPage' || appState.page === 'practicePlayPage')){
+        window.__fitActiveBoard(true);
+      }
+    }catch(e){}
+  }
+
+  window.addEventListener('resize', ()=>{
+    requestAnimationFrame(refitActiveBoard);
+  }, { passive:true });
+
+  window.addEventListener('orientationchange', ()=>{
+    setTimeout(refitActiveBoard, 120);
+  });
+})();
+</script>
+
 </body>
 </html>
