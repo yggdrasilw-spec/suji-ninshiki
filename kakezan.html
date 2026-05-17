@@ -2222,6 +2222,9 @@ function generateProblem(preserveCustom=false){
   checkInputs("practice");
   updateToggleButtons();
   updateHints();
+  if(typeof window.__fitActiveBoard === 'function'){
+    window.__fitActiveBoard(true);
+  }
   if(typeof window.__triggerIpadLayoutRefresh === 'function'){
     window.__triggerIpadLayoutRefresh();
   }
@@ -2879,6 +2882,9 @@ function nextAttackQuestion(initial=false){
   checkInputs("attack");
   updateToggleButtons();
   updateAttackHints();
+  if(typeof window.__fitActiveBoard === 'function'){
+    window.__fitActiveBoard(true);
+  }
   if(typeof window.__triggerIpadLayoutRefresh === 'function'){
     window.__triggerIpadLayoutRefresh();
   }
@@ -3922,9 +3928,7 @@ body.ipadDevice .handwritingPopupCanvas{
     popupTargetNode = node;
     popupTargetKind = node.classList.contains('handField') ? 'handwriting' : 'keyboard';
     popupTargetFieldId = popupTargetKind === 'handwriting' ? node.id : null;
-    if(typeof window.__resetActiveBoardZoom === 'function'){
-      window.__resetActiveBoardZoom();
-    }
+    // 画面フィットは問題生成時または明示ボタンのみで行う。
     const popup = document.getElementById('handwritingPopup');
     if(popup){
       popup.classList.add('active');
@@ -3934,9 +3938,7 @@ body.ipadDevice .handwritingPopupCanvas{
     popupResizeTimer = setTimeout(()=>{
       resizePopupCanvas();
       fillPopupWhite();
-      if(typeof window.__scheduleHandwritingBoardFit === 'function'){
-        window.__scheduleHandwritingBoardFit();
-      }
+      // 自動フィットはしない
     }, 50);
   }
 
@@ -3954,9 +3956,7 @@ body.ipadDevice .handwritingPopupCanvas{
     popupTargetNode = null;
     popupTargetKind = null;
     popupTargetFieldId = null;
-    if(typeof window.__scheduleHandwritingBoardFit === 'function'){
-      window.__scheduleHandwritingBoardFit();
-    }
+    // 自動フィットはしない
   };
 
   window.clearPopupCanvas = function(){
@@ -4185,8 +4185,8 @@ body.handwritingMode .miniCarryBox.handField{
 
 <style id="explicitBoardControlStyles">
 :root{
-  --board-control-bg: rgba(255,255,255,.94);
-  --board-control-border: rgba(148,163,184,.45);
+  --board-control-bg: rgba(255,255,255,.92);
+  --board-control-border: rgba(148,163,184,.42);
   --board-control-shadow: 0 12px 32px rgba(15,23,42,.14);
 }
 
@@ -4219,51 +4219,36 @@ body.boardDrawMode .boardControlBtn[data-mode="draw"]{
   display:flex;
   align-items:center;
   flex-wrap:wrap;
-  gap:6px;
-  padding:7px 8px;
+  gap:8px;
+  padding:8px 10px;
   border-radius:18px;
   background:var(--board-control-bg);
   border:1px solid var(--board-control-border);
   box-shadow:var(--board-control-shadow);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
 }
 
 .boardControlBtn{
   border:1px solid #d5ddeb;
   background:white;
   color:#1f2937;
-  border-radius:12px;
-  width:38px;
-  height:38px;
-  padding:0;
-  font-size:19px;
+  border-radius:14px;
+  padding:10px 12px;
+  font-size:16px;
   line-height:1;
   cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
+  min-width:48px;
   box-shadow:none;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.boardControlBtn[data-mode]{
-  width:auto;
-  min-width:44px;
-  padding:0 9px;
-  font-size:15px;
-  font-weight:800;
 }
 
 .boardControlBtn:active{ transform:scale(.98); }
 
 .boardControlLabel{
-  min-width:54px;
+  min-width:72px;
   text-align:center;
   font-weight:800;
-  font-size:13px;
+  font-size:15px;
   color:#334155;
-  padding:0 4px;
 }
 
 body.boardMoveMode .practiceBoardWrap,
@@ -4279,11 +4264,6 @@ body.boardDrawMode .attackBoardShell{
   will-change: transform;
 }
 
-#verticalArea[data-manual-zoom="true"],
-#attackVerticalArea[data-manual-zoom="true"]{
-  transition: transform .08s linear;
-}
-
 .boardPannable{
   cursor: grab;
 }
@@ -4292,70 +4272,205 @@ body.boardMoveMode .boardPannable{
   cursor: grabbing;
 }
 
-@media (max-width:720px){
-  .boardControlPanel{
-    gap:5px;
-    padding:6px 7px;
+@media (orientation: landscape) and (min-width: 721px){
+  #practicePlayPage.page.handwritingFullscreen.active,
+  #attackPlayPage.page.handwritingFullscreen.active{
+    display:grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(190px, 230px);
+    grid-template-rows: auto auto auto auto auto auto;
+    column-gap: 12px;
+    row-gap: 8px;
+    align-items:start;
+    padding:8px 8px 8px 12px;
+  }
+
+  #practicePlayPage .handwritingTopBar.practiceTopBar,
+  #attackPlayPage .attackTopBar{
+    grid-column:2;
+    width:100%;
+    position:static;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:6px;
+    margin:0;
+    padding:8px;
+    overflow:hidden;
+    border-radius:16px;
+    border:1px solid #dbe4f0;
+    background:white;
+  }
+
+  #practicePlayPage .practiceTopActions{
+    flex-direction:column;
+    justify-content:flex-start;
+    align-items:stretch;
+    gap:6px;
+    width:100%;
+  }
+
+  #practicePlayPage .practiceTopActions .navBtn,
+  #practicePlayPage .handwritingTopBar .navBtn,
+  #attackPlayPage .attackTopBar .navBtn{
+    width:100%;
+    font-size:13px;
+    padding:8px 10px;
+  }
+
+  #attackPlayPage .attackHud{
+    flex:0 0 auto;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:6px;
+    font-size:11px;
+    white-space:normal;
+    overflow:visible;
+    text-align:left;
+  }
+
+  #attackPlayPage .attackHud span{
+    width:100%;
+    justify-content:space-between;
+    display:flex;
+  }
+
+  #attackPlayPage .attackHud b{
+    font-size:13px;
+  }
+
+  #practicePlayPage .practiceMiniToolbar,
+  #attackPlayPage .attackMiniToolbar{
+    grid-column:2;
+    width:100%;
+    position:static;
+    margin:0;
+    justify-content:flex-start;
+    align-items:stretch;
+    flex-direction:column;
+    gap:6px;
+    padding:0;
+  }
+
+  #practicePlayPage .practiceMiniToolbar .toggleBtn,
+  #attackPlayPage .attackMiniToolbar .toggleBtn{
+    width:100%;
+    font-size:12px;
+    padding:8px 10px;
+    border-radius:12px;
+    text-align:left;
+  }
+
+  #practicePlayPage .boardControlOverlay,
+  #attackPlayPage .boardControlOverlay{
+    grid-column:2;
+    position:static;
+    margin:0;
+    justify-content:flex-start;
+    width:100%;
+  }
+
+  #practicePlayPage .boardControlPanel,
+  #attackPlayPage .boardControlPanel{
+    width:100%;
+    flex-direction:column;
+    align-items:stretch;
+    gap:6px;
+    padding:8px;
     border-radius:16px;
   }
-  .boardControlBtn{
-    width:34px;
-    height:34px;
-    font-size:18px;
-    border-radius:11px;
+
+  #practicePlayPage .boardControlBtn,
+  #attackPlayPage .boardControlBtn{
+    width:100%;
+    min-width:0;
+    font-size:13px;
+    padding:9px 10px;
+    border-radius:12px;
+    text-align:left;
   }
-  .boardControlBtn[data-mode]{
-    min-width:42px;
-    padding:0 8px;
-    font-size:12px;
+
+  #practicePlayPage .boardControlLabel,
+  #attackPlayPage .boardControlLabel{
+    width:100%;
+    min-width:0;
+    padding:8px 10px;
+    border-radius:12px;
+    background:#f8fafc;
   }
-  .boardControlLabel{
-    font-size:12px;
-    min-width:48px;
+
+  #practicePlayPage #hint,
+  #practicePlayPage #result,
+  #attackPlayPage #attackHint,
+  #attackPlayPage #attackResult{
+    grid-column:2;
+    width:100%;
+    position:static;
+    margin:0;
+    padding:8px 10px;
+    border-radius:14px;
+    background:white;
+    border:1px solid #dbe4f0;
+    text-align:left;
+  }
+
+  #practicePlayPage #hint,
+  #attackPlayPage #attackHint{
+    grid-row:4;
+    min-height:auto;
+    font-size:14px;
+  }
+
+  #practicePlayPage #result,
+  #attackPlayPage #attackResult{
+    grid-row:5;
+    min-height:auto;
+    font-size:16px;
+  }
+
+  #practicePlayPage .practiceBoardWrap,
+  #attackPlayPage .attackBoardShell{
+    grid-column:1;
+    grid-row:1 / span 6;
+    min-height:0;
+    overflow:auto;
+    padding:0;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+  }
+
+  #practicePlayPage #verticalArea,
+  #attackPlayPage #attackVerticalArea{
+    max-width:100%;
+    width:fit-content;
+    margin:0 auto;
+  }
+
+  #attackPlayPage #attackFinishPanel{
+    grid-column:2;
+    grid-row:6;
+    width:100%;
+    margin:0;
   }
 }
 
-@media (orientation: landscape){
-  .boardControlOverlay{
-    position:fixed;
-    top:50%;
-    right:10px;
-    left:auto;
-    width:auto;
-    transform:translateY(-50%);
-    justify-content:flex-end;
-    align-items:center;
-    margin:0;
-  }
+@media (max-width:720px){
   .boardControlPanel{
-    flex-direction:column;
-    align-items:stretch;
-    gap:7px;
-    padding:8px;
-    border-radius:20px;
+    gap:6px;
+    padding:7px 8px;
+    border-radius:16px;
   }
   .boardControlBtn{
-    width:44px;
-    height:44px;
-    font-size:20px;
-  }
-  .boardControlBtn[data-mode]{
-    width:44px;
+    padding:9px 10px;
+    font-size:15px;
     min-width:44px;
-    padding:0;
-    font-size:11px;
-    line-height:1.05;
-    white-space:normal;
   }
   .boardControlLabel{
-    min-width:44px;
-    font-size:12px;
-  }
-  body.boardMoveMode .practiceBoardWrap,
-  body.boardMoveMode .attackBoardShell,
-  body.boardDrawMode .practiceBoardWrap,
-  body.boardDrawMode .attackBoardShell{
-    padding-right:76px;
+    font-size:14px;
+    min-width:64px;
   }
 }
 </style>
@@ -4385,67 +4500,51 @@ body.boardMoveMode .boardPannable{
 
   const viewState = {
     practice: { scale: 1, panX: 0, panY: 0, manual: false, panActive: false, panPointerId: null, panStartX: 0, panStartY: 0, panBaseX: 0, panBaseY: 0 },
-    attack: { scale: 1, panX: 0, panY: 0, manual: false, panActive: false, panPointerId: null, panStartX: 0, panStartY: 0, panBaseX: 0, panBaseY: 0 }
+    attack:   { scale: 1, panX: 0, panY: 0, manual: false, panActive: false, panPointerId: null, panStartX: 0, panStartY: 0, panBaseX: 0, panBaseY: 0 }
   };
 
   function activeKey(){
-    if(typeof appState !== 'undefined' && appState.page === 'attackPlayPage') return 'attack';
-    return 'practice';
+    return (typeof appState !== 'undefined' && appState.page === 'attackPlayPage') ? 'attack' : 'practice';
   }
 
-  function getInfo(key){ return BOARD_INFO[key]; }
-  function getState(key){ return viewState[key]; }
+  function info(key){ return BOARD_INFO[key]; }
+  function state(key){ return viewState[key]; }
+  function boardEl(key){ return document.getElementById(info(key).boardId); }
+  function viewportEl(key){ return document.querySelector(info(key).viewportSelector); }
+  function labelEl(key){ return document.getElementById(info(key).labelId); }
 
   function clamp(value, min, max){
     return Math.min(max, Math.max(min, value));
   }
 
-  function boardEl(key){
-    const info = getInfo(key);
-    return document.getElementById(info.boardId);
-  }
-
-  function viewportEl(key){
-    const info = getInfo(key);
-    return document.querySelector(info.viewportSelector);
-  }
-
-  function labelEl(key){
-    const info = getInfo(key);
-    return document.getElementById(info.labelId);
-  }
-
-  function setMode(mode){
-    const normalized = mode === 'move' ? 'move' : 'draw';
-    document.body.classList.toggle('boardMoveMode', normalized === 'move');
-    document.body.classList.toggle('boardDrawMode', normalized === 'draw');
-    document.querySelectorAll('.boardControlBtn[data-mode]').forEach(btn => {
-      btn.classList.toggle('on', btn.dataset.mode === normalized);
-    });
-    const active = activeKey();
-    const vp = viewportEl(active);
-    if(vp){
-      vp.classList.toggle('boardPannable', normalized === 'move');
+  function refreshGuides(key){
+    if(key === 'practice' && typeof updateHints === 'function'){
+      updateHints();
+    }else if(key === 'attack' && typeof updateAttackHints === 'function'){
+      updateAttackHints();
     }
   }
 
-  function applyTransform(key){
+  function applyTransform(key, options = {}){
     const board = boardEl(key);
     if(!board) return;
-    const st = getState(key);
+    const st = state(key);
     board.style.transform = `translate(${st.panX}px, ${st.panY}px) scale(${st.scale})`;
-    board.setAttribute(BOARD_INFO[key].manualAttr, st.manual ? 'true' : 'false');
+    board.setAttribute(info(key).manualAttr, st.manual ? 'true' : 'false');
     const label = labelEl(key);
     if(label) label.textContent = `${Math.round(st.scale * 100)}%`;
+    if(options.redraw) refreshGuides(key);
   }
 
   function fitBoard(key, options = {}){
     const board = boardEl(key);
     if(!board) return;
-    const st = getState(key);
+
+    const st = state(key);
     if(st.manual && !options.force) return;
-    const info = getInfo(key);
-    const page = document.getElementById(info.pageId);
+
+    const meta = info(key);
+    const page = document.getElementById(meta.pageId);
     if(!page || !page.classList.contains('active')) return;
 
     const viewport = viewportEl(key);
@@ -4465,58 +4564,74 @@ body.boardMoveMode .boardPannable{
     board.style.transition = '';
 
     const viewportRect = viewport.getBoundingClientRect();
+    const landscapeSidebar = (window.matchMedia && window.matchMedia('(orientation: landscape) and (min-width: 721px)').matches)
+      ? Math.min(230, Math.max(190, viewportRect.width * 0.22))
+      : 0;
+    const availableW = Math.max(260, viewportRect.width - landscapeSidebar - 16);
     const occupiedTop = (topBar?.getBoundingClientRect().height || 0) + (toolbar?.getBoundingClientRect().height || 0) + (hint?.getBoundingClientRect().height || 0) + (result?.getBoundingClientRect().height || 0);
-    const availableW = Math.max(260, viewportRect.width - 16);
     const availableH = Math.max(180, viewportRect.height - occupiedTop - 18);
+
     let scale = Math.min(1, availableW / naturalW, availableH / naturalH);
     if(!Number.isFinite(scale) || scale <= 0) scale = 1;
     scale = clamp(scale, 0.6, 1);
+
     st.scale = scale;
     st.panX = 0;
     st.panY = 0;
     st.manual = false;
-    applyTransform(key);
+    applyTransform(key, { redraw: true });
   }
 
-  function scheduleFit(){
-    clearTimeout(scheduleFit._timer);
-    scheduleFit._timer = setTimeout(() => {
-      fitBoard(activeKey());
-    }, 60);
+  function fitActiveBoard(force = false){
+    fitBoard(activeKey(), { force });
   }
 
   function zoomActive(delta){
     const key = activeKey();
-    const st = getState(key);
+    const st = state(key);
     st.manual = true;
     st.scale = clamp(Math.round((st.scale + delta) * 100) / 100, 0.6, 2.4);
-    applyTransform(key);
+    applyTransform(key, { redraw: true });
   }
 
-  function resetActiveBoardZoom(){
-    const key = activeKey();
-    const st = getState(key);
-    st.manual = false;
-    scheduleFit();
+  function setMode(mode){
+    const normalized = mode === 'move' ? 'move' : 'draw';
+    document.body.classList.toggle('boardMoveMode', normalized === 'move');
+    document.body.classList.toggle('boardDrawMode', normalized === 'draw');
+
+    document.querySelectorAll('.boardControlBtn[data-mode]').forEach(btn => {
+      btn.classList.toggle('on', btn.dataset.mode === normalized);
+    });
+
+    const active = activeKey();
+    const vp = viewportEl(active);
+    if(vp){
+      vp.classList.toggle('boardPannable', normalized === 'move');
+      if(normalized === 'draw'){
+        const st = state(active);
+        st.panActive = false;
+        st.panPointerId = null;
+      }
+    }
   }
 
   function ensureControlBar(key){
-    const info = getInfo(key);
-    const page = document.getElementById(info.pageId);
-    if(!page) return;
-    if(document.getElementById(info.controlsId)) return;
+    const meta = info(key);
+    const page = document.getElementById(meta.pageId);
+    if(!page || document.getElementById(meta.controlsId)) return;
 
-    const anchor = page.querySelector(info.overlayAnchorSelector);
+    const anchor = page.querySelector(meta.overlayAnchorSelector);
     const bar = document.createElement('div');
     bar.className = 'boardControlOverlay';
-    bar.id = info.controlsId;
+    bar.id = meta.controlsId;
     bar.innerHTML = `
       <div class="boardControlPanel" role="toolbar" aria-label="ボード操作">
-        <button type="button" class="boardControlBtn" data-action="zoom-out" aria-label="縮小 10%" title="縮小 10%">➖</button>
-        <button type="button" class="boardControlBtn" data-action="zoom-in" aria-label="拡大 10%" title="拡大 10%">➕</button>
-        <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動" title="移動">🖐️</button>
-        <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画" title="描画">✍️</button>
-        <div class="boardControlLabel" id="${info.labelId}" title="現在の拡大率">100%</div>
+        <button type="button" class="boardControlBtn" data-action="fit" aria-label="画面にフィット">📐 FIT</button>
+        <button type="button" class="boardControlBtn" data-action="zoom-out" aria-label="縮小">➖</button>
+        <button type="button" class="boardControlBtn" data-action="zoom-in" aria-label="拡大">➕</button>
+        <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動モード">✋ 移動</button>
+        <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画モード">✍️ 描画</button>
+        <div class="boardControlLabel" id="${meta.labelId}">100%</div>
       </div>
     `;
     if(anchor && anchor.parentNode){
@@ -4525,6 +4640,7 @@ body.boardMoveMode .boardPannable{
       page.insertBefore(bar, page.firstChild);
     }
 
+    bar.querySelector('[data-action="fit"]').addEventListener('click', () => fitActiveBoard(true));
     bar.querySelector('[data-action="zoom-out"]').addEventListener('click', () => zoomActive(-0.1));
     bar.querySelector('[data-action="zoom-in"]').addEventListener('click', () => zoomActive(0.1));
     bar.querySelector('[data-mode="move"]').addEventListener('click', () => setMode('move'));
@@ -4533,15 +4649,14 @@ body.boardMoveMode .boardPannable{
 
   function bindPan(key){
     const vp = viewportEl(key);
-    const board = boardEl(key);
-    if(!vp || !board || vp.__boardPanBound) return;
+    if(!vp || vp.__boardPanBound) return;
     vp.__boardPanBound = true;
 
-    const st = getState(key);
+    const st = state(key);
 
     vp.addEventListener('pointerdown', (e) => {
       if(document.body.classList.contains('boardMoveMode') === false) return;
-      if(e.target.closest('button, input, select, textarea, label, .toggleBtn, .navBtn, .cardBtn')) return;
+      if(e.target.closest('button, input, select, textarea, label, .toggleBtn, .navBtn, .cardBtn, .boardControlBtn')) return;
       st.panActive = true;
       st.panPointerId = e.pointerId;
       st.panStartX = e.clientX;
@@ -4556,7 +4671,7 @@ body.boardMoveMode .boardPannable{
       if(!st.panActive || st.panPointerId !== e.pointerId) return;
       st.panX = st.panBaseX + (e.clientX - st.panStartX);
       st.panY = st.panBaseY + (e.clientY - st.panStartY);
-      applyTransform(key);
+      applyTransform(key, { redraw: false });
       e.preventDefault();
     }, { passive:false });
 
@@ -4571,7 +4686,7 @@ body.boardMoveMode .boardPannable{
     vp.addEventListener('pointercancel', endPan, { passive:false });
     vp.addEventListener('pointerleave', endPan, { passive:false });
 
-    board.classList.add('boardPannable');
+    vp.classList.add('boardPannable');
   }
 
   function initKey(key){
@@ -4584,11 +4699,11 @@ body.boardMoveMode .boardPannable{
     initKey('practice');
     initKey('attack');
     setMode('draw');
-    scheduleFit();
   }
 
-  window.__resetActiveBoardZoom = resetActiveBoardZoom;
-  window.__scheduleHandwritingBoardFit = scheduleFit;
+  window.__resetActiveBoardZoom = function(){};
+  window.__fitActiveBoard = fitActiveBoard;
+  window.__scheduleHandwritingBoardFit = function(){};
   window.__setBoardInteractionMode = setMode;
   window.__zoomActiveBoard = zoomActive;
 
@@ -4598,14 +4713,11 @@ body.boardMoveMode .boardPannable{
       const result = oldShowPage(pageId);
       if(pageId === 'practicePlayPage' || pageId === 'attackPlayPage'){
         setMode('draw');
-        scheduleFit();
       }
       return result;
     };
   }
 
-  window.addEventListener('resize', scheduleFit, { passive:true });
-  window.addEventListener('orientationchange', () => setTimeout(scheduleFit, 80), { passive:true });
   document.addEventListener('DOMContentLoaded', init);
   setTimeout(init, 300);
 })();
