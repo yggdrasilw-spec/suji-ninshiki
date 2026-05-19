@@ -296,6 +296,76 @@ input.shortInput{
 .toggleBtn.on[data-toggle="sound"]{ background:#f59e0b; }
 .toggleBtn.on[data-toggle="superHint"]{ background:#14b8a6; }
 
+.defaultHintList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:10px;
+}
+
+.defaultHintRow{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:10px 12px;
+  background:white;
+  border:1px solid #e6edf6;
+  border-radius:14px;
+}
+
+.defaultHintBtn{
+  width:56px;
+  min-width:56px;
+  height:42px;
+  padding:0;
+  font-size:18px;
+  border-radius:12px;
+  box-shadow:none;
+}
+
+.defaultHintBtn.on{
+  color:white;
+}
+
+.defaultHintBtn.off{
+  background:#b9b9b9;
+  color:#f5f5f5;
+  border-color:#a0a0a0;
+  opacity:0.85;
+}
+
+.defaultHintBtn.on[data-default-toggle="arrow"]{ background:var(--accent); }
+.defaultHintBtn.on[data-default-toggle="target"]{ background:var(--blue); }
+.defaultHintBtn.on[data-default-toggle="correctness"]{ background:var(--green); }
+.defaultHintBtn.on[data-default-toggle="text"]{ background:var(--purple); }
+.defaultHintBtn.on[data-default-toggle="superHint"]{ background:#14b8a6; }
+
+.defaultHintMeta{
+  flex:1;
+  text-align:left;
+  min-width:0;
+}
+
+.defaultHintTitle{
+  font-weight:800;
+  font-size:16px;
+  line-height:1.2;
+}
+
+.defaultHintDesc{
+  margin-top:4px;
+  font-size:14px;
+  line-height:1.5;
+  color:#475569;
+}
+
+.defaultHintNote{
+  margin-top:10px;
+  font-size:13px;
+  line-height:1.5;
+  color:var(--muted);
+}
+
 .ghostDigit{
   position:absolute;
   inset:0;
@@ -3557,7 +3627,6 @@ body.handwritingMode .handField.active .handCanvas{
       <p>入力方法をキーボードと手書きから選べます。手書きモードでは、全ての入力マスをキャンバスとして使えます。</p>
       <button class="cardBtn" onclick="openSettings()">設定を開く</button>
     </div>
-
   </div>
 </div>
 
@@ -3604,29 +3673,6 @@ body.handwritingMode .handField.active .handCanvas{
         <div id="modelStatusBox" class="modelStatus warn">モデルの状態を確認中です…</div>
       </div>
 
-      <div class="settingsBox" style="margin-top:12px;">
-        <h4>ヒントの設定</h4>
-        <div class="radioGroup">
-          <label class="radioRow">
-            <input type="checkbox" id="practiceHintsDefaultOn">
-            <div>
-              <strong>自由練習のデフォルトヒント</strong><br>
-              <span class="muted">オンにすると、自由練習を始めたときにヒントを最初から使えるようにします。オフにすると、ノーヒントを目指しやすくなります。</span>
-            </div>
-          </label>
-        </div>
-        <div class="settingsNote">
-          <strong>ノーヒントを目指そう！</strong><br><br>
-          ・<strong>ヒント矢印</strong>：どこの数字とどこの数字がかけられるか分かります。<br>
-          ・<strong>青マス</strong>：次どこに書くのか教えてくれます。<br>
-          ・<strong>正誤判定</strong>：1マスずつ、あっていたら緑、間違っていたら赤で教えてくれます。<br>
-          ・<strong>テキスト</strong>：今しないといけないかけ算の式を教えてくれます。使う数字のマスも色を付けて教えます。<br>
-          ・<strong>超ヒント</strong>：うっすら全部のマスの答えを教えてくれます。
-        </div>
-        <div class="footerActions" style="justify-content:flex-start;">
-          <button class="primaryBtn" onclick="saveHintSettingsFromSettings()">ヒント設定を保存</button>
-        </div>
-      </div>
       <div class="settingsBox">
         <h4>手書きモードの使い方</h4>
         <p>・手書きは「1マスにつき1桁」を想定しています。</p>
@@ -3634,6 +3680,13 @@ body.handwritingMode .handField.active .handCanvas{
         <p>・認識した数字はそのまま正誤判定に使われます。</p>
         <p>・補助計算マス（繰り上がりのマス）も、同じように手書きできます。</p>
         <p>・認識がうまくいかないときは、書き直しで再入力できます。</p>
+      </div>
+
+      <div class="settingsBox">
+        <h4>自由練習のデフォルトヒント</h4>
+        <p class="muted">ここでONにしたものが、自由練習で「問題を作る」を押したときの初期状態になります。変更は自動保存されます。</p>
+        <div id="practiceHintSettings" class="defaultHintList" aria-label="自由練習のデフォルトヒント設定"></div>
+        <div class="defaultHintNote">超ヒントは答えが見えやすくなるので、最初はOFFがおすすめです。</div>
       </div>
     </div>
   </div>
@@ -3658,8 +3711,8 @@ body.handwritingMode .handField.active .handCanvas{
             <select id="topDigitsSelect">
               <option value="1">1桁</option>
               <option value="2">2桁</option>
-              <option value="3" selected>3桁</option>
-              <option value="4">4桁</option>
+              <option value="3">3桁</option>
+              <option value="4" selected>4桁</option>
             </select>
           </label>
 
@@ -3669,6 +3722,7 @@ body.handwritingMode .handField.active .handCanvas{
               <option value="1" selected>1桁</option>
               <option value="2">2桁</option>
               <option value="3">3桁</option>
+              <option value="4">4桁</option>
             </select>
           </label>
         </div>
@@ -3684,11 +3738,11 @@ body.handwritingMode .handField.active .handCanvas{
         <div class="rowControls">
           <label class="labelBox">
             <span>かけられる数</span>
-            <input id="customTopInput" class="shortInput" type="text" inputmode="numeric" maxlength="4" placeholder="例: 123">
+            <input id="customTopInput" class="shortInput" type="text" inputmode="numeric" maxlength="4" placeholder="例: 1234">
           </label>
           <label class="labelBox">
             <span>かける数</span>
-            <input id="customBottomInput" class="shortInput" type="text" inputmode="numeric" maxlength="4" placeholder="例: 45">
+            <input id="customBottomInput" class="shortInput" type="text" inputmode="numeric" maxlength="4" placeholder="例: 5678">
           </label>
         </div>
         <div class="rowControls">
@@ -3778,8 +3832,8 @@ body.handwritingMode .handField.active .handCanvas{
             <select id="attackTopDigitsSelect">
               <option value="1">1桁</option>
               <option value="2">2桁</option>
-              <option value="3" selected>3桁</option>
-              <option value="4">4桁</option>
+              <option value="3">3桁</option>
+              <option value="4" selected>4桁</option>
             </select>
           </label>
           <label class="labelBox">
@@ -3788,6 +3842,7 @@ body.handwritingMode .handField.active .handCanvas{
               <option value="1" selected>1桁</option>
               <option value="2">2桁</option>
               <option value="3">3桁</option>
+              <option value="4">4桁</option>
             </select>
           </label>
           <label class="labelBox">
@@ -3896,7 +3951,7 @@ body.handwritingMode .handField.active .handCanvas{
       <div id="attackAnswerBar" class="attackAnswerBar" style="display:flex;">
         <button type="button" class="actionBtn secondary compactAction" onclick="evaluateAttackAnswer()">答え合わせ</button>
         <button type="button" class="actionBtn secondary compactAction" onclick="retryAttackCurrent()" id="attackRetryBtn" style="display:none;">もう一度</button>
-        <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackCurrent()" id="attackNextBtn">次の問題へ</button>
+        <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackAfterReview()" id="attackNextBtn" style="display:none;">次へ</button>
       </div>
     </div>
   </div>
@@ -3968,7 +4023,6 @@ const appState = {
   attackManualCheckMode: false,
   attackQuestionState: "pending",
   attackPendingScale: null,
-  attackAdvanceTimer: 0,
   inputMode: "keyboard"
 };
 
@@ -3977,8 +4031,17 @@ const STORAGE_KEYS = {
   targets: "attackTargetTimes",
   sound: "soundEnabled",
   superHint: "superHintEnabled",
-  practiceHints: "practiceHints",
+  practiceHints: "practiceHintDefaults",
   inputMode: "inputMode"
+};
+
+
+const DEFAULT_PRACTICE_HINTS = {
+  arrow: true,
+  target: true,
+  correctness: true,
+  text: true,
+  superHint: false
 };
 
 let audioCtx = null;
@@ -4003,8 +4066,8 @@ function openPractice(){
   appState.mode = "practice";
   showPage("practicePage");
   buildCarryCheckboxes();
-  applyPracticeHintDefault();
   updateToggleButtons();
+  renderPracticeHintSettings();
   if(appState.inputMode === "handwriting"){
     ensureHandwritingModel().catch(()=>{});
   }
@@ -4027,7 +4090,12 @@ function openAttackSetup(){
   clearPracticeWorkspace();
   showPage("attackSetupPage");
   appState.mode = "attack";
-  applyPracticeHintDefault();
+  uiState.arrow = false;
+  uiState.target = false;
+  uiState.correctness = false;
+  uiState.text = false;
+  uiState.superHint = false;
+  updateToggleButtons();
   buildAttackCarryCheckboxes();
   syncAttackTargetWheel();
   updateAttackTargetPreview();
@@ -4190,14 +4258,14 @@ function updateAttackAnswerBar(){
   const showBar = !!appState.attackActive;
   bar.style.display = showBar ? "flex" : "none";
   if(retry) retry.style.display = "none";
-  if(next) next.style.display = showBar ? "inline-flex" : "none";
+  if(next) next.style.display = "none";
 }
 
 function setAttackAnswerBarState(state){
   const retry = document.getElementById("attackRetryBtn");
   const next = document.getElementById("attackNextBtn");
   if(retry) retry.style.display = state === "wrong" ? "inline-flex" : "none";
-  if(next) next.style.display = appState.attackActive ? "inline-flex" : "none";
+  if(next) next.style.display = state === "wrong" || state === "correctAfterWrong" || state === "correct" ? "inline-flex" : "none";
 }
 
 function updateAttackManualMode(){
@@ -4227,7 +4295,7 @@ function toggleHint(key){
 
 function updateToggleButtons(){
   document.body.classList.toggle("superHintOn", !!uiState.superHint);
-  document.querySelectorAll(".toggleBtn").forEach(btn=>{
+  document.querySelectorAll(".toggleBtn[data-toggle]").forEach(btn=>{
     const key = btn.dataset.toggle;
     if(!key) return;
     const isOn = !!uiState[key];
@@ -4256,10 +4324,78 @@ function readSuperHintSetting(){
   }
 }
 
+
 function readInputModeSetting(){
   const raw = localStorage.getItem(STORAGE_KEYS.inputMode);
   if(raw === null) return "keyboard";
   return raw === "handwriting" ? "handwriting" : "keyboard";
+}
+
+function getPracticeHintDefaults(){
+  let stored = {};
+  try{
+    stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.practiceHints) || "{}") || {};
+  }catch(e){
+    stored = {};
+  }
+  return {
+    arrow: stored.arrow !== undefined ? !!stored.arrow : DEFAULT_PRACTICE_HINTS.arrow,
+    target: stored.target !== undefined ? !!stored.target : DEFAULT_PRACTICE_HINTS.target,
+    correctness: stored.correctness !== undefined ? !!stored.correctness : DEFAULT_PRACTICE_HINTS.correctness,
+    text: stored.text !== undefined ? !!stored.text : DEFAULT_PRACTICE_HINTS.text,
+    superHint: stored.superHint !== undefined ? !!stored.superHint : DEFAULT_PRACTICE_HINTS.superHint
+  };
+}
+
+function savePracticeHintDefaults(next){
+  const normalized = {
+    arrow: !!next.arrow,
+    target: !!next.target,
+    correctness: !!next.correctness,
+    text: !!next.text,
+    superHint: !!next.superHint
+  };
+  localStorage.setItem(STORAGE_KEYS.practiceHints, JSON.stringify(normalized));
+  renderPracticeHintSettings();
+  return normalized;
+}
+
+function renderPracticeHintSettings(){
+  const wrap = document.getElementById("practiceHintSettings");
+  if(!wrap) return;
+  const state = getPracticeHintDefaults();
+  const items = [
+    ["arrow", "ヒント矢印", "どこの数字とどこの数字がかけられるか分かります。", "➡️"],
+    ["target", "青マス", "次どこに書くのか教えてくれます。", "🔵"],
+    ["correctness", "正誤判定", "1マスずつ、あっていたら緑、間違っていたら赤で教えてくれます。", "🟥🟩"],
+    ["text", "テキスト", "今しないといけない、かけ算の式を教えてくれます。使う数字のマスも色を付けて教えます。", "📝"],
+    ["superHint", "超ヒント", "うっすら全部のマスの答えを教えてくれます。", "🪄"]
+  ];
+  wrap.innerHTML = items.map(([key, title, desc, icon]) => `
+    <div class="defaultHintRow">
+      <button type="button" class="toggleBtn defaultHintBtn ${state[key] ? "on" : "off"}" data-default-toggle="${key}" onclick="togglePracticeHintDefault('${key}')" title="${title}">${icon}</button>
+      <div class="defaultHintMeta">
+        <div class="defaultHintTitle">${title}</div>
+        <div class="defaultHintDesc">${desc}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+function togglePracticeHintDefault(key){
+  const current = getPracticeHintDefaults();
+  current[key] = !current[key];
+  savePracticeHintDefaults(current);
+}
+
+function applyPracticeHintDefaults(){
+  const defaults = getPracticeHintDefaults();
+  uiState.arrow = defaults.arrow;
+  uiState.target = defaults.target;
+  uiState.correctness = defaults.correctness;
+  uiState.text = defaults.text;
+  uiState.superHint = defaults.superHint;
+  updateToggleButtons();
 }
 
 function saveInputModeSetting(mode){
@@ -4275,6 +4411,7 @@ function updateSettingsSummary(){
   document.querySelectorAll('input[name="inputMode"]').forEach(r => {
     r.checked = r.value === appState.inputMode;
   });
+  renderPracticeHintSettings();
 }
 
 function openSettings(){
@@ -4284,7 +4421,7 @@ function openSettings(){
   showPage("settingsPage");
   appState.page = "settingsPage";
   updateSettingsSummary();
-  syncPracticeHintSettingsUI();
+  renderPracticeHintSettings();
   updateModelStatusBox();
   if(appState.inputMode === "handwriting"){
     ensureHandwritingModel();
@@ -4300,36 +4437,6 @@ function saveInputModeFromSettings(){
     ensureHandwritingModel().catch(()=>{});
   }
   alert(mode === "handwriting" ? "手書きモードに切り替えました。" : "キーボードモードに切り替えました。");
-}
-
-function readPracticeHintDefaultSetting(){
-  const raw = localStorage.getItem(STORAGE_KEYS.practiceHints);
-  if(raw === null) return true;
-  try{ return JSON.parse(raw); }catch(e){ return true; }
-}
-function savePracticeHintDefaultSetting(enabled){
-  const next = !!enabled;
-  localStorage.setItem(STORAGE_KEYS.practiceHints, JSON.stringify(next));
-}
-function applyPracticeHintDefault(){
-  const enabled = readPracticeHintDefaultSetting();
-  uiState.arrow = enabled;
-  uiState.target = enabled;
-  uiState.correctness = enabled;
-  uiState.text = enabled;
-  uiState.superHint = enabled;
-  updateToggleButtons();
-}
-function syncPracticeHintSettingsUI(){
-  const box = document.getElementById("practiceHintsDefaultOn");
-  if(box) box.checked = readPracticeHintDefaultSetting();
-}
-function saveHintSettingsFromSettings(){
-  const box = document.getElementById("practiceHintsDefaultOn");
-  savePracticeHintDefaultSetting(!!(box && box.checked));
-  applyPracticeHintDefault();
-  updateSettingsSummary();
-  alert(box && box.checked ? "自由練習のデフォルトヒントをオンにしました。" : "自由練習のデフォルトヒントをオフにしました。");
 }
 
 async function ensureHandwritingModel(){
@@ -4824,7 +4931,6 @@ function generateRandomProblem(){
   appState.customEquationActive = false;
   appState.customTop = null;
   appState.customBottom = null;
-  applyPracticeHintDefault();
   generateProblem(false);
   enterPracticeFullscreen();
 }
@@ -4840,6 +4946,8 @@ function generateProblem(preserveCustom=false){
   finalShown = false;
   document.getElementById("result").innerHTML = "";
   currentStep = 0;
+
+  applyPracticeHintDefaults();
 
   const topLen = Number(document.getElementById("topDigitsSelect").value);
   const bottomLen = Number(document.getElementById("bottomDigitsSelect").value);
@@ -4916,7 +5024,6 @@ function generateCustomProblem(){
   document.getElementById("topDigitsSelect").value = String(topStr.length);
   document.getElementById("bottomDigitsSelect").value = String(bottomStr.length);
   buildCarryCheckboxes();
-  applyPracticeHintDefault();
   generateProblem(true);
   enterPracticeFullscreen();
 }
@@ -5480,8 +5587,6 @@ function startAttack(){
   appState.attackManualCheckMode = false;
   appState.attackQuestionState = "pending";
   appState.attackPendingScale = null;
-  clearTimeout(appState.attackAdvanceTimer);
-  appState.attackAdvanceTimer = 0;
   finalShown = false;
   currentStep = 0;
 
@@ -5543,8 +5648,6 @@ function attackQuestionMatchesCarry(top, bottom){
 }
 
 function nextAttackQuestion(initial=false){
-  clearTimeout(appState.attackAdvanceTimer);
-  appState.attackAdvanceTimer = 0;
   finalShown = false;
   clearPracticeWorkspace();
   currentStep = 0;
@@ -5612,25 +5715,10 @@ function updateAttackTimer(){
 
 function finishAttackQuestion(){
   if(!appState.attackActive) return;
+  appState.attackCorrect++;
   if(typeof window.__getBoardScale === 'function'){
     appState.attackPendingScale = window.__getBoardScale('attack');
   }
-  if(appState.attackQuestionState === "wrong"){
-    document.getElementById("attackResult").innerHTML = "正解ですが 記録は不正解のままです。";
-    setAttackAnswerBarState("correctAfterWrong");
-    clearTimeout(appState.attackAdvanceTimer);
-    appState.attackAdvanceTimer = setTimeout(()=>{
-      appState.attackAdvanceTimer = 0;
-      appState.attackIndex++;
-      if(appState.attackIndex >= appState.attackQuestions.length){
-        finishAttackSession();
-      }else{
-        nextAttackQuestion();
-      }
-    }, 500);
-    return;
-  }
-  appState.attackCorrect++;
   updateAttackStats();
   playQuestionClearSound();
   document.getElementById("attackResult").innerHTML = "正解！";
@@ -5641,7 +5729,7 @@ function finishAttackQuestion(){
     }else{
       nextAttackQuestion();
     }
-  }, 450);
+  }, 650);
 }
 
 function updateAttackStats(){
@@ -5699,10 +5787,8 @@ function retryAttackCurrent(){
   updateAttackHints();
 }
 
-function nextAttackCurrent(){
+function nextAttackAfterReview(){
   if(!appState.attackActive) return;
-  clearTimeout(appState.attackAdvanceTimer);
-  appState.attackAdvanceTimer = 0;
   appState.attackIndex++;
   if(appState.attackIndex >= appState.attackQuestions.length){
     finishAttackSession();
@@ -5945,11 +6031,10 @@ function initFromStorage(){
   uiState.sound = readSoundSetting();
   uiState.superHint = readSuperHintSetting();
   appState.inputMode = readInputModeSetting();
-  applyPracticeHintDefault();
   updateToggleButtons();
   setSoundButtonState();
   updateSettingsSummary();
-  syncPracticeHintSettingsUI();
+  renderPracticeHintSettings();
   populateWheelSelect(document.getElementById("attackTargetMinTens"));
   populateWheelSelect(document.getElementById("attackTargetMinOnes"));
 }
@@ -5963,6 +6048,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   openHome();
   updateToggleButtons();
   updateSettingsSummary();
+  renderPracticeHintSettings();
   window.addEventListener("resize", ()=>{
     if(appState.inputMode === "handwriting"){
       resizeAllHandwritingFields();
@@ -7032,7 +7118,7 @@ body.boardMoveMode .boardPannable{
     const board = boardEl(key);
     if(!board) return;
     const st = state(key);
-    board.style.setProperty('transform', `translate(${st.panX}px, ${st.panY}px) scale(${st.scale})`, 'important');
+    board.style.transform = `translate(${st.panX}px, ${st.panY}px) scale(${st.scale})`;
     board.setAttribute(info(key).manualAttr, st.manual ? 'true' : 'false');
     const label = labelEl(key);
     if(label) label.textContent = `${Math.round(st.scale * 100)}%`;
@@ -7059,17 +7145,12 @@ body.boardMoveMode .boardPannable{
     const answerBar = key === 'attack' ? document.getElementById('attackAnswerBar') : null;
     const finishPanel = key === 'attack' ? document.getElementById('attackFinishPanel') : null;
 
-    const oldTransform = board.style.getPropertyValue('transform');
-    const oldPriority = board.style.getPropertyPriority('transform');
-    board.style.setProperty('transform', 'none', 'important');
+    const oldTransform = board.style.transform;
+    board.style.transform = 'none';
     board.style.transition = 'none';
     const naturalW = Math.max(1, board.offsetWidth || board.getBoundingClientRect().width || 1);
     const naturalH = Math.max(1, board.offsetHeight || board.getBoundingClientRect().height || 1);
-    if(oldTransform){
-      board.style.setProperty('transform', oldTransform, oldPriority || 'important');
-    }else{
-      board.style.removeProperty('transform');
-    }
+    board.style.transform = oldTransform;
     board.style.transition = '';
 
     const viewportRect = viewport.getBoundingClientRect();
@@ -7772,87 +7853,6 @@ body.boardMoveMode .boardPannable{
   window.addEventListener('orientationchange', ()=>{
     setTimeout(refitActiveBoard, 120);
   });
-})();
-</script>
-
-<style id="finalInteractionAndBoardFixes">
-#practicePlayPage #verticalArea,
-#attackPlayPage #attackVerticalArea{
-  transform-origin: top center !important;
-  will-change: transform;
-}
-#attackPlayPage #attackAnswerBar{ gap: 6px !important; }
-#attackPlayPage #attackAnswerBar .compactAction{ display: inline-flex; justify-content:center; align-items:center; }
-#attackPlayPage #attackNextBtn{ background:#e8f0ff; color:#1f3f80; }
-#attackPlayPage #attackRetryBtn{ background:#fff3e0; color:#8a4b00; }
-</style>
-
-
-<script id="boardControlRebindPatch_v1">
-(function(){
-  function bindBar(bar){
-    if(!bar || bar.dataset.controlsBound === '1') return;
-    bar.dataset.controlsBound = '1';
-
-    const qs = (sel) => bar.querySelector(sel);
-
-    const fitBtn = qs('[data-action="fit"]');
-    const zoomOutBtn = qs('[data-action="zoom-out"]');
-    const zoomInBtn = qs('[data-action="zoom-in"]');
-    const moveBtn = qs('[data-mode="move"]');
-    const drawBtn = qs('[data-mode="draw"]');
-
-    if(fitBtn) fitBtn.addEventListener('click', () => {
-      if(typeof window.__fitActiveBoard === 'function') window.__fitActiveBoard(true);
-    });
-
-    if(zoomOutBtn) zoomOutBtn.addEventListener('click', () => {
-      if(typeof window.__zoomActiveBoard === 'function') window.__zoomActiveBoard(-0.1);
-    });
-
-    if(zoomInBtn) zoomInBtn.addEventListener('click', () => {
-      if(typeof window.__zoomActiveBoard === 'function') window.__zoomActiveBoard(0.1);
-    });
-
-    if(moveBtn) moveBtn.addEventListener('click', () => {
-      if(typeof window.__setBoardInteractionMode === 'function') window.__setBoardInteractionMode('move');
-    });
-
-    if(drawBtn) drawBtn.addEventListener('click', () => {
-      if(typeof window.__setBoardInteractionMode === 'function') window.__setBoardInteractionMode('draw');
-    });
-  }
-
-  function bindAll(){
-    bindBar(document.getElementById('practiceBoardControls'));
-    bindBar(document.getElementById('attackBoardControls'));
-  }
-
-  const oldShowPage = window.showPage;
-  if(typeof oldShowPage === 'function' && !window.__showPageBoardControlRebindPatch){
-    window.__showPageBoardControlRebindPatch = true;
-    window.showPage = function(pageId){
-      const ret = oldShowPage(pageId);
-      setTimeout(bindAll, 0);
-      setTimeout(bindAll, 50);
-      return ret;
-    };
-  }
-
-  const oldEnsure = window.ensureControlBar;
-  if(typeof oldEnsure === 'function' && !window.__ensureControlBarRebindPatch){
-    window.__ensureControlBarRebindPatch = true;
-    window.ensureControlBar = function(key){
-      const ret = oldEnsure(key);
-      bindAll();
-      return ret;
-    };
-  }
-
-  document.addEventListener('DOMContentLoaded', bindAll);
-  window.addEventListener('pageshow', bindAll);
-  setTimeout(bindAll, 0);
-  setTimeout(bindAll, 300);
 })();
 </script>
 
