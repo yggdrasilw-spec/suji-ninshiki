@@ -4321,8 +4321,6 @@ let audioCtx = null;
 let lastCellState = {};
 let handwritingModel = null;
 let handwritingModelPromise = null;
-let handwritingModelStatus = "idle";
-let handwritingModelErrorMessage = "";
 let handwritingFields = {};
 let handwritingPendingTimers = {};
 
@@ -4877,15 +4875,9 @@ function saveInputModeFromSettings(){
 }
 
 async function ensureHandwritingModel(){
-  if(handwritingModel){
-    handwritingModelStatus = "ok";
-    handwritingModelErrorMessage = "";
-    return handwritingModel;
-  }
+  if(handwritingModel) return handwritingModel;
   if(handwritingModelPromise) return handwritingModelPromise;
   handwritingModelPromise = (async ()=>{
-    handwritingModelStatus = "loading";
-    handwritingModelErrorMessage = "";
     updateModelStatusBox("loading");
     try{
       if(typeof tf === "undefined"){
@@ -4893,16 +4885,12 @@ async function ensureHandwritingModel(){
       }
       const model = await tf.loadGraphModel("./model/model.json");
       handwritingModel = model;
-      handwritingModelStatus = "ok";
-      handwritingModelErrorMessage = "";
       updateModelStatusBox("ok");
       return model;
     }catch(e){
       console.error(e);
       handwritingModel = null;
-      handwritingModelStatus = "error";
-      handwritingModelErrorMessage = e && e.message ? e.message : String(e);
-      updateModelStatusBox("err", handwritingModelErrorMessage);
+      updateModelStatusBox("err", e.message);
       throw e;
     }finally{
       handwritingModelPromise = null;
@@ -4914,31 +4902,12 @@ async function ensureHandwritingModel(){
 function updateModelStatusBox(state, message=""){
   const box = document.getElementById("modelStatusBox");
   if(!box) return;
-
   if(!state){
-    if(appState.inputMode !== "handwriting"){
-      box.className = "modelStatus ok";
-      box.innerHTML = "キーボードモードが選ばれています。";
-      return;
-    }
-
-    if(handwritingModel){
-      box.className = "modelStatus ok";
-      box.innerHTML = "✅ モデルを読み込みました。手書き認識を使えます。";
-      return;
-    }
-
-    if(handwritingModelStatus === "error" || handwritingModelErrorMessage){
-      box.className = "modelStatus err";
-      box.innerHTML = `❌ モデル読み込み失敗。<br>${handwritingModelErrorMessage || "model/model.json を確認してください。"}`;
-      return;
-    }
-
-    box.className = "modelStatus " + (handwritingModelPromise || handwritingModelStatus === "loading" ? "warn" : "warn");
-    box.innerHTML = "手書きモードが選ばれています。モデルを読み込んでいます。読み込みが完了すると「読み込みました」と表示されます。";
+    const saved = appState.inputMode === "handwriting" ? "手書きモードが選ばれています。モデルを読み込んでいます。読み込みが完了すると「読み込みました」と表示されます。" : "キーボードモードが選ばれています。";
+    box.className = "modelStatus " + (appState.inputMode === "handwriting" ? "warn" : "ok");
+    box.innerHTML = saved;
     return;
   }
-
   if(state === "loading"){
     box.className = "modelStatus warn";
     box.innerHTML = "モデルを読み込んでいます… 完了すると「読み込みました」と表示されます。";
@@ -4952,7 +4921,6 @@ function updateModelStatusBox(state, message=""){
 }
 
 function destroyHandwritingFields(){
-
   Object.values(handwritingPendingTimers).forEach(timer => clearTimeout(timer));
   handwritingPendingTimers = {};
   handwritingFields = {};
@@ -5427,12 +5395,14 @@ function clearPracticeCompletionPrompt(){
 function updatePracticeResultIfComplete(){
   if(appState.page !== "practicePlayPage") return;
   const allCorrect = inputMap.length > 0 && inputMap.every(item => getFieldValue(item.id) === item.correct);
-  if((allCorrect || currentStep >= inputMap.length) && isDecimalAnswerComplete()){
+  const decimalOk = isDecimalAnswerComplete();
+  if((allCorrect || currentStep >= inputMap.length) && decimalOk){
     showPracticeCompletionPrompt();
   }else{
     clearPracticeCompletionPrompt();
   }
 }
+
 
 function generateSamePracticeProblem(){
   const topSel = document.getElementById("topDigitsSelect");
@@ -6177,12 +6147,14 @@ function checkFinal(kind){
 function updatePracticeResultIfComplete(){
   if(appState.page !== "practicePlayPage") return;
   const allCorrect = inputMap.length > 0 && inputMap.every(item => getFieldValue(item.id) === item.correct);
-  if(allCorrect || currentStep >= inputMap.length){
+  const decimalOk = isDecimalAnswerComplete();
+  if((allCorrect || currentStep >= inputMap.length) && decimalOk){
     showPracticeCompletionPrompt();
   }else{
     clearPracticeCompletionPrompt();
   }
 }
+
 
 function currentAttackQuestion(){
   return appState.attackQuestions[appState.attackIndex] || null;
@@ -6368,7 +6340,21 @@ function updateAttackStats(){
 
 function evaluateAttackAnswer(){
   if(!appState.attackActive) return;
-  const ok = inputMap.every(item => getFieldValue(item.id) === item.correct);
+  const digitsOk = inputMap.every(item => getFieldValue(item.id) === item.correct);
+  const decimalOk = isDecimalAnswerComplete();
+
+  if(digitsOk && !decimalOk){
+    if(appState.attackQuestionState !== "wrong"){
+      appState.attackQuestionState = "wrong";
+      appState.attackMiss++;
+      updateAttackStats();
+    }
+    document.getElementById("attackResult").innerHTML = "小数点を合わせよう";
+    setAttackAnswerBarState("wrong");
+    return;
+  }
+
+  const ok = digitsOk && decimalOk;
   if(ok){
     if(appState.attackQuestionState === "wrong"){
       document.getElementById("attackResult").innerHTML = "正解ですが、記録は不正解のままです。";
