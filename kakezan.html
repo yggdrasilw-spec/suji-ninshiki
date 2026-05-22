@@ -4321,6 +4321,8 @@ let audioCtx = null;
 let lastCellState = {};
 let handwritingModel = null;
 let handwritingModelPromise = null;
+let handwritingModelStatus = "idle";
+let handwritingModelErrorMessage = "";
 let handwritingFields = {};
 let handwritingPendingTimers = {};
 
@@ -4875,9 +4877,15 @@ function saveInputModeFromSettings(){
 }
 
 async function ensureHandwritingModel(){
-  if(handwritingModel) return handwritingModel;
+  if(handwritingModel){
+    handwritingModelStatus = "ok";
+    handwritingModelErrorMessage = "";
+    return handwritingModel;
+  }
   if(handwritingModelPromise) return handwritingModelPromise;
   handwritingModelPromise = (async ()=>{
+    handwritingModelStatus = "loading";
+    handwritingModelErrorMessage = "";
     updateModelStatusBox("loading");
     try{
       if(typeof tf === "undefined"){
@@ -4885,12 +4893,16 @@ async function ensureHandwritingModel(){
       }
       const model = await tf.loadGraphModel("./model/model.json");
       handwritingModel = model;
+      handwritingModelStatus = "ok";
+      handwritingModelErrorMessage = "";
       updateModelStatusBox("ok");
       return model;
     }catch(e){
       console.error(e);
       handwritingModel = null;
-      updateModelStatusBox("err", e.message);
+      handwritingModelStatus = "error";
+      handwritingModelErrorMessage = e && e.message ? e.message : String(e);
+      updateModelStatusBox("err", handwritingModelErrorMessage);
       throw e;
     }finally{
       handwritingModelPromise = null;
@@ -4902,12 +4914,31 @@ async function ensureHandwritingModel(){
 function updateModelStatusBox(state, message=""){
   const box = document.getElementById("modelStatusBox");
   if(!box) return;
+
   if(!state){
-    const saved = appState.inputMode === "handwriting" ? "手書きモードが選ばれています。モデルを読み込んでいます。読み込みが完了すると「読み込みました」と表示されます。" : "キーボードモードが選ばれています。";
-    box.className = "modelStatus " + (appState.inputMode === "handwriting" ? "warn" : "ok");
-    box.innerHTML = saved;
+    if(appState.inputMode !== "handwriting"){
+      box.className = "modelStatus ok";
+      box.innerHTML = "キーボードモードが選ばれています。";
+      return;
+    }
+
+    if(handwritingModel){
+      box.className = "modelStatus ok";
+      box.innerHTML = "✅ モデルを読み込みました。手書き認識を使えます。";
+      return;
+    }
+
+    if(handwritingModelStatus === "error" || handwritingModelErrorMessage){
+      box.className = "modelStatus err";
+      box.innerHTML = `❌ モデル読み込み失敗。<br>${handwritingModelErrorMessage || "model/model.json を確認してください。"}`;
+      return;
+    }
+
+    box.className = "modelStatus " + (handwritingModelPromise || handwritingModelStatus === "loading" ? "warn" : "warn");
+    box.innerHTML = "手書きモードが選ばれています。モデルを読み込んでいます。読み込みが完了すると「読み込みました」と表示されます。";
     return;
   }
+
   if(state === "loading"){
     box.className = "modelStatus warn";
     box.innerHTML = "モデルを読み込んでいます… 完了すると「読み込みました」と表示されます。";
@@ -4921,6 +4952,7 @@ function updateModelStatusBox(state, message=""){
 }
 
 function destroyHandwritingFields(){
+
   Object.values(handwritingPendingTimers).forEach(timer => clearTimeout(timer));
   handwritingPendingTimers = {};
   handwritingFields = {};
