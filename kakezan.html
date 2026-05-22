@@ -66,8 +66,9 @@ const textEl=document.getElementById('popupRecognizedText');
 if(textEl)textEl.textContent=val;
 }
 document.addEventListener('dblclick',e=>{
-const input=e.target.closest('.mainInput,.miniCarryInput');
-if(input){openPopupForInput(input);}
+  if(appState.inputMode!=='handwriting') return;
+  const input=e.target.closest('.mainInput,.miniCarryInput');
+  if(input){openPopupForInput(input);}
 });
 
 </script>
@@ -237,6 +238,122 @@ input[type="number"]{
 
 input.shortInput{
   width:120px;
+}
+
+
+/* 小数モード */
+.decimalSettingsBox{
+  margin-top:10px;
+  padding:12px;
+  border:1px solid #e6edf6;
+  border-radius:16px;
+  background:#fbfdff;
+}
+
+.decimalSettingsBox h5{
+  margin:0 0 8px;
+  font-size:16px;
+}
+
+.decimalSettingsNote{
+  margin:6px 0 10px;
+  font-size:13px;
+  line-height:1.5;
+  color:var(--muted);
+}
+
+.decimalOptionList{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.decimalOptionRow{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:8px 10px;
+  background:white;
+  border:1px solid #e6edf6;
+  border-radius:12px;
+}
+
+.decimalOptionRow strong{
+  display:block;
+  line-height:1.25;
+}
+
+td.decimalMark{
+  overflow:visible;
+}
+
+.decimalPointSvg{
+  position:absolute;
+  right:0;
+  bottom:20%;
+  width:12px;
+  height:12px;
+  transform:translate(50%, 50%);
+  pointer-events:none;
+  overflow:visible;
+  z-index:4;
+}
+
+.decimalPointSvg circle{
+  fill:#444;
+}
+
+#decimalPointSvg,
+#attackDecimalPointSvg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:visible;
+  pointer-events:none;
+  z-index:10000;
+}
+
+.decimalGapRow td{
+  height:40px;
+  border-top:none;
+  border-bottom:none;
+  position:relative;
+  overflow:visible;
+}
+
+.decimalGapBtn{
+  position:absolute;
+  left:100%;
+  top:4px;
+  width:30px;
+  height:30px;
+  border:none;
+  border-radius:999px;
+  background:#e8eef7;
+  color:#35507a;
+  font-size:18px;
+  font-weight:900;
+  cursor:pointer;
+  line-height:1;
+  transform:translateX(-50%);
+  padding:0;
+  z-index:20000;
+}
+
+.decimalGapBtn.selected{
+  background:#2b7cff;
+  color:white;
+}
+
+.decimalGapBtn.correct{
+  background:#43a047;
+  color:white;
+}
+
+.decimalGapBtn.wrong{
+  background:#d84315;
+  color:white;
 }
 
 #carrySettings{
@@ -854,6 +971,69 @@ td.wrong .handCanvas{
 #practicePlayPage.page,#attackPlayPage.page{max-width:none;width:100%;margin:0;padding:0;}
 #practicePlayPage #hint,#practicePlayPage #result{width:100%;text-align:center;}
 .practiceResult{margin-top:10px;min-height:40px;}
+.practiceCompletionArea{
+  margin-top:8px;
+  min-height:0;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  border-radius:16px;
+  background:#fff;
+  border:1px solid #e3eaf4;
+  box-shadow:0 8px 24px rgba(33,52,74,.06);
+}
+.practiceCompletionMessage{
+  font-size:22px;
+  font-weight:800;
+  line-height:1.35;
+  text-align:center;
+}
+.practiceCompletionActions{
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.practiceCompletionBtn{
+  min-width:min(100%, 340px);
+}
+.practiceResultText{
+  font-size:22px;
+  font-weight:800;
+  line-height:1.35;
+  min-height:1.35em;
+}
+.practiceResultActions{
+  margin-top:10px;
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.practiceSameBtn{
+  min-width:min(100%, 340px);
+}
+
+.practiceResultText{
+  font-size:22px;
+  font-weight:800;
+  line-height:1.35;
+  min-height:1.35em;
+}
+.practiceResultActions{
+  margin-top:10px;
+  display:flex;
+  justify-content:center;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.practiceSameBtn{
+  min-width:min(100%, 340px);
+}
+
+
 .attackFullscreen .attackTopBar{padding:4px 8px;background:white;border-bottom:2px solid #dbe4f0;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow:hidden;}
 .attackFullscreen .attackHud{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .attackFullscreen .attackHud span{display:inline-flex;align-items:baseline;gap:3px;}
@@ -3728,21 +3908,67 @@ body.handwritingMode .handField.active .handCanvas{
         </div>
 
         <div class="rowControls">
-          <button class="primaryBtn" onclick="generateRandomProblem()">問題を作る</button>
+          <button class="primaryBtn" onclick="generateProblem()">問題を作る</button>
+        </div>
+      </div>
+
+      <div class="setupCard">
+        <h4>小数モード</h4>
+        <div class="decimalSettingsBox">
+          <div class="decimalSettingsNote">オンにすると、整数も含めて小数を混ぜた問題を出せます。出してよい位だけをチェックで選びます。</div>
+          <div class="decimalOptionList">
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="practiceDecimalEnabled">
+              <div>
+                <strong>小数も許可する</strong><br>
+                <span class="muted">オフのときは、今まで通り整数だけを出題します。</span>
+              </div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="practiceDecimalPlace0" class="practiceDecimalPlace" checked>
+              <div>
+                <strong>整数（1倍）も許可する</strong>
+              </div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="practiceDecimalPlace1" class="practiceDecimalPlace" checked>
+              <div>
+                <strong>小数第1位まで（1/10）</strong>
+              </div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="practiceDecimalPlace2" class="practiceDecimalPlace" checked>
+              <div>
+                <strong>小数第2位まで（1/100）</strong>
+              </div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="practiceDecimalPlace3" class="practiceDecimalPlace" checked>
+              <div>
+                <strong>小数第3位まで（1/1000）</strong>
+              </div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="practiceDecimalPlace4" class="practiceDecimalPlace" checked>
+              <div>
+                <strong>小数第4位まで（1/10000）</strong>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 
       <div class="setupCard">
         <h4>自分で式を入れる</h4>
-        <p class="muted">1〜4桁の数を入れて、その式の筆算を練習できます。</p>
+        <p class="muted">1〜4桁の数を入れて、その式の筆算を練習できます。小数点も1つまで使えます。</p>
         <div class="rowControls">
           <label class="labelBox">
             <span>かけられる数</span>
-            <input id="customTopInput" class="shortInput" type="text" inputmode="numeric" maxlength="4" placeholder="例: 1234">
+            <input id="customTopInput" class="shortInput" type="text" inputmode="decimal" maxlength="5" placeholder="例: 12.3">
           </label>
           <label class="labelBox">
             <span>かける数</span>
-            <input id="customBottomInput" class="shortInput" type="text" inputmode="numeric" maxlength="4" placeholder="例: 5678">
+            <input id="customBottomInput" class="shortInput" type="text" inputmode="decimal" maxlength="5" placeholder="例: 56.78">
           </label>
         </div>
         <div class="rowControls">
@@ -3789,15 +4015,19 @@ body.handwritingMode .handField.active .handCanvas{
 
     <div class="practiceCenterArea">
       <div id="hint" style="margin-top:8px;"></div>
+      <div id="practiceCompletionArea" class="practiceCompletionArea" aria-live="polite"></div>
 
       <div class="handwritingBoardWrap practiceBoardWrap">
         <div id="verticalArea">
           <svg id="arrowSvg"></svg>
+          <svg id="decimalPointSvg"></svg>
           <div id="tableArea"></div>
         </div>
       </div>
 
-      <div id="result" class="practiceResult"></div>
+      <div id="result" class="practiceResult">
+        <div id="practiceResultText"></div>
+      </div>
     </div>
 
     <div class="practiceRightRail">
@@ -3853,6 +4083,40 @@ body.handwritingMode .handField.active .handCanvas{
               <option value="20">20問</option>
             </select>
           </label>
+        </div>
+
+        <div class="decimalSettingsBox">
+          <h5>小数モード</h5>
+          <div class="decimalSettingsNote">オンにすると、整数も含めて小数を混ぜた問題を出せます。出してよい位だけをチェックで選びます。</div>
+          <div class="decimalOptionList">
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="attackDecimalEnabled">
+              <div>
+                <strong>小数も許可する</strong><br>
+                <span class="muted">オフのときは、今まで通り整数だけを出題します。</span>
+              </div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="attackDecimalPlace0" class="attackDecimalPlace" checked>
+              <div><strong>整数（1倍）も許可する</strong></div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="attackDecimalPlace1" class="attackDecimalPlace" checked>
+              <div><strong>小数第1位まで（1/10）</strong></div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="attackDecimalPlace2" class="attackDecimalPlace" checked>
+              <div><strong>小数第2位まで（1/100）</strong></div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="attackDecimalPlace3" class="attackDecimalPlace" checked>
+              <div><strong>小数第3位まで（1/1000）</strong></div>
+            </label>
+            <label class="decimalOptionRow">
+              <input type="checkbox" id="attackDecimalPlace4" class="attackDecimalPlace" checked>
+              <div><strong>小数第4位まで（1/10000）</strong></div>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -3914,6 +4178,7 @@ body.handwritingMode .handField.active .handCanvas{
       <div class="attackBoardShell">
         <div id="attackVerticalArea" class="attackVerticalArea">
           <svg id="attackArrowSvg" style="position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:9999;"></svg>
+          <svg id="attackDecimalPointSvg"></svg>
           <div id="attackTableArea"></div>
         </div>
       </div>
@@ -3992,6 +4257,14 @@ let bottomCellIds = [];
 let carryBoxByInput = {};
 let finalShown = false;
 
+let topDisplayStr = "";
+let bottomDisplayStr = "";
+let finalDisplayStr = "";
+let topDecimalPlaces = 0;
+let bottomDecimalPlaces = 0;
+let finalDecimalPlaces = 0;
+let selectedFinalDecimalGap = null;
+
 const uiState = {
   arrow: true,
   target: true,
@@ -4068,6 +4341,7 @@ function openPractice(){
   buildCarryCheckboxes();
   updateToggleButtons();
   renderPracticeHintSettings();
+  syncDecimalSettingControls("practice");
   if(appState.inputMode === "handwriting"){
     ensureHandwritingModel().catch(()=>{});
   }
@@ -4099,6 +4373,7 @@ function openAttackSetup(){
   buildAttackCarryCheckboxes();
   syncAttackTargetWheel();
   updateAttackTargetPreview();
+  syncDecimalSettingControls("attack");
   if(appState.inputMode === "handwriting"){
     ensureHandwritingModel().catch(()=>{});
   }
@@ -4141,10 +4416,19 @@ function clearPracticeWorkspace(){
   const arrowSvg = document.getElementById("arrowSvg");
   const hint = document.getElementById("hint");
   const result = document.getElementById("result");
+  const completion = document.getElementById("practiceCompletionArea");
   if(tableArea) tableArea.innerHTML = "";
   if(arrowSvg) arrowSvg.innerHTML = "";
   if(hint) hint.innerHTML = "";
   if(result) result.innerHTML = "";
+  if(completion){
+    completion.innerHTML = "";
+    completion.style.display = "none";
+  }
+  const resultText = document.getElementById("practiceResultText");
+  const resultActions = document.getElementById("practiceResultActions");
+  if(resultText) resultText.innerHTML = "";
+  if(resultActions) resultActions.style.display = "none";
   destroyHandwritingFields();
 }
 
@@ -4170,6 +4454,157 @@ function rand(min, max){
 
 function generateNumber(digits){
   return rand(Math.pow(10, digits - 1), Math.pow(10, digits) - 1);
+}
+
+function getAllowedDecimalPlaces(kind){
+  const prefix = kind === "attack" ? "attack" : "practice";
+  const enabledEl = document.getElementById(`${prefix}DecimalEnabled`);
+  const enabled = !!enabledEl && enabledEl.checked;
+  const places = [];
+  [0,1,2,3,4].forEach(place=>{
+    const el = document.getElementById(`${prefix}DecimalPlace${place}`);
+    if(el && el.checked){
+      places.push(place);
+    }
+  });
+  if(!enabled || places.length === 0){
+    return [0];
+  }
+  return places;
+}
+
+function syncDecimalSettingControls(kind){
+  const prefix = kind === "attack" ? "attack" : "practice";
+  const enabledEl = document.getElementById(`${prefix}DecimalEnabled`);
+  const enabled = !!enabledEl && enabledEl.checked;
+  document.querySelectorAll(`.${prefix}DecimalPlace`).forEach(el=>{
+    el.disabled = !enabled;
+  });
+}
+
+function buildScaledDisplayString(value, decimalPlaces){
+  let s = String(Math.abs(value));
+  const minLen = Math.max(1, decimalPlaces + 1);
+  if(s.length < minLen){
+    s = s.padStart(minLen, "0");
+  }
+  return s;
+}
+
+function getDecimalGapIndex(displayLen, decimalPlaces){
+  if(decimalPlaces <= 0) return -1;
+  return Math.max(0, displayLen - decimalPlaces - 1);
+}
+
+function getCurrentDecimalGap(kind){
+  if(selectedFinalDecimalGap === null) return null;
+  return selectedFinalDecimalGap;
+}
+
+function isDecimalAnswerRequired(){
+  return finalDecimalPlaces > 0;
+}
+
+function isDecimalAnswerComplete(){
+  if(!isDecimalAnswerRequired()) return true;
+  return selectedFinalDecimalGap !== null && selectedFinalDecimalGap === getDecimalGapIndex(finalDisplayStr.length, finalDecimalPlaces);
+}
+
+function refreshDecimalGapButtons(kind){
+  const correctGap = isDecimalAnswerRequired() ? getDecimalGapIndex(finalDisplayStr.length, finalDecimalPlaces) : -1;
+  const solved = currentStep >= inputMap.length && inputMap.length > 0;
+  document.querySelectorAll(`.decimalGapBtn[data-kind="${kind}"]`).forEach(btn=>{
+    const gap = Number(btn.dataset.gap);
+    btn.classList.toggle("selected", selectedFinalDecimalGap === gap);
+    btn.classList.toggle("correct", solved && selectedFinalDecimalGap !== null && gap === correctGap);
+    btn.classList.toggle("wrong", solved && selectedFinalDecimalGap !== null && selectedFinalDecimalGap === gap && gap !== correctGap);
+  });
+  updateDecimalPointOverlay(kind);
+}
+
+function getDecimalPointSvgId(kind){
+  return kind === "attack" ? "attackDecimalPointSvg" : "decimalPointSvg";
+}
+
+function clearDecimalPointOverlay(kind){
+  const svg = document.getElementById(getDecimalPointSvgId(kind));
+  if(svg) svg.innerHTML = "";
+}
+
+function updateDecimalPointOverlay(kind){
+  let svg = document.getElementById(getDecimalPointSvgId(kind));
+  const area = document.getElementById(kind === "attack" ? "attackVerticalArea" : "verticalArea");
+  if(!area) return;
+  if(!svg){
+    svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = getDecimalPointSvgId(kind);
+    svg.style.position = 'absolute';
+    svg.style.inset = '0';
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.overflow = 'visible';
+    svg.style.pointerEvents = 'none';
+    svg.style.zIndex = '10000';
+    area.insertBefore(svg, area.firstChild);
+  }
+
+  const selectedGap = selectedFinalDecimalGap;
+  if(selectedGap === null || !isDecimalAnswerRequired()){
+    svg.innerHTML = "";
+    return;
+  }
+
+  const answerRowIndex = bottomDigits.length > 1 ? (2 + bottomDigits.length) : 2;
+  const answerCellId = getCellId(answerRowIndex, currentCols - finalDisplayStr.length + selectedGap);
+  const answerCell = document.getElementById(answerCellId);
+  if(!answerCell){
+    svg.innerHTML = "";
+    return;
+  }
+
+  const naturalW = Math.max(1, area.scrollWidth || area.offsetWidth || area.getBoundingClientRect().width || 1);
+  const naturalH = Math.max(1, area.scrollHeight || area.offsetHeight || area.getBoundingClientRect().height || 1);
+  svg.setAttribute("viewBox", `0 0 ${naturalW} ${naturalH}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.innerHTML = "";
+
+  const localPos = (el, root) => {
+    let left = 0;
+    let top = 0;
+    let node = el;
+    while(node && node !== root){
+      left += node.offsetLeft || 0;
+      top += node.offsetTop || 0;
+      node = node.offsetParent;
+    }
+    return {
+      left,
+      top,
+      width: el.offsetWidth || el.getBoundingClientRect().width || 0,
+      height: el.offsetHeight || el.getBoundingClientRect().height || 0
+    };
+  };
+
+  const pos = localPos(answerCell, area);
+  const x = pos.left + pos.width;
+  const y = pos.top + pos.height * 0.8;
+
+  const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  dot.setAttribute("cx", x);
+  dot.setAttribute("cy", y);
+  dot.setAttribute("r", "5");
+  dot.setAttribute("fill", "#444");
+  svg.appendChild(dot);
+}
+
+function setFinalDecimalGap(kind, gap){
+  selectedFinalDecimalGap = gap;
+  refreshDecimalGapButtons(kind);
+  checkFinal(kind);
+}
+
+function setDecimalModeFromUI(kind){
+  syncDecimalSettingControls(kind);
 }
 
 function getCellId(row, col){
@@ -4468,17 +4903,17 @@ function updateModelStatusBox(state, message=""){
   const box = document.getElementById("modelStatusBox");
   if(!box) return;
   if(!state){
-    const saved = appState.inputMode === "handwriting" ? "手書きモードが選ばれています。モデルを読み込んでいます。" : "キーボードモードが選ばれています。";
+    const saved = appState.inputMode === "handwriting" ? "手書きモードが選ばれています。モデルを読み込んでいます。読み込みが完了すると「読み込みました」と表示されます。" : "キーボードモードが選ばれています。";
     box.className = "modelStatus " + (appState.inputMode === "handwriting" ? "warn" : "ok");
     box.innerHTML = saved;
     return;
   }
   if(state === "loading"){
     box.className = "modelStatus warn";
-    box.innerHTML = "モデルを読み込み中です…";
+    box.innerHTML = "モデルを読み込んでいます… 完了すると「読み込みました」と表示されます。";
   }else if(state === "ok"){
     box.className = "modelStatus ok";
-    box.innerHTML = "✅ モデル読み込み成功。手書き認識を使えます。";
+    box.innerHTML = "✅ モデルを読み込みました。手書き認識を使えます。";
   }else{
     box.className = "modelStatus err";
     box.innerHTML = `❌ モデル読み込み失敗。<br>${message || "model/model.json を確認してください。"}`;
@@ -4922,12 +5357,55 @@ document.getElementById("attackBottomDigitsSelect").addEventListener("change", (
   buildAttackCarryCheckboxes();
   syncAttackTargetWheel();
 });
+document.getElementById("practiceDecimalEnabled").addEventListener("change", ()=>syncDecimalSettingControls("practice"));
+document.getElementById("attackDecimalEnabled").addEventListener("change", ()=>syncDecimalSettingControls("attack"));
 document.getElementById("attackQuestionCountSelect").addEventListener("change", ()=>{
   syncAttackTargetWheel();
   updateAttackTargetPreview();
 });
 
-function generateRandomProblem(){
+syncDecimalSettingControls("practice");
+syncDecimalSettingControls("attack");
+
+function setPracticeResult(message=""){
+  const textEl = document.getElementById("practiceResultText");
+  if(textEl) textEl.innerHTML = message;
+}
+
+function showPracticeCompletionPrompt(){
+  const area = document.getElementById("practiceCompletionArea");
+  if(!area) return;
+  area.style.display = "flex";
+  area.innerHTML = `
+    <div class="practiceCompletionMessage">完成！</div>
+    <div class="practiceCompletionActions">
+      <button type="button" class="primaryBtn practiceCompletionBtn" onclick="generateSamePracticeProblem()">同じ条件で問題生成</button>
+    </div>
+  `;
+}
+
+function clearPracticeCompletionPrompt(){
+  const area = document.getElementById("practiceCompletionArea");
+  if(area){
+    area.innerHTML = "";
+    area.style.display = "none";
+  }
+}
+
+function updatePracticeResultIfComplete(){
+  if(appState.page !== "practicePlayPage") return;
+  const allCorrect = inputMap.length > 0 && inputMap.every(item => getFieldValue(item.id) === item.correct);
+  if((allCorrect || currentStep >= inputMap.length) && isDecimalAnswerComplete()){
+    showPracticeCompletionPrompt();
+  }else{
+    clearPracticeCompletionPrompt();
+  }
+}
+
+function generateSamePracticeProblem(){
+  const topSel = document.getElementById("topDigitsSelect");
+  const bottomSel = document.getElementById("bottomDigitsSelect");
+  if(!topSel || !bottomSel) return;
   appState.customEquationActive = false;
   appState.customTop = null;
   appState.customBottom = null;
@@ -4935,8 +5413,14 @@ function generateRandomProblem(){
   enterPracticeFullscreen();
 }
 
+function generateRandomProblem(){
+  // 旧ボタン名との互換用。中身は通常の問題生成を呼びます。
+  generateProblem(false);
+}
+
 function generateProblem(preserveCustom=false){
   appState.mode = "practice";
+  clearPracticeWorkspace();
   clearAttackWorkspace();
   if(!preserveCustom){
     appState.customEquationActive = false;
@@ -4944,13 +5428,15 @@ function generateProblem(preserveCustom=false){
     appState.customBottom = null;
   }
   finalShown = false;
-  document.getElementById("result").innerHTML = "";
+  setPracticeResult("");
+  clearPracticeCompletionPrompt();
   currentStep = 0;
 
   applyPracticeHintDefaults();
 
   const topLen = Number(document.getElementById("topDigitsSelect").value);
   const bottomLen = Number(document.getElementById("bottomDigitsSelect").value);
+  const decimalPlacesPool = getAllowedDecimalPlaces("practice");
   let ok = false;
 
   while(!ok){
@@ -4967,6 +5453,15 @@ function generateProblem(preserveCustom=false){
     topDigits = String(topNumber).split("").map(Number);
     bottomDigits = String(bottomNumber).split("").map(Number);
     finalAnswer = topNumber * bottomNumber;
+
+    if(!(appState.customEquationActive && appState.customTop !== null && appState.customBottom !== null)){
+      topDecimalPlaces = decimalPlacesPool[Math.floor(Math.random() * decimalPlacesPool.length)];
+      bottomDecimalPlaces = decimalPlacesPool[Math.floor(Math.random() * decimalPlacesPool.length)];
+    }
+    finalDecimalPlaces = topDecimalPlaces + bottomDecimalPlaces;
+    topDisplayStr = buildScaledDisplayString(topNumber, topDecimalPlaces);
+    bottomDisplayStr = buildScaledDisplayString(bottomNumber, bottomDecimalPlaces);
+    finalDisplayStr = buildScaledDisplayString(finalAnswer, finalDecimalPlaces);
 
     if(bottomLen !== 1) continue;
 
@@ -5004,25 +5499,56 @@ function generateProblem(preserveCustom=false){
   }
 }
 
+function parseCustomDecimalInput(raw){
+  const s = String(raw).trim();
+  if(s === "") return null;
+  if(!/^(?:0|[1-9]\d*)(?:\.\d+)?$/.test(s)) return null;
+
+  const parts = s.split(".");
+  const intPart = parts[0];
+  const fracPart = parts[1] || "";
+  const digitCount = intPart.length + fracPart.length;
+
+  if(digitCount < 1 || digitCount > 4) return null;
+  if(intPart === "0" && fracPart === "") return null;
+
+  const decimalPlaces = fracPart.length;
+  const scaledText = intPart + fracPart;
+  const scaledValue = Number(scaledText);
+
+  if(!Number.isInteger(scaledValue) || scaledValue <= 0) return null;
+
+  return {
+    value: scaledValue,
+    digits: digitCount,
+    decimalPlaces
+  };
+}
+
 function generateCustomProblem(){
   const topStr = document.getElementById("customTopInput").value.trim();
   const bottomStr = document.getElementById("customBottomInput").value.trim();
-  if(!/^[1-9][0-9]{0,3}$/.test(topStr) || !/^[1-9][0-9]{0,3}$/.test(bottomStr)){
-    alert("1〜4桁の数字を入れてください。");
-    return;
-  }
-  const topVal = Number(topStr);
-  const bottomVal = Number(bottomStr);
-  if(topVal < 1 || topVal > 9999 || bottomVal < 1 || bottomVal > 9999){
-    alert("1〜4桁の数字を入れてください。");
-    return;
-  }
-  appState.customTop = topVal;
-  appState.customBottom = bottomVal;
-  appState.customEquationActive = true;
+  const topParsed = parseCustomDecimalInput(topStr);
+  const bottomParsed = parseCustomDecimalInput(bottomStr);
 
-  document.getElementById("topDigitsSelect").value = String(topStr.length);
-  document.getElementById("bottomDigitsSelect").value = String(bottomStr.length);
+  if(!topParsed || !bottomParsed){
+    alert("1〜4桁で、必要なら小数点を1つ使ってください。");
+    return;
+  }
+
+  appState.customTop = topParsed.value;
+  appState.customBottom = bottomParsed.value;
+  appState.customEquationActive = true;
+  topDecimalPlaces = topParsed.decimalPlaces;
+  bottomDecimalPlaces = bottomParsed.decimalPlaces;
+  finalDecimalPlaces = topDecimalPlaces + bottomDecimalPlaces;
+  selectedFinalDecimalGap = null;
+  topDisplayStr = buildScaledDisplayString(appState.customTop, topDecimalPlaces);
+  bottomDisplayStr = buildScaledDisplayString(appState.customBottom, bottomDecimalPlaces);
+  finalDisplayStr = buildScaledDisplayString(appState.customTop * appState.customBottom, finalDecimalPlaces);
+
+  document.getElementById("topDigitsSelect").value = String(topParsed.digits);
+  document.getElementById("bottomDigitsSelect").value = String(bottomParsed.digits);
   buildCarryCheckboxes();
   generateProblem(true);
   enterPracticeFullscreen();
@@ -5036,28 +5562,38 @@ function buildTable(kind){
   bottomCellIds = [];
   carryBoxByInput = {};
   lastCellState = {};
+  selectedFinalDecimalGap = null;
 
-  const answerStr = String(finalAnswer);
-  currentCols = Math.max(answerStr.length, topDigits.length + bottomDigits.length);
+  const answerStr = finalDisplayStr || String(finalAnswer);
+  const topDisplay = topDisplayStr || String(topNumber);
+  const bottomDisplay = bottomDisplayStr || String(bottomNumber);
+  currentCols = Math.max(answerStr.length, topDisplay.length, bottomDisplay.length, topDigits.length + bottomDigits.length);
+  const finalStart = currentCols - answerStr.length;
   let html = "<table>";
 
   html += "<tr>";
-  const topBlank = currentCols - topDigits.length;
+  const topBlank = currentCols - topDisplay.length;
+  const topMathOffset = Math.max(0, topDisplay.length - topDigits.length);
   for(let c=0;c<currentCols;c++){
     const cellId = `topcell_${c}`;
     if(c < topBlank){
       html += `<td id="${cellId}"></td>`;
     }else{
       const idx = c - topBlank;
-      topCellIds[idx] = cellId;
-      html += `<td id="${cellId}" class="number">${topDigits[idx]}</td>`;
+      const ch = topDisplay[idx];
+      const isDecimal = topDecimalPlaces > 0 && idx === getDecimalGapIndex(topDisplay.length, topDecimalPlaces);
+      if(idx >= topMathOffset){
+        topCellIds[idx - topMathOffset] = cellId;
+      }
+      html += `<td id="${cellId}" class="number${isDecimal ? ' decimalMark' : ''}">${ch}${isDecimal ? '<svg class="decimalPointSvg" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5"></circle></svg>' : ''} </td>`;
     }
   }
   html += "</tr>";
 
   html += "<tr>";
-  const symbolPos = currentCols - (Math.max(topDigits.length, bottomDigits.length) + 1);
-  const lowerBlank = currentCols - symbolPos - 1 - bottomDigits.length;
+  const symbolPos = currentCols - (Math.max(topDisplay.length, bottomDisplay.length) + 1);
+  const lowerBlank = currentCols - symbolPos - 1 - bottomDisplay.length;
+  const bottomMathOffset = Math.max(0, bottomDisplay.length - bottomDigits.length);
   for(let c=0;c<currentCols;c++){
     const cellId = `bottomcell_${c}`;
     if(c < symbolPos){
@@ -5068,15 +5604,20 @@ function buildTable(kind){
       html += `<td id="${cellId}"></td>`;
     }else{
       const idx = c - (symbolPos + 1 + lowerBlank);
-      bottomCellIds[idx] = cellId;
-      html += `<td id="${cellId}" class="number">${bottomDigits[idx]}</td>`;
+      const ch = bottomDisplay[idx];
+      const isDecimal = bottomDecimalPlaces > 0 && idx === getDecimalGapIndex(bottomDisplay.length, bottomDecimalPlaces);
+      if(idx >= bottomMathOffset){
+        bottomCellIds[idx - bottomMathOffset] = cellId;
+      }
+      html += `<td id="${cellId}" class="number${isDecimal ? ' decimalMark' : ''}">${ch}${isDecimal ? '<svg class="decimalPointSvg" viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="5"></circle></svg>' : ''} </td>`;
     }
   }
   html += "</tr>";
 
   for(let row=0; row<bottomDigits.length; row++){
     const digit = bottomDigits[bottomDigits.length - 1 - row];
-    const partial = String(topNumber * digit);
+    const rawPartial = String(topNumber * digit);
+    const partial = (bottomDigits.length === 1 && finalDecimalPlaces > 0) ? answerStr : rawPartial;
     const startCol = currentCols - partial.length - row;
     const rowIndex = 2 + row;
 
@@ -5122,7 +5663,6 @@ function buildTable(kind){
 
   if(bottomDigits.length > 1){
     const finalRowIndex = 2 + bottomDigits.length;
-    const finalStart = currentCols - answerStr.length;
     const finalRowMeta = {
       kind: "final",
       rowIndex: finalRowIndex,
@@ -5160,12 +5700,29 @@ function buildTable(kind){
     html += "</tr>";
   }
 
+  if(finalDecimalPlaces > 0){
+    const decimalBaseRowIndex = bottomDigits.length > 1 ? (2 + bottomDigits.length) : 2;
+    const decimalRowIndex = decimalBaseRowIndex + 1;
+    html += '<tr class="decimalGapRow">';
+    for(let c=0;c<currentCols;c++){
+      const cellId = getCellId(decimalRowIndex, c);
+      if(c < finalStart || c >= finalStart + answerStr.length - 1){
+        html += `<td id="${cellId}"></td>`;
+      }else{
+        const gap = c - finalStart;
+        html += `<td id="${cellId}"><button type="button" class="decimalGapBtn" data-kind="${kind}" data-gap="${gap}" onclick="setFinalDecimalGap('${kind}', ${gap})">↑</button></td>`;
+      }
+    }
+    html += "</tr>";
+  }
+
   html += "</table>";
 
   const targetTableArea = kind === "attack" ? "attackTableArea" : "tableArea";
   document.getElementById(targetTableArea).innerHTML = html;
   rebuildCarryBoxes();
   reorderInputMap();
+  refreshDecimalGapButtons(kind);
 }
 
 function reorderInputMap(){
@@ -5445,9 +6002,15 @@ function updateHints(){
   if(appState.page !== "practicePlayPage") return;
   clearHighlights();
   document.getElementById("arrowSvg").innerHTML = "";
+  clearDecimalPointOverlay("practice");
+  refreshDecimalGapButtons("practice");
 
   if(currentStep >= inputMap.length){
-    document.getElementById("hint").innerHTML = uiState.text ? "完成！" : "";
+    const hintEl = document.getElementById("hint");
+    if(hintEl){
+      hintEl.innerHTML = isDecimalAnswerComplete() ? (uiState.text ? "完成！" : "") : "小数点を合わせよう";
+    }
+    updatePracticeResultIfComplete();
     return;
   }
 
@@ -5491,10 +6054,12 @@ function updateAttackHints(){
   if(appState.page !== "attackPlayPage") return;
   clearHighlights();
   document.getElementById("attackArrowSvg").innerHTML = "";
+  clearDecimalPointOverlay("attack");
   updateAttackManualMode();
+  refreshDecimalGapButtons("attack");
 
   if(currentStep >= inputMap.length){
-    document.getElementById("attackHint").innerHTML = uiState.text ? "完成！" : "";
+    document.getElementById("attackHint").innerHTML = isDecimalAnswerComplete() ? (uiState.text ? "完成！" : "") : "小数点を合わせよう";
     return;
   }
 
@@ -5551,6 +6116,15 @@ function checkFinal(kind){
   });
 
   if(ok){
+    if(!isDecimalAnswerComplete()){
+      if(kind === "practice"){
+        document.getElementById("result").innerHTML = "小数点を合わせよう";
+      }else{
+        document.getElementById("attackResult").innerHTML = "小数点を合わせよう";
+      }
+      refreshDecimalGapButtons(kind);
+      return;
+    }
     if(kind === "practice"){
       if(finalShown) return;
       finalShown = true;
@@ -5560,6 +6134,7 @@ function checkFinal(kind){
       });
       document.getElementById("result").innerHTML = "正解！";
       playQuestionClearSound();
+      updatePracticeResultIfComplete();
     }else{
       if(appState.attackManualCheckMode) return;
       finishAttackQuestion();
@@ -5568,7 +6143,13 @@ function checkFinal(kind){
 }
 
 function updatePracticeResultIfComplete(){
-  if(finalShown) return;
+  if(appState.page !== "practicePlayPage") return;
+  const allCorrect = inputMap.length > 0 && inputMap.every(item => getFieldValue(item.id) === item.correct);
+  if(allCorrect || currentStep >= inputMap.length){
+    showPracticeCompletionPrompt();
+  }else{
+    clearPracticeCompletionPrompt();
+  }
 }
 
 function currentAttackQuestion(){
@@ -5589,25 +6170,29 @@ function startAttack(){
   appState.attackPendingScale = null;
   finalShown = false;
   currentStep = 0;
+  selectedFinalDecimalGap = null;
 
   appState.attackTargetMinutes = getAttackTargetMinutes();
   appState.attackQuestionCount = Number(document.getElementById("attackQuestionCountSelect").value);
-  appState.attackPatternKey = `${document.getElementById("attackTopDigitsSelect").value}x${document.getElementById("attackBottomDigitsSelect").value}_${appState.attackQuestionCount}`;
+  appState.attackPatternKey = `${document.getElementById("attackTopDigitsSelect").value}x${document.getElementById("attackBottomDigitsSelect").value}_q${appState.attackQuestionCount}_${document.getElementById("attackDecimalEnabled").checked ? 'dec' : 'int'}`;
   appState.attackCarryMode = document.querySelector('input[name="attackCarryMode"]:checked').value;
 
   const topLen = Number(document.getElementById("attackTopDigitsSelect").value);
   const bottomLen = Number(document.getElementById("attackBottomDigitsSelect").value);
+  const decimalPlacesPool = getAllowedDecimalPlaces("attack");
 
   for(let i=0;i<appState.attackQuestionCount;i++){
-    let top, bottom;
+    let top, bottom, topDp, bottomDp;
     let tries = 0;
     do{
       top = generateNumber(topLen);
       bottom = generateNumber(bottomLen);
+      topDp = decimalPlacesPool[Math.floor(Math.random() * decimalPlacesPool.length)];
+      bottomDp = decimalPlacesPool[Math.floor(Math.random() * decimalPlacesPool.length)];
       tries++;
       if(tries > 500) break;
     }while(!attackQuestionMatchesCarry(top, bottom));
-    appState.attackQuestions.push({ top, bottom });
+    appState.attackQuestions.push({ top, bottom, topDp, bottomDp });
   }
 
   uiState.arrow = false;
@@ -5649,6 +6234,7 @@ function attackQuestionMatchesCarry(top, bottom){
 
 function nextAttackQuestion(initial=false){
   finalShown = false;
+  selectedFinalDecimalGap = null;
   clearPracticeWorkspace();
   currentStep = 0;
   appState.attackQuestionState = "pending";
@@ -5664,9 +6250,15 @@ function nextAttackQuestion(initial=false){
 
   topNumber = q.top;
   bottomNumber = q.bottom;
+  topDecimalPlaces = q.topDp || 0;
+  bottomDecimalPlaces = q.bottomDp || 0;
   topDigits = String(topNumber).split("").map(Number);
   bottomDigits = String(bottomNumber).split("").map(Number);
   finalAnswer = topNumber * bottomNumber;
+  finalDecimalPlaces = topDecimalPlaces + bottomDecimalPlaces;
+  topDisplayStr = buildScaledDisplayString(topNumber, topDecimalPlaces);
+  bottomDisplayStr = buildScaledDisplayString(bottomNumber, bottomDecimalPlaces);
+  finalDisplayStr = buildScaledDisplayString(finalAnswer, finalDecimalPlaces);
 
   buildTable("attack");
   addEvents("attack");
@@ -6676,6 +7268,7 @@ body.ipadDevice .handwritingPopupCanvas{
   }
 
   function shouldOpenPopupFromTarget(target){
+    if(appState.inputMode !== 'handwriting') return false;
     if(!target) return false;
     if(target.classList && target.classList.contains('handField')){
       const lastStrokeEnd = Number(window.lastHandwritingStrokeEndAt || 0);
@@ -6789,6 +7382,7 @@ body.ipadDevice .handwritingPopupCanvas{
   }
 
   function openPopupForNode(node){
+    if(appState.inputMode !== 'handwriting') return;
     if(!node) return;
     popupTargetNode = node;
     popupTargetKind = node.classList.contains('handField') ? 'handwriting' : 'keyboard';
@@ -7204,36 +7798,57 @@ body.boardMoveMode .boardPannable{
     }
   }
 
+  function bindControlBar(bar){
+    if(!bar || bar.__boardControlBound) return;
+    bar.__boardControlBound = true;
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.boardControlBtn');
+      if(!btn || !bar.contains(btn)) return;
+      const action = btn.dataset.action;
+      const mode = btn.dataset.mode;
+      if(action === 'fit'){
+        fitActiveBoard(true);
+      }else if(action === 'zoom-out'){
+        zoomActive(-0.1);
+      }else if(action === 'zoom-in'){
+        zoomActive(0.1);
+      }else if(mode === 'move'){
+        setMode('move');
+      }else if(mode === 'draw'){
+        setMode('draw');
+      }
+    });
+  }
+
   function ensureControlBar(key){
     const meta = info(key);
     const page = document.getElementById(meta.pageId);
-    if(!page || document.getElementById(meta.controlsId)) return;
+    if(!page) return;
 
-    const anchor = page.querySelector(meta.overlayAnchorSelector);
-    const bar = document.createElement('div');
-    bar.className = 'boardControlOverlay';
-    bar.id = meta.controlsId;
-    bar.innerHTML = `
-      <div class="boardControlPanel" role="toolbar" aria-label="ボード操作">
-        <button type="button" class="boardControlBtn" data-action="fit" aria-label="画面にフィット">📐</button>
-        <button type="button" class="boardControlBtn" data-action="zoom-out" aria-label="縮小">➖</button>
-        <button type="button" class="boardControlBtn" data-action="zoom-in" aria-label="拡大">➕</button>
-        <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動モード">🖐️</button>
-        <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画モード">✍️</button>
-        <div class="boardControlLabel" id="${meta.labelId}">100%</div>
-      </div>
-    `;
-    if(anchor && anchor.parentNode){
-      anchor.parentNode.insertBefore(bar, anchor.nextSibling);
-    }else{
-      page.insertBefore(bar, page.firstChild);
+    let bar = document.getElementById(meta.controlsId);
+    if(!bar){
+      const anchor = page.querySelector(meta.overlayAnchorSelector);
+      bar = document.createElement('div');
+      bar.className = 'boardControlOverlay';
+      bar.id = meta.controlsId;
+      bar.innerHTML = `
+        <div class="boardControlPanel" role="toolbar" aria-label="ボード操作">
+          <button type="button" class="boardControlBtn" data-action="fit" aria-label="画面にフィット">📐</button>
+          <button type="button" class="boardControlBtn" data-action="zoom-out" aria-label="縮小">➖</button>
+          <button type="button" class="boardControlBtn" data-action="zoom-in" aria-label="拡大">➕</button>
+          <button type="button" class="boardControlBtn" data-mode="move" aria-label="移動モード">🖐️</button>
+          <button type="button" class="boardControlBtn" data-mode="draw" aria-label="描画モード">✍️</button>
+          <div class="boardControlLabel" id="${meta.labelId}">100%</div>
+        </div>
+      `;
+      if(anchor && anchor.parentNode){
+        anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+      }else{
+        page.insertBefore(bar, page.firstChild);
+      }
     }
 
-    bar.querySelector('[data-action="fit"]').addEventListener('click', () => fitActiveBoard(true));
-    bar.querySelector('[data-action="zoom-out"]').addEventListener('click', () => zoomActive(-0.1));
-    bar.querySelector('[data-action="zoom-in"]').addEventListener('click', () => zoomActive(0.1));
-    bar.querySelector('[data-mode="move"]').addEventListener('click', () => setMode('move'));
-    bar.querySelector('[data-mode="draw"]').addEventListener('click', () => setMode('draw'));
+    bindControlBar(bar);
   }
 
   function bindPan(key){
@@ -7289,6 +7904,13 @@ body.boardMoveMode .boardPannable{
     initKey('attack');
     setMode('draw');
   }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.boardControlBtn');
+    if(!btn) return;
+    const bar = btn.closest('.boardControlOverlay');
+    if(bar) bindControlBar(bar);
+  }, true);
 
   window.__resetActiveBoardZoom = function(){};
   window.__fitActiveBoard = fitActiveBoard;
