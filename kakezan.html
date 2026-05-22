@@ -4216,7 +4216,7 @@ body.handwritingMode .handField.active .handCanvas{
       <div id="attackAnswerBar" class="attackAnswerBar" style="display:flex;">
         <button type="button" class="actionBtn secondary compactAction" onclick="evaluateAttackAnswer()">答え合わせ</button>
         <button type="button" class="actionBtn secondary compactAction" onclick="retryAttackCurrent()" id="attackRetryBtn" style="display:none;">もう一度</button>
-        <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackAfterReview()" id="attackNextBtn" style="display:none;">次へ</button>
+        <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackAfterReview()" id="attackNextBtn" style="display:none;">次の問題へ</button>
       </div>
     </div>
   </div>
@@ -4701,6 +4701,14 @@ function setAttackAnswerBarState(state){
   const next = document.getElementById("attackNextBtn");
   if(retry) retry.style.display = state === "wrong" ? "inline-flex" : "none";
   if(next) next.style.display = state === "wrong" || state === "correctAfterWrong" || state === "correct" ? "inline-flex" : "none";
+}
+
+function showAttackReviewAdvance(){
+  appState.attackQuestionState = "correctAfterWrong";
+  updateAttackStats();
+  playQuestionClearSound();
+  document.getElementById("attackResult").innerHTML = "正解です。次へ進めます。";
+  setAttackAnswerBarState("correctAfterWrong");
 }
 
 function updateAttackManualMode(){
@@ -5395,14 +5403,12 @@ function clearPracticeCompletionPrompt(){
 function updatePracticeResultIfComplete(){
   if(appState.page !== "practicePlayPage") return;
   const allCorrect = inputMap.length > 0 && inputMap.every(item => getFieldValue(item.id) === item.correct);
-  const decimalOk = isDecimalAnswerComplete();
-  if((allCorrect || currentStep >= inputMap.length) && decimalOk){
+  if((allCorrect || currentStep >= inputMap.length) && isDecimalAnswerComplete()){
     showPracticeCompletionPrompt();
   }else{
     clearPracticeCompletionPrompt();
   }
 }
-
 
 function generateSamePracticeProblem(){
   const topSel = document.getElementById("topDigitsSelect");
@@ -6138,6 +6144,10 @@ function checkFinal(kind){
       playQuestionClearSound();
       updatePracticeResultIfComplete();
     }else{
+      if(appState.attackQuestionState === "retrying"){
+        showAttackReviewAdvance();
+        return;
+      }
       if(appState.attackManualCheckMode) return;
       finishAttackQuestion();
     }
@@ -6147,14 +6157,12 @@ function checkFinal(kind){
 function updatePracticeResultIfComplete(){
   if(appState.page !== "practicePlayPage") return;
   const allCorrect = inputMap.length > 0 && inputMap.every(item => getFieldValue(item.id) === item.correct);
-  const decimalOk = isDecimalAnswerComplete();
-  if((allCorrect || currentStep >= inputMap.length) && decimalOk){
+  if(allCorrect || currentStep >= inputMap.length){
     showPracticeCompletionPrompt();
   }else{
     clearPracticeCompletionPrompt();
   }
 }
-
 
 function currentAttackQuestion(){
   return appState.attackQuestions[appState.attackIndex] || null;
@@ -6340,26 +6348,10 @@ function updateAttackStats(){
 
 function evaluateAttackAnswer(){
   if(!appState.attackActive) return;
-  const digitsOk = inputMap.every(item => getFieldValue(item.id) === item.correct);
-  const decimalOk = isDecimalAnswerComplete();
-
-  if(digitsOk && !decimalOk){
-    if(appState.attackQuestionState !== "wrong"){
-      appState.attackQuestionState = "wrong";
-      appState.attackMiss++;
-      updateAttackStats();
-    }
-    document.getElementById("attackResult").innerHTML = "小数点を合わせよう";
-    setAttackAnswerBarState("wrong");
-    return;
-  }
-
-  const ok = digitsOk && decimalOk;
+  const ok = inputMap.every(item => getFieldValue(item.id) === item.correct);
   if(ok){
-    if(appState.attackQuestionState === "wrong"){
-      document.getElementById("attackResult").innerHTML = "正解ですが、記録は不正解のままです。";
-      setAttackAnswerBarState("correctAfterWrong");
-      updateAttackStats();
+    if(appState.attackQuestionState === "wrong" || appState.attackQuestionState === "retrying"){
+      showAttackReviewAdvance();
       return;
     }
     appState.attackQuestionState = "correct";
@@ -6389,10 +6381,11 @@ function evaluateAttackAnswer(){
 
 function retryAttackCurrent(){
   if(!appState.attackActive) return;
+  appState.attackQuestionState = "retrying";
   inputMap.forEach(item => setFieldValue(item.id, ""));
   checkInputs("attack");
   currentStep = 0;
-  document.getElementById("attackResult").innerHTML = "";
+  document.getElementById("attackResult").innerHTML = "解き直し中。正解したら次へ進めます。";
   setAttackAnswerBarState("pending");
   updateAttackHints();
 }
