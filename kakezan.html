@@ -3803,10 +3803,83 @@ body.handwritingMode .handField.active .handCanvas{
     </div>
 
     <div class="card">
+      <h3>🖼️ 問題を取り込む</h3>
+      <p>プリントや教科書の問題を写真から読み込みます。1回ごとにパッケージ化して保存し、そのまま連続で解けます。</p>
+      <button class="cardBtn" onclick="openCollectorPage()">取り込みをはじめる</button>
+    </div>
+
+    <div class="card">
       <h3>⚙️ 設定</h3>
       <p>入力方法をキーボードと手書きから選べます。手書きモードでは、全ての入力マスをキャンバスとして使えます。</p>
       <button class="cardBtn" onclick="openSettings()">設定を開く</button>
     </div>
+  </div>
+</div>
+
+<style id="collectorFeatureStyles">
+#collectorPage .collectorUploadRow{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px;
+  align-items:end;
+}
+#collectorPage .collectorPackageList{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.collectorPackageCard{
+  background:#fff;
+  border:1px solid #e3eaf4;
+  border-radius:16px;
+  padding:12px;
+  box-shadow:0 8px 24px rgba(33,52,74,.06);
+  text-align:left;
+}
+.collectorPackageTop{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:flex-start;
+  margin-bottom:8px;
+}
+.collectorPackageTitle{font-size:18px;font-weight:800;margin:0;}
+.collectorPackageMeta{font-size:13px;color:var(--muted);line-height:1.5;margin-top:4px;}
+.collectorPackageMemo{width:100%;min-height:72px;resize:vertical;}
+.collectorItemTable{width:100%;border-collapse:collapse;margin-top:10px;}
+.collectorItemTable th,.collectorItemTable td{border:1px solid #d7deea;padding:6px 8px;font-size:13px;text-align:center;}
+.collectorItemTable th{background:#eef4ff;}
+.collectorPackageActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.collectorPackageActions .actionBtn,.collectorPackageActions .primaryBtn{flex:1;min-width:150px;}
+</style>
+
+<div id="collectorPage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
+    <div class="muted">問題の取り込み</div>
+    <button class="navBtn" onclick="renderCollectorPackages()" aria-label="更新">🔄</button>
+  </div>
+
+  <div class="sectionPanel">
+    <h2>プリントや教科書の問題を取り込む</h2>
+    <div class="collectorUploadRow">
+      <label class="labelBox">
+        <span>写真</span>
+        <input type="file" id="collectorImageInput" accept="image/*" capture="environment">
+      </label>
+      <label class="labelBox" style="min-width:min(100%, 280px);">
+        <span>任意メモ</span>
+        <input type="text" id="collectorMemoInput" placeholder="例: 2年生のp.14" maxlength="80">
+      </label>
+      <button class="primaryBtn" onclick="importCollectorImage()">AIで問題を読み込む</button>
+    </div>
+    <p id="collectorStatus" class="muted" style="margin:12px 0 0;line-height:1.5;"></p>
+  </div>
+
+  <div class="sectionPanel">
+    <h2>保存したパッケージ</h2>
+    <div id="collectorPackageList" class="collectorPackageList"></div>
   </div>
 </div>
 
@@ -8516,6 +8589,447 @@ body.boardMoveMode .boardPannable{
     setTimeout(refitActiveBoard, 120);
   });
 })();
+</script>
+
+
+<script>
+const COLLECTOR_STORAGE_KEY = "kakezan_collector_packages_v1";
+const COLLECTOR_GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxYCloSHTKmIA3_azXpGvO_qechRHGFEUu5PSCR5AciIKMrqQYb0sCDMqqpRjVmmBE/exec";
+
+const collectorSession = {
+  active: false,
+  packageId: null,
+  packageName: "",
+  packageItems: [],
+  index: 0,
+  correct: 0,
+  miss: 0,
+  state: "pending"
+};
+
+function getCollectorPackages(){
+  try{
+    const raw = localStorage.getItem(COLLECTOR_STORAGE_KEY);
+    const data = raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  }catch(e){
+    return [];
+  }
+}
+
+function saveCollectorPackages(packages){
+  localStorage.setItem(COLLECTOR_STORAGE_KEY, JSON.stringify(packages));
+}
+
+function makeCollectorId(){
+  return `collector_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function escapeHtml(str){
+  return String(str ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+}
+
+function parseCollectorEquationValue(raw){
+  const s = String(raw ?? "").trim().replaceAll(",", "");
+  if(!s) return null;
+  if(!/^(?:\d+)(?:\.\d+)?$/.test(s)) return null;
+  const parts = s.split(".");
+  const decimalPlaces = parts[1] ? parts[1].length : 0;
+  const scaled = Number(parts.join(""));
+  if(!Number.isFinite(scaled)) return null;
+  return { text:s, scaled, decimalPlaces, digits:parts.join("").length };
+}
+
+function normalizeCollectorQuestion(item){
+  const top = parseCollectorEquationValue(item.num1 ?? item.top ?? item.a ?? item.left ?? "");
+  const bottom = parseCollectorEquationValue(item.num2 ?? item.bottom ?? item.b ?? item.right ?? "");
+  if(!top || !bottom) return null;
+  return {
+    page: item.page || "-",
+    bigNo: item.bigNo || "-",
+    smallNo: item.smallNo || "-",
+    num1: item.num1 ?? item.top ?? item.a ?? item.left ?? "",
+    num2: item.num2 ?? item.bottom ?? item.b ?? item.right ?? "",
+    top,
+    bottom
+  };
+}
+
+function parseCollectorCsv(text){
+  const items = [];
+  String(text ?? "").split(/\r?\n/).forEach(line=>{
+    const trimmed = line.trim();
+    if(!trimmed) return;
+    const cols = trimmed.split(",");
+    if(cols.length < 4) return;
+    const item = { page:cols[0] || "-", bigNo:cols[1] || "-", smallNo:cols[2] || "-", num1:cols[3] || "", num2:cols[4] || "" };
+    const normalized = normalizeCollectorQuestion(item);
+    if(normalized) items.push({ ...item, top: normalized.top, bottom: normalized.bottom });
+  });
+  return items;
+}
+
+
+function toBase64(file){
+  return new Promise((resolve, reject) => {
+    try{
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error("FileReader error"));
+      reader.readAsDataURL(file);
+    }catch(e){
+      reject(e);
+    }
+  });
+}
+
+async function importCollectorImage(){
+  const fileInput = document.getElementById("collectorImageInput");
+  const memoInput = document.getElementById("collectorMemoInput");
+  const statusEl = document.getElementById("collectorStatus");
+  if(!fileInput || fileInput.files.length === 0){
+    alert("写真を選んでください");
+    return;
+  }
+  const btn = document.querySelector('#collectorPage .primaryBtn');
+  if(btn) btn.disabled = true;
+  if(statusEl) statusEl.textContent = "読み込み中...";
+  try{
+    const file = fileInput.files[0];
+    const base64Data = await toBase64(file);
+    const response = await fetch(COLLECTOR_GAS_WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify({ base64Data: base64Data.split(",")[1], mimeType: file.type })
+    });
+    const resJson = await response.json();
+    if(!resJson.success) throw new Error(resJson.error || "読み込み失敗");
+    const items = parseCollectorCsv(resJson.data);
+    if(!items.length) throw new Error("問題を抽出できませんでした");
+    const packages = getCollectorPackages();
+    packages.unshift({
+      id: makeCollectorId(),
+      createdAt: new Date().toISOString(),
+      memo: String(memoInput?.value ?? "").trim(),
+      source: { fileName: file.name, mimeType: file.type },
+      items
+    });
+    saveCollectorPackages(packages);
+    if(fileInput) fileInput.value = "";
+    if(memoInput) memoInput.value = "";
+    renderCollectorPackages();
+    if(statusEl) statusEl.textContent = `読み込み完了。${items.length}問を保存しました。`;
+  }catch(e){
+    console.error(e);
+    alert(`読み込み失敗: ${e.message || e}`);
+    if(statusEl) statusEl.textContent = "読み込みに失敗しました。";
+  }finally{
+    const btn2 = document.querySelector('#collectorPage .primaryBtn');
+    if(btn2) btn2.disabled = false;
+  }
+}
+
+function renderCollectorPackages(){
+  const list = document.getElementById("collectorPackageList");
+  if(!list) return;
+  const packages = getCollectorPackages();
+  if(!packages.length){
+    list.innerHTML = '<p class="muted">まだ取り込みデータがありません。</p>';
+    return;
+  }
+  list.innerHTML = packages.map((pkg, index)=>{
+    const created = pkg.createdAt ? new Date(pkg.createdAt).toLocaleString("ja-JP") : "-";
+    const memo = escapeHtml(pkg.memo || "");
+    const count = Array.isArray(pkg.items) ? pkg.items.length : 0;
+    const rows = (pkg.items || []).map(item=>`
+      <tr>
+        <td>${escapeHtml(item.page ?? "-")}</td>
+        <td>${escapeHtml(item.bigNo ?? "-")}</td>
+        <td>${escapeHtml(item.smallNo ?? "-")}</td>
+        <td>${escapeHtml(item.num1 ?? "")}</td>
+        <td>${escapeHtml(item.num2 ?? "")}</td>
+      </tr>`).join("");
+    return `
+      <div class="collectorPackageCard">
+        <div class="collectorPackageTop">
+          <div>
+            <div class="collectorPackageTitle">パッケージ ${index + 1}</div>
+            <div class="collectorPackageMeta">保存日時: ${escapeHtml(created)} / 問題数: ${count}</div>
+          </div>
+        </div>
+        <label class="labelBox" style="width:100%;margin-top:6px;">
+          <span>メモ</span>
+          <textarea class="collectorPackageMemo" oninput="updateCollectorMemo(${index}, this.value)">${memo}</textarea>
+        </label>
+        <table class="collectorItemTable">
+          <thead>
+            <tr><th>ページ</th><th>大問</th><th>小問</th><th>かけられる数</th><th>かける数</th></tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="5" class="muted">問題がありません</td></tr>'}</tbody>
+        </table>
+        <div class="collectorPackageActions">
+          <button class="primaryBtn" onclick="startCollectorPackage(${index})">この問題をやる</button>
+          <button class="actionBtn secondary" onclick="deleteCollectorPackage(${index})">削除</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function updateCollectorMemo(index, value){
+  const packages = getCollectorPackages();
+  if(!packages[index]) return;
+  packages[index].memo = String(value ?? "");
+  saveCollectorPackages(packages);
+}
+
+function deleteCollectorPackage(index){
+  const packages = getCollectorPackages();
+  if(!packages[index]) return;
+  if(!confirm("このパッケージを削除しますか？")) return;
+  packages.splice(index, 1);
+  saveCollectorPackages(packages);
+  renderCollectorPackages();
+}
+
+function endCollectorSession(){
+  if(!collectorSession.active) return;
+  collectorSession.active = false;
+  collectorSession.packageId = null;
+  collectorSession.packageName = "";
+  collectorSession.packageItems = [];
+  collectorSession.index = 0;
+  collectorSession.correct = 0;
+  collectorSession.miss = 0;
+  collectorSession.state = "pending";
+  setAttackAnswerBarState("pending");
+  appState.attackActive = false;
+  updateAttackManualMode();
+}
+
+function startCollectorPackage(index){
+  const packages = getCollectorPackages();
+  const pkg = packages[index];
+  if(!pkg) return alert("パッケージが見つかりません");
+  const normalized = (pkg.items || []).map(normalizeCollectorQuestion).filter(Boolean);
+  if(!normalized.length) return alert("このパッケージには有効な問題がありません");
+
+  collectorSession.active = true;
+  collectorSession.packageId = pkg.id || String(index);
+  collectorSession.packageName = pkg.memo ? String(pkg.memo) : `パッケージ ${index + 1}`;
+  collectorSession.packageItems = normalized;
+  collectorSession.index = 0;
+  collectorSession.correct = 0;
+  collectorSession.miss = 0;
+  collectorSession.state = "pending";
+
+  appState.attackActive = true;
+  appState.attackQuestions = normalized.map(q=>({ top:q.top.scaled, bottom:q.bottom.scaled, topDp:q.top.decimalPlaces, bottomDp:q.bottom.decimalPlaces }));
+  appState.attackQuestionCount = normalized.length;
+  appState.attackIndex = 0;
+  appState.attackCorrect = 0;
+  appState.attackMiss = 0;
+  appState.attackQuestionState = "pending";
+  appState.attackHintUsed = false;
+  appState.attackManualCheckMode = true;
+  appState.attackTargetMinutes = 0;
+  appState.attackStartMs = Date.now();
+
+  showPage("attackPlayPage");
+  updateAttackManualMode();
+  collectorRenderCurrentQuestion(true);
+  setAttackAnswerBarState("pending");
+}
+
+function collectorRenderCurrentQuestion(){
+  const q = collectorSession.packageItems[collectorSession.index];
+  if(!q){
+    collectorFinishSession();
+    return;
+  }
+
+  topNumber = q.top.scaled;
+  bottomNumber = q.bottom.scaled;
+  topDigits = String(topNumber).split("").map(Number);
+  bottomDigits = String(bottomNumber).split("").map(Number);
+  topDecimalPlaces = q.top.decimalPlaces;
+  bottomDecimalPlaces = q.bottom.decimalPlaces;
+  finalAnswer = topNumber * bottomNumber;
+  finalDecimalPlaces = topDecimalPlaces + bottomDecimalPlaces;
+  topDisplayStr = buildScaledDisplayString(topNumber, topDecimalPlaces);
+  bottomDisplayStr = buildScaledDisplayString(bottomNumber, bottomDecimalPlaces);
+  finalDisplayStr = buildScaledDisplayString(finalAnswer, finalDecimalPlaces);
+  selectedFinalDecimalGap = null;
+  finalShown = false;
+  currentStep = 0;
+  clearPracticeWorkspace();
+  buildTable("attack");
+  addEvents("attack");
+  checkInputs("attack");
+  updateToggleButtons();
+  updateAttackStats();
+
+  const hintEl = document.getElementById("attackHint");
+  const resultEl = document.getElementById("attackResult");
+  const progressEl = document.getElementById("attackProgress");
+  if(hintEl) hintEl.textContent = `${collectorSession.packageName} / ${collectorSession.index + 1} / ${collectorSession.packageItems.length}`;
+  if(resultEl) resultEl.textContent = "";
+  if(progressEl) progressEl.textContent = `${collectorSession.index + 1} / ${collectorSession.packageItems.length}`;
+  setAttackAnswerBarState("pending");
+}
+
+function collectorHandleCorrectAfterWrong(){
+  collectorSession.state = "correctAfterWrong";
+  const resultEl = document.getElementById("attackResult");
+  if(resultEl) resultEl.textContent = "正解。次へ進んでください。";
+  setAttackAnswerBarState("correctAfterWrong");
+}
+
+function collectorEvaluateAnswer(){
+  if(!collectorSession.active) return;
+  checkInputs("attack");
+  const digitsOk = inputMap.every(item => getFieldValue(item.id) === item.correct);
+  const decimalOk = isDecimalAnswerComplete();
+
+  if(digitsOk && !decimalOk){
+    if(collectorSession.state !== "wrong"){
+      collectorSession.state = "wrong";
+      collectorSession.miss++;
+      appState.attackMiss = collectorSession.miss;
+      updateAttackStats();
+    }
+    const resultEl = document.getElementById("attackResult");
+    if(resultEl) resultEl.textContent = "小数点を合わせよう";
+    setAttackAnswerBarState("wrong");
+    return;
+  }
+
+  if(digitsOk && decimalOk){
+    if(collectorSession.state === "wrong"){
+      collectorHandleCorrectAfterWrong();
+      return;
+    }
+    collectorSession.state = "correct";
+    collectorSession.correct++;
+    appState.attackCorrect = collectorSession.correct;
+    updateAttackStats();
+    playQuestionClearSound();
+    const resultEl = document.getElementById("attackResult");
+    if(resultEl) resultEl.textContent = "正解！";
+    setAttackAnswerBarState("correct");
+    setTimeout(()=>{
+      collectorNextAfterReview();
+    }, 450);
+    return;
+  }
+
+  if(collectorSession.state !== "wrong"){
+    collectorSession.state = "wrong";
+    collectorSession.miss++;
+    appState.attackMiss = collectorSession.miss;
+    updateAttackStats();
+  }
+  const resultEl = document.getElementById("attackResult");
+  if(resultEl) resultEl.textContent = "不正解。もう一度考えるか、次へ進めます。";
+  setAttackAnswerBarState("wrong");
+}
+
+function collectorRetryCurrent(){
+  if(!collectorSession.active) return;
+  inputMap.forEach(item => setFieldValue(item.id, ""));
+  checkInputs("attack");
+  const resultEl = document.getElementById("attackResult");
+  if(resultEl) resultEl.textContent = "";
+  collectorSession.state = "pending";
+  setAttackAnswerBarState("pending");
+}
+
+function collectorNextAfterReview(){
+  if(!collectorSession.active) return;
+  collectorSession.index++;
+  appState.attackIndex = collectorSession.index;
+  if(collectorSession.index >= collectorSession.packageItems.length){
+    collectorFinishSession();
+  }else{
+    collectorRenderCurrentQuestion();
+    updateAttackStats();
+  }
+}
+
+function collectorFinishSession(){
+  const summaryEl = document.getElementById("attackResult");
+  const finishPanel = document.getElementById("attackFinishPanel");
+  if(summaryEl) summaryEl.textContent = `終了。正解 ${collectorSession.correct} / ${collectorSession.packageItems.length}`;
+  if(finishPanel){
+    finishPanel.style.display = "block";
+    const accuracy = collectorSession.packageItems.length ? Math.round((collectorSession.correct / collectorSession.packageItems.length) * 100) : 0;
+    const accEl = document.getElementById("finishAccuracy");
+    const timeEl = document.getElementById("finishTime");
+    const targetEl = document.getElementById("finishTarget");
+    const goalEl = document.getElementById("finishGoal");
+    if(accEl) accEl.textContent = `${accuracy}%`;
+    if(timeEl) timeEl.textContent = "-";
+    if(targetEl) targetEl.textContent = "-";
+    if(goalEl) goalEl.textContent = "-";
+  }
+  endCollectorSession();
+}
+
+function openCollectorPage(){
+  endCollectorSession();
+  showPage("collectorPage");
+  renderCollectorPackages();
+}
+
+const _evaluateAttackAnswer = evaluateAttackAnswer;
+evaluateAttackAnswer = function(){
+  if(collectorSession.active) return collectorEvaluateAnswer();
+  return _evaluateAttackAnswer();
+};
+
+const _retryAttackCurrent = retryAttackCurrent;
+retryAttackCurrent = function(){
+  if(collectorSession.active) return collectorRetryCurrent();
+  return _retryAttackCurrent();
+};
+
+const _nextAttackAfterReview = nextAttackAfterReview;
+nextAttackAfterReview = function(){
+  if(collectorSession.active) return collectorNextAfterReview();
+  return _nextAttackAfterReview();
+};
+
+const _openHome = openHome;
+openHome = function(){
+  endCollectorSession();
+  return _openHome();
+};
+
+const _openAttackSetup = openAttackSetup;
+openAttackSetup = function(){
+  endCollectorSession();
+  return _openAttackSetup();
+};
+
+const _openPractice = openPractice;
+openPractice = function(){
+  endCollectorSession();
+  return _openPractice();
+};
+
+const _openRecords = openRecords;
+openRecords = function(){
+  endCollectorSession();
+  return _openRecords();
+};
+
+const _openSettings = openSettings;
+openSettings = function(){
+  endCollectorSession();
+  return _openSettings();
+};
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  renderCollectorPackages();
+});
 </script>
 
 </body>
