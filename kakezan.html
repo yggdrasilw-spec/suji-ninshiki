@@ -4910,9 +4910,21 @@ function updateModelStatusBox(state, message=""){
   const box = document.getElementById("modelStatusBox");
   if(!box) return;
   if(!state){
-    const saved = appState.inputMode === "handwriting" ? "手書きモードが選ばれています。モデルを読み込んでいます。読み込みが完了すると「読み込みました」と表示されます。" : "キーボードモードが選ばれています。";
-    box.className = "modelStatus " + (appState.inputMode === "handwriting" ? "warn" : "ok");
-    box.innerHTML = saved;
+    if(appState.inputMode === "handwriting"){
+      if(handwritingModel){
+        box.className = "modelStatus ok";
+        box.innerHTML = "✅ モデルを読み込みました。手書き認識を使えます。";
+      }else if(handwritingModelPromise){
+        box.className = "modelStatus warn";
+        box.innerHTML = "モデルを読み込んでいます… 完了すると「読み込みました」と表示されます。";
+      }else{
+        box.className = "modelStatus warn";
+        box.innerHTML = "手書きモードが選ばれています。モデルを読み込んでいます。読み込みが完了すると「読み込みました」と表示されます。";
+      }
+    }else{
+      box.className = "modelStatus ok";
+      box.innerHTML = "キーボードモードが選ばれています。";
+    }
     return;
   }
   if(state === "loading"){
