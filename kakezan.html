@@ -584,6 +584,16 @@ td{
 .highlight{ background:#ffe082 !important; }
 .target{ background:#81d4fa !important; }
 
+/* ダミーセル：正規マスと同じ見た目 */
+/* dummyCellsOn（色付き＝簡単）のときダミーをすべて非表示 */
+.dummyCell{ background:white; }
+body.dummyCellsOn .dummyField,
+body.dummyCellsOn .miniCarryBox.dummyCarry{
+  visibility:hidden;
+  pointer-events:none;
+}
+.toggleBtn.on[data-toggle="dummyCells"]{ background:#92400e; color:white; }
+
 .miniCarryBox{
   position:absolute;
   top:-2px;
@@ -4110,6 +4120,7 @@ body.handwritingMode .handField.active .handCanvas{
         <button type="button" class="toggleBtn on" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
         <button type="button" class="toggleBtn on" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
         <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
+        <button type="button" class="toggleBtn off" data-toggle="dummyCells" onclick="toggleHint('dummyCells')" title="ダミーマス">🟫</button>
         <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
       </div>
     </div>
@@ -4282,6 +4293,7 @@ body.handwritingMode .handField.active .handCanvas{
           <button type="button" class="toggleBtn off" data-toggle="correctness" onclick="toggleHint('correctness')" title="正誤判定">🟥🟩</button>
           <button type="button" class="toggleBtn off" data-toggle="text" onclick="toggleHint('text')" title="テキスト">📝</button>
           <button type="button" class="toggleBtn off" data-toggle="superHint" onclick="toggleHint('superHint')" title="超ヒント">🪄</button>
+          <button type="button" class="toggleBtn off" data-toggle="dummyCells" onclick="toggleHint('dummyCells')" title="ダミーマス">🟫</button>
           <button type="button" class="toggleBtn on" data-toggle="sound" onclick="toggleSound()" title="効果音">🔊</button>
         </div>
       </div>
@@ -4345,7 +4357,8 @@ const uiState = {
   correctness: true,
   text: true,
   sound: true,
-  superHint: false
+  superHint: false,
+  dummyCells: false
 };
 
 const appState = {
@@ -4379,7 +4392,8 @@ const STORAGE_KEYS = {
   sound: "soundEnabled",
   superHint: "superHintEnabled",
   practiceHints: "practiceHintDefaults",
-  inputMode: "inputMode"
+  inputMode: "inputMode",
+  dummyCells: "dummyCellsEnabled"
 };
 
 
@@ -4388,7 +4402,8 @@ const DEFAULT_PRACTICE_HINTS = {
   target: true,
   correctness: true,
   text: true,
-  superHint: false
+  superHint: false,
+  dummyCells: false
 };
 
 let audioCtx = null;
@@ -4791,13 +4806,18 @@ function updateAttackManualMode(){
 function toggleHint(key){
   const before = attackHasAnyHintOn();
   const next = !uiState[key];
-  if(appState.attackActive && next && !before && !appState.attackHintWarningShown){
+  if(key !== "dummyCells" && appState.attackActive && next && !before && !appState.attackHintWarningShown){
     appState.attackHintWarningShown = true;
     alert("⚠️ノーヒントの記録がつきません。");
   }
   uiState[key] = next;
   if(key === "superHint"){
     localStorage.setItem(STORAGE_KEYS.superHint, JSON.stringify(uiState.superHint));
+  }
+  if(key === "dummyCells"){
+    localStorage.setItem(STORAGE_KEYS.dummyCells, JSON.stringify(uiState.dummyCells));
+    updateDummyCellsVisibility();
+    return;
   }
   if(appState.attackActive && next){
     appState.attackHintUsed = true;
@@ -4817,6 +4837,22 @@ function updateToggleButtons(){
     btn.classList.toggle("on", isOn);
     btn.classList.toggle("off", !isOn);
   });
+}
+
+function updateDummyCellsVisibility(){
+  const on = !!uiState.dummyCells;
+  document.body.classList.toggle("dummyCellsOn", on);
+  /* ボタン状態も同期 */
+  document.querySelectorAll(".toggleBtn[data-toggle='dummyCells']").forEach(btn=>{
+    btn.classList.toggle("on", on);
+    btn.classList.toggle("off", !on);
+  });
+}
+
+function readDummyCellsSetting(){
+  const raw = localStorage.getItem(STORAGE_KEYS.dummyCells);
+  if(raw === null) return false; /* デフォルトOFF（ダミー表示） */
+  try{ return JSON.parse(raw); }catch(e){ return true; }
 }
 
 function readSoundSetting(){
@@ -4858,7 +4894,8 @@ function getPracticeHintDefaults(){
     target: stored.target !== undefined ? !!stored.target : DEFAULT_PRACTICE_HINTS.target,
     correctness: stored.correctness !== undefined ? !!stored.correctness : DEFAULT_PRACTICE_HINTS.correctness,
     text: stored.text !== undefined ? !!stored.text : DEFAULT_PRACTICE_HINTS.text,
-    superHint: stored.superHint !== undefined ? !!stored.superHint : DEFAULT_PRACTICE_HINTS.superHint
+    superHint: stored.superHint !== undefined ? !!stored.superHint : DEFAULT_PRACTICE_HINTS.superHint,
+    dummyCells: stored.dummyCells !== undefined ? !!stored.dummyCells : DEFAULT_PRACTICE_HINTS.dummyCells
   };
 }
 
@@ -4868,7 +4905,8 @@ function savePracticeHintDefaults(next){
     target: !!next.target,
     correctness: !!next.correctness,
     text: !!next.text,
-    superHint: !!next.superHint
+    superHint: !!next.superHint,
+    dummyCells: !!next.dummyCells
   };
   localStorage.setItem(STORAGE_KEYS.practiceHints, JSON.stringify(normalized));
   renderPracticeHintSettings();
@@ -4884,7 +4922,8 @@ function renderPracticeHintSettings(){
     ["target", "青マス", "次どこに書くのか教えてくれます。", "🔵"],
     ["correctness", "正誤判定", "1マスずつ、あっていたら緑、間違っていたら赤で教えてくれます。", "🟥🟩"],
     ["text", "テキスト", "今しないといけない、かけ算の式を教えてくれます。使う数字のマスも色を付けて教えます。", "📝"],
-    ["superHint", "超ヒント", "うっすら全部のマスの答えを教えてくれます。", "🪄"]
+    ["superHint", "超ヒント", "うっすら全部のマスの答えを教えてくれます。", "🪄"],
+    ["dummyCells", "ダミーマス非表示", "部分積・答えの段の「書かなくていいマス」と「ダミーの補助計算マス」を隠します。ボタンOFF（色なし）のときはダミーマスが見えるので、どこに書くか自分で判断する練習になります。", "🟫"]
   ];
   wrap.innerHTML = items.map(([key, title, desc, icon]) => `
     <div class="defaultHintRow">
@@ -4910,7 +4949,9 @@ function applyPracticeHintDefaults(){
   uiState.correctness = defaults.correctness;
   uiState.text = defaults.text;
   uiState.superHint = defaults.superHint;
+  uiState.dummyCells = defaults.dummyCells;
   updateToggleButtons();
+  updateDummyCellsVisibility();
 }
 
 function saveInputModeSetting(mode){
@@ -5032,6 +5073,19 @@ function buildFieldHtml(fieldId, correct, options={}){
   }
   const inputClass = isMini ? "miniCarryInput" : "mainInput";
   return `<input class="${inputClass}" id="${fieldId}" maxlength="1" inputmode="numeric">`;
+}
+
+/* ダミーセル：inputMapに登録しない入力欄（正解判定に影響しない） */
+function buildDummyFieldHtml(fieldId){
+  if(appState.inputMode === "handwriting"){
+    return `
+      <div class="handField dummyField" id="${fieldId}" data-field-id="${fieldId}" data-correct="" data-dummy="1">
+        <canvas class="handCanvas" id="canvas_${fieldId}"></canvas>
+        <div class="handValue" id="value_${fieldId}"></div>
+      </div>
+    `;
+  }
+  return `<input class="mainInput dummyField" id="${fieldId}" maxlength="1" inputmode="numeric" data-dummy="1">`;
 }
 
 function getFieldNode(fieldId){
@@ -5730,7 +5784,12 @@ function buildTable(kind){
     for(let c=0;c<currentCols;c++){
       const cellId = getCellId(rowIndex, c);
       if(c < startCol || c >= startCol + partial.length){
-        html += `<td id="${cellId}"></td>`;
+        const dummyId = `dummy_${rowIndex}_${c}`;
+        if(appState.inputMode === "handwriting"){
+          html += `<td id="${cellId}" class="handCell dummyCell">${buildDummyFieldHtml(dummyId)}</td>`;
+        }else{
+          html += `<td id="${cellId}" class="dummyCell">${buildDummyFieldHtml(dummyId)}</td>`;
+        }
       }else{
         const idx = c - startCol;
         const inputId = getInputId(rowIndex, c);
@@ -5771,7 +5830,12 @@ function buildTable(kind){
     for(let c=0;c<currentCols;c++){
       const cellId = getCellId(finalRowIndex, c);
       if(c < finalStart || c >= finalStart + answerStr.length){
-        html += `<td id="${cellId}"></td>`;
+        const dummyId = `dummy_${finalRowIndex}_${c}`;
+        if(appState.inputMode === "handwriting"){
+          html += `<td id="${cellId}" class="handCell dummyCell">${buildDummyFieldHtml(dummyId)}</td>`;
+        }else{
+          html += `<td id="${cellId}" class="dummyCell">${buildDummyFieldHtml(dummyId)}</td>`;
+        }
       }else{
         const idx = c - finalStart;
         const inputId = getInputId(finalRowIndex, c);
@@ -5848,12 +5912,36 @@ function appendCarryBox(rowIndex, destCol, sourceInputId, carryText=""){
   carryBoxByInput[sourceInputId] = box.id;
 }
 
+/* 正規の繰り上がりのないマスにダミー補助計算マスを追加する */
+function appendDummyCarryBox(rowIndex, destCol){
+  if(destCol < 0) return;
+  const destCell = document.getElementById(getCellId(rowIndex, destCol));
+  if(!destCell) return;
+  /* 正規の繰り上がりが既にある（hasCarryBox）マスはスキップ */
+  if(destCell.classList.contains("hasCarryBox")) return;
+  /* すでにダミー繰り上がりがあれば重複しない */
+  if(destCell.querySelector(".miniCarryBox.dummyCarry")) return;
+  destCell.classList.add("hasCarryBox");
+  if(appState.inputMode === "handwriting"){
+    const fieldId = `dminicarry_${rowIndex}_${destCol}`;
+    const html = `<div class="miniCarryBox dummyCarry handField" id="${fieldId}" data-field-id="${fieldId}" data-correct="" data-dummy="1"><canvas class="handCanvas" id="canvas_${fieldId}"></canvas><div class="handValue" id="value_${fieldId}"></div></div>`;
+    destCell.insertAdjacentHTML("beforeend", html);
+  } else {
+    const box = document.createElement("div");
+    box.className = "miniCarryBox dummyCarry";
+    box.id = `dminicarry_${rowIndex}_${destCol}`;
+    box.innerHTML = `<input class="miniCarryInput dummyField" maxlength="1" inputmode="numeric" data-dummy="1">`;
+    destCell.appendChild(box);
+  }
+}
+
 function rebuildCarryBoxes(){
   document.querySelectorAll(".miniCarryBox").forEach(box=>box.remove());
   document.querySelectorAll("td.hasCarryBox").forEach(td=>td.classList.remove("hasCarryBox"));
   carryBoxByInput = {};
   addCarryBoxes();
   addFinalCarryBoxes();
+  addDummyCarryBoxes();
 }
 
 function addCarryBoxes(){
@@ -5898,6 +5986,17 @@ function addFinalCarryBoxes(){
   }
 }
 
+/* 部分積・合計の行で正規繰り上がりのない全マスにダミー補助計算マスを配置 */
+function addDummyCarryBoxes(){
+  /* 対象行インデックスを収集（partial行 + final行） */
+  const targetRowIndices = new Set(answerRows.map(r => r.rowIndex));
+  targetRowIndices.forEach(rowIndex => {
+    for(let c = 0; c < currentCols; c++){
+      appendDummyCarryBox(rowIndex, c);
+    }
+  });
+}
+
 function addEvents(kind){
   if(appState.inputMode === "handwriting"){
     requestAnimationFrame(()=>{
@@ -5906,7 +6005,9 @@ function addEvents(kind){
     });
     return;
   }
-  document.querySelectorAll(kind === "attack" ? "#attackTableArea .mainInput" : "#tableArea .mainInput").forEach(input=>{
+  const areaId = kind === "attack" ? "#attackTableArea" : "#tableArea";
+  document.querySelectorAll(`${areaId} .mainInput`).forEach(input=>{
+    if(input.dataset.dummy === "1") return;
     input.addEventListener("input", ()=>{
       if(kind === "attack"){
         checkInputs("attack");
@@ -5916,6 +6017,18 @@ function addEvents(kind){
         checkInputs("practice");
         advanceStep("practice");
         checkFinal("practice");
+      }
+    });
+  });
+  /* ダミーセル：入力できるが正解判定には影響しない */
+  document.querySelectorAll(`${areaId} .mainInput.dummyField`).forEach(input=>{
+    input.addEventListener("input", ()=>{
+      if(input.value.length >= 1){
+        const allInputs = Array.from(document.querySelectorAll(`${areaId} .mainInput`));
+        const idx = allInputs.indexOf(input);
+        if(idx >= 0 && idx + 1 < allInputs.length){
+          allInputs[idx + 1].focus();
+        }
       }
     });
   });
@@ -6735,8 +6848,10 @@ function setSoundButtonState(){
 function initFromStorage(){
   uiState.sound = readSoundSetting();
   uiState.superHint = readSuperHintSetting();
+  uiState.dummyCells = readDummyCellsSetting();
   appState.inputMode = readInputModeSetting();
   updateToggleButtons();
+  updateDummyCellsVisibility();
   setSoundButtonState();
   updateSettingsSummary();
   renderPracticeHintSettings();
@@ -7241,7 +7356,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
   document.addEventListener('DOMContentLoaded', ()=>{
     setBodyInputModeClass();
-    document.body.classList.toggle('ipadDevice', deviceFlags.isIPad);
+    document.body.classList.toggle('ipadDevice', !!window.__isIPadLike);
   }, { once:true });
 })();
 </script>
