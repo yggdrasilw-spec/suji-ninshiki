@@ -3818,6 +3818,13 @@ body.handwritingMode .handField.active .handCanvas{
       <button class="cardBtn" onclick="openCollectorPage()">取り込みをはじめる</button>
     </div>
 
+    <div class="card" id="challengeHomeCard">
+      <h3>📡 今日のチャレンジ</h3>
+      <p>先生が出した問題をみんなで解いて、クラスでランキングを競います。</p>
+      <div id="homeChallengeBadge" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+      <button class="cardBtn" onclick="openChallengePage()">チャレンジをはじめる</button>
+    </div>
+
     <div class="card">
       <h3>⚙️ 設定</h3>
       <p>入力方法をキーボードと手書きから選べます。手書きモードでは、全ての入力マスをキャンバスとして使えます。</p>
@@ -3825,6 +3832,143 @@ body.handwritingMode .handField.active .handCanvas{
     </div>
   </div>
 </div>
+
+<!-- ========== チャレンジページ ========== -->
+<div id="challengePage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
+    <div class="muted">今日のチャレンジ</div>
+    <button class="navBtn" onclick="openRankingPage()" aria-label="ランキング">🏆</button>
+  </div>
+  <div class="sectionPanel">
+    <div id="challengeStatus" style="text-align:center;padding:16px;color:var(--muted);font-size:14px">読み込み中…</div>
+    <div id="challengeInfo" style="display:none">
+      <h2 id="challengeTitle" style="margin-bottom:6px"></h2>
+      <div id="challengeMeta" style="font-size:13px;color:var(--muted);margin-bottom:16px"></div>
+      <div id="challengeProfileCheck" class="settingsBox" style="display:none;margin-bottom:14px">
+        <h4>⚠️ プロフィール未設定</h4>
+        <p class="muted" style="margin-bottom:10px">ランキングに載るには名前などの設定が必要です。</p>
+        <button class="primaryBtn" onclick="openProfilePage()">プロフィールを設定する</button>
+      </div>
+      <div class="footerActions" style="justify-content:flex-start;gap:10px;flex-wrap:wrap">
+        <button class="primaryBtn" id="startChallengeBtn" onclick="startChallenge()">🚀 スタート</button>
+        <button class="actionBtn" onclick="openRankingPage()">🏆 ランキングを見る</button>
+      </div>
+    </div>
+    <div id="challengeNone" style="display:none;text-align:center;padding:20px">
+      <div style="font-size:36px;margin-bottom:8px">📭</div>
+      <div style="color:var(--muted);font-size:14px">現在配信中のチャレンジはありません</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px" id="gasNotSetNote"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ランキングページ ========== -->
+<div id="rankingPage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openChallengePage()" aria-label="チャレンジ">📡</button>
+    <div class="muted">ランキング</div>
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
+  </div>
+  <div class="sectionPanel">
+    <h2 id="rankingPageTitle" style="margin-bottom:4px">ランキング</h2>
+    <div id="rankingPageMeta" style="font-size:13px;color:var(--muted);margin-bottom:14px"></div>
+    <div id="rankingPageContent" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- ========== プロフィールページ ========== -->
+<div id="profilePage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
+    <div class="muted">プロフィール設定</div>
+    <button class="navBtn" style="opacity:0" disabled></button>
+  </div>
+  <div class="sectionPanel">
+    <div class="setupGrid">
+      <div class="settingsBox">
+        <h4>👤 名前・クラス</h4>
+        <p class="muted" style="margin-bottom:12px">ランキングに表示されます。学年・組・出席番号でスコアを管理します。</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">学年</label>
+            <select id="prof_grade" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d0daea;font-size:14px">
+              <option value="1">1年</option><option value="2">2年</option><option value="3">3年</option>
+              <option value="4" selected>4年</option><option value="5">5年</option><option value="6">6年</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">クラス（組）</label>
+            <input type="number" id="prof_class" min="1" max="9" value="1"
+              style="width:100%;padding:8px;border-radius:8px;border:1px solid #d0daea;font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">出席番号</label>
+            <input type="number" id="prof_number" min="1" max="50" value="1"
+              style="width:100%;padding:8px;border-radius:8px;border:1px solid #d0daea;font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">名前</label>
+            <input type="text" id="prof_name" placeholder="例：山田 太郎"
+              style="width:100%;padding:8px;border-radius:8px;border:1px solid #d0daea;font-size:14px">
+          </div>
+        </div>
+        <div id="profileSaveMsg" style="font-size:13px;margin-bottom:10px;display:none"></div>
+        <div class="footerActions" style="justify-content:flex-start">
+          <button class="primaryBtn" onclick="saveProfile()">💾 保存する</button>
+        </div>
+      </div>
+
+      <div class="settingsBox">
+        <h4>🔗 GAS連携設定</h4>
+        <p class="muted" style="margin-bottom:10px">先生からGAS URLをもらって設定します。チャレンジ・ランキング共有に必要です。</p>
+        <div style="margin-bottom:10px">
+          <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">GAS URL</label>
+          <input type="url" id="prof_gasUrl" placeholder="https://script.google.com/macros/s/.../exec"
+            style="width:100%;padding:8px;border-radius:8px;border:1px solid #d0daea;font-size:12px;font-family:monospace">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="primaryBtn" onclick="saveGasUrlStudent()">💾 保存</button>
+          <button class="actionBtn" onclick="testGasUrlStudent()">🔌 テスト</button>
+        </div>
+        <div id="gasTestMsgStudent" style="font-size:12px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- チャレンジ結果モーダル -->
+<div id="challengeResultModal" style="position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:28px 24px;max-width:440px;width:92%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.25)">
+    <div id="resultEmoji" style="font-size:40px;margin-bottom:6px">🎉</div>
+    <h2 id="resultTitle" style="font-size:22px;margin-bottom:6px">お疲れさまでした！</h2>
+    <div style="display:flex;justify-content:center;gap:24px;margin:16px 0;flex-wrap:wrap">
+      <div style="text-align:center"><div id="resCorrect" style="font-size:32px;font-weight:900;line-height:1">—</div><div style="font-size:11px;color:var(--muted);margin-top:2px">正解数</div></div>
+      <div style="text-align:center"><div id="resMiss" style="font-size:32px;font-weight:900;line-height:1;color:#e74c3c">—</div><div style="font-size:11px;color:var(--muted);margin-top:2px">ミス</div></div>
+      <div style="text-align:center"><div id="resTime" style="font-size:32px;font-weight:900;line-height:1">—</div><div style="font-size:11px;color:var(--muted);margin-top:2px">タイム</div></div>
+    </div>
+    <div id="resNoHint" style="font-size:13px;margin-bottom:10px"></div>
+    <div id="resSubmitMsg" style="font-size:13px;margin-bottom:14px;color:var(--muted)"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="primaryBtn" onclick="closeChallengeResult();openRankingPage()">🏆 ランキングを見る</button>
+      <button class="actionBtn" onclick="closeChallengeResult()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ランキングテーブル */
+.rankTable{ width:100%; border-collapse:collapse; font-size:13px; }
+.rankTable th{ text-align:left; padding:7px 8px; background:#eef4ff; font-size:11px; font-weight:700; border-bottom:2px solid #d0daea; white-space:nowrap; }
+.rankTable td{ padding:9px 8px; border-bottom:1px solid #edf2f8; vertical-align:middle; }
+.rankTable tr:hover td{ background:#f6f9ff; }
+.rankTable .rankNum{ font-size:18px; font-weight:900; text-align:center; width:36px; color:#aaa; }
+.rankTable .rankNum.gold{ color:#f5a623; }
+.rankTable .rankNum.silver{ color:#8e9aaf; }
+.rankTable .rankNum.bronze{ color:#b87333; }
+.rankTable tr.myRow td{ background:#eef8ff !important; }
+.nohintBadge{ display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; background:#e6f9ef; color:#1a7a40; }
+</style>
 
 <style id="collectorFeatureStyles">
 #collectorPage .collectorUploadRow{
@@ -3945,6 +4089,11 @@ body.handwritingMode .handField.active .handCanvas{
         <p>・認識がうまくいかないときは、書き直しで再入力できます。</p>
       </div>
 
+      <div class="settingsBox">
+        <h4>👤 プロフィール・GAS連携</h4>
+        <p class="muted" style="margin-bottom:10px">ランキングに名前を載せたり、チャレンジ機能を使うには設定が必要です。</p>
+        <button class="primaryBtn" onclick="openProfilePage()">プロフィールを設定する</button>
+      </div>
       <div class="settingsBox">
         <h4>自由練習のデフォルトヒント</h4>
         <p class="muted">ここでONにしたものが、自由練習で「問題を作る」を押したときの初期状態になります。変更は自動保存されます。</p>
@@ -4472,6 +4621,26 @@ function openRecords(){
   stopAttackTimer();
   showPage("recordPage");
   renderRecords();
+}
+
+function openChallengePage(){
+  stopAttackTimer();
+  clearPracticeWorkspace();
+  clearAttackWorkspace();
+  showPage("challengePage");
+  loadChallenge();
+}
+
+function openRankingPage(){
+  showPage("rankingPage");
+  if(challengeState.currentProblem){
+    loadRanking(challengeState.currentProblem.id);
+  }
+}
+
+function openProfilePage(){
+  showPage("profilePage");
+  loadProfileForm();
 }
 
 function confirmLeaveAttack(){
@@ -6618,6 +6787,18 @@ function finishAttackSession(){
   stopAttackTimer();
   appState.attackActive = false;
   const elapsedSec = Math.floor((Date.now() - appState.attackStartMs) / 1000);
+  /* チャレンジモードのときは結果モーダルを出してスコア送信 */
+  if(appState.isChallenge){
+    appState.isChallenge = false;
+    onChallengeFinished({
+      correct:  appState.attackCorrect  || 0,
+      total:    appState.attackQuestionCount || 0,
+      miss:     appState.attackMiss     || 0,
+      hintUsed: appState.attackHintUsed || false,
+      elapsedSec
+    });
+    return;
+  }
   const total = appState.attackQuestionCount;
   const correct = appState.attackCorrect;
   const miss = appState.attackMiss;
@@ -9147,5 +9328,338 @@ document.addEventListener("DOMContentLoaded", ()=>{
 });
 </script>
 
+<script>
+/* =========================================================
+   チャレンジ機能
+   ========================================================= */
+
+const challengeState = {
+  currentProblem: null
+};
+
+/* ---------- プロフィール ---------- */
+function getProfile(){
+  try{ return JSON.parse(localStorage.getItem("userProfile") || "{}"); }
+  catch(e){ return {}; }
+}
+
+function saveProfile(){
+  const p = {
+    grade:  document.getElementById("prof_grade").value,
+    class:  document.getElementById("prof_class").value,
+    number: document.getElementById("prof_number").value,
+    name:   document.getElementById("prof_name").value.trim()
+  };
+  if(!p.name){ showProfileMsg("名前を入力してください", "err"); return; }
+  localStorage.setItem("userProfile", JSON.stringify(p));
+  showProfileMsg("✅ 保存しました", "ok");
+  updateHomeChallengeBadge();
+}
+
+function loadProfileForm(){
+  const p = getProfile();
+  if(p.grade)  document.getElementById("prof_grade").value  = p.grade;
+  if(p.class)  document.getElementById("prof_class").value  = p.class;
+  if(p.number) document.getElementById("prof_number").value = p.number;
+  if(p.name)   document.getElementById("prof_name").value   = p.name;
+  document.getElementById("prof_gasUrl").value = getStudentGasUrl();
+}
+
+function showProfileMsg(msg, type){
+  const el = document.getElementById("profileSaveMsg");
+  el.textContent = msg;
+  el.style.display = "block";
+  el.style.color = type === "ok" ? "#1a7a40" : "#c0392b";
+  clearTimeout(el._t);
+  if(type === "ok") el._t = setTimeout(()=>{ el.style.display="none"; }, 3000);
+}
+
+/* ---------- GAS URL（生徒用） ---------- */
+function getStudentGasUrl(){
+  return localStorage.getItem("student_gasUrl") || "";
+}
+
+function saveGasUrlStudent(){
+  const url = document.getElementById("prof_gasUrl").value.trim();
+  localStorage.setItem("student_gasUrl", url);
+  showGasTestMsg("💾 保存しました", "#1a7a40");
+  updateHomeChallengeBadge();
+}
+
+async function testGasUrlStudent(){
+  const url = document.getElementById("prof_gasUrl").value.trim();
+  if(!url){ showGasTestMsg("URLを入力してください", "#c0392b"); return; }
+  showGasTestMsg("接続テスト中…", "#888");
+  try{
+    const r = await studentGasGet({ action:"getChallengeList" }, url);
+    showGasTestMsg(r.ok !== false ? "✅ 接続成功！" : "❌ " + (r.error||"エラー"),
+                   r.ok !== false ? "#1a7a40" : "#c0392b");
+  }catch(e){
+    showGasTestMsg("❌ " + e.message, "#c0392b");
+  }
+}
+
+function showGasTestMsg(msg, color){
+  const el = document.getElementById("gasTestMsgStudent");
+  if(!el) return;
+  el.textContent = msg;
+  el.style.color = color;
+  el.style.display = "block";
+}
+
+async function studentGasGet(params, url){
+  const gasUrl = url || getStudentGasUrl();
+  if(!gasUrl) throw new Error("GAS URLが設定されていません。プロフィール設定で登録してください。");
+  const u = new URL(gasUrl);
+  Object.entries(params).forEach(([k,v]) => u.searchParams.set(k, String(v)));
+  const res = await fetch(u.toString());
+  if(!res.ok) throw new Error("通信エラー: " + res.status);
+  return res.json();
+}
+
+async function studentGasPost(data){
+  const gasUrl = getStudentGasUrl();
+  if(!gasUrl) throw new Error("GAS URLが設定されていません。");
+  const res = await fetch(gasUrl, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(data)
+  });
+  if(!res.ok) throw new Error("通信エラー: " + res.status);
+  return res.json();
+}
+
+/* ---------- チャレンジ読み込み ---------- */
+async function loadChallenge(){
+  const statusEl = document.getElementById("challengeStatus");
+  const infoEl   = document.getElementById("challengeInfo");
+  const noneEl   = document.getElementById("challengeNone");
+  statusEl.style.display = "block";
+  infoEl.style.display   = "none";
+  noneEl.style.display   = "none";
+  statusEl.textContent   = "読み込み中…";
+
+  try{
+    const r = await studentGasGet({ action:"getChallenge" });
+    if(!r.ok || !r.problem){
+      statusEl.style.display = "none";
+      noneEl.style.display   = "block";
+      document.getElementById("gasNotSetNote").textContent =
+        r.error || "先生からGAS URLをもらって設定してください。";
+      return;
+    }
+    const p = r.problem;
+    challengeState.currentProblem = p;
+    document.getElementById("challengeTitle").textContent = p.title;
+    const meta = [];
+    meta.push(p.topMin + "〜" + p.topMax + "桁 × " + p.botMin + "〜" + p.botMax + "桁");
+    if(p.topDp || p.botDp) meta.push("🔸 小数あり");
+    meta.push(p.qCount + "問");
+    if(p.deadline) meta.push("⏰ 締切: " + fmtChallengeDate(p.deadline));
+    document.getElementById("challengeMeta").textContent = meta.join("　");
+
+    const profCheck = document.getElementById("challengeProfileCheck");
+    profCheck.style.display = (!getProfile().name) ? "block" : "none";
+
+    statusEl.style.display = "none";
+    infoEl.style.display   = "block";
+    updateHomeChallengeBadge();
+  }catch(e){
+    statusEl.style.display = "none";
+    noneEl.style.display   = "block";
+    document.getElementById("gasNotSetNote").textContent = e.message;
+  }
+}
+
+function updateHomeChallengeBadge(){
+  const el = document.getElementById("homeChallengeBadge");
+  if(!el) return;
+  const p = challengeState.currentProblem;
+  if(p){ el.textContent = "📡 配信中: " + p.title; }
+  else{ el.textContent = getStudentGasUrl() ? "" : "※ プロフィール設定でGAS URLを登録するとチャレンジが使えます"; }
+}
+
+/* ---------- チャレンジ開始 ---------- */
+function startChallenge(){
+  const p = challengeState.currentProblem;
+  if(!p || !p.questions || !p.questions.length){
+    alert("問題データがありません");
+    return;
+  }
+
+  // タイムアタックと同じ状態にリセット
+  clearPracticeWorkspace();
+  appState.attackActive           = true;
+  appState.attackQuestions        = p.questions.map(q => ({
+    top:      applyDpToNum(q.top,    q.topDp  || 0),
+    bottom:   applyDpToNum(q.bottom, q.botDp  || 0),
+    topDp:    q.topDp  || 0,
+    bottomDp: q.botDp  || 0
+  }));
+  appState.attackIndex            = 0;
+  appState.attackCorrect          = 0;
+  appState.attackMiss             = 0;
+  appState.attackHintUsed         = false;
+  appState.attackHintWarningShown = false;
+  appState.attackManualCheckMode  = false;
+  appState.attackQuestionState    = "pending";
+  appState.attackPendingScale     = null;
+  appState.attackQuestionCount    = p.questions.length;
+  appState.attackTargetMinutes    = 99;
+  appState.attackPatternKey       = "challenge_" + p.id;
+  appState.isChallenge            = true;
+  finalShown  = false;
+  currentStep = 0;
+  selectedFinalDecimalGap = null;
+
+  uiState.arrow       = false;
+  uiState.target      = false;
+  uiState.correctness = false;
+  uiState.text        = false;
+  uiState.superHint   = false;
+  updateToggleButtons();
+
+  showPage("attackPlayPage");
+  nextAttackQuestion(true);
+  if(typeof window.__fitActiveBoard === "function") window.__fitActiveBoard(true);
+  updateAttackManualMode();
+  startAttackTimer();
+  appState.attackStartMs = Date.now();
+}
+
+function applyDpToNum(num, dp){
+  if(!dp) return num;
+  return num / Math.pow(10, dp);
+}
+
+/* ---------- チャレンジ完了（finishAttackSessionから呼ばれる） ---------- */
+function onChallengeFinished(result){
+  document.getElementById("resCorrect").textContent = result.correct + "/" + result.total;
+  document.getElementById("resMiss").textContent    = result.miss;
+  document.getElementById("resTime").textContent    = fmtTimeSec(result.elapsedSec);
+  document.getElementById("resNoHint").innerHTML    = result.hintUsed
+    ? '<span style="color:#888">ヒントあり</span>'
+    : '<span style="color:#1a7a40;font-weight:700">✅ ノーヒントクリア！</span>';
+  document.getElementById("resSubmitMsg").textContent = "";
+  document.getElementById("challengeResultModal").style.display = "flex";
+  submitChallengeScore(result);
+}
+
+function closeChallengeResult(){
+  document.getElementById("challengeResultModal").style.display = "none";
+}
+
+async function submitChallengeScore(result){
+  const msgEl = document.getElementById("resSubmitMsg");
+  msgEl.textContent = "スコアを送信中…";
+  const prof = getProfile();
+  if(!prof.name){
+    msgEl.textContent = "⚠️ プロフィール未設定のためスコアは送信されませんでした";
+    return;
+  }
+  try{
+    const r = await studentGasPost({
+      action:    "submitScore",
+      problemId: challengeState.currentProblem.id,
+      grade:     prof.grade,
+      class:     prof.class,
+      number:    prof.number,
+      name:      prof.name,
+      correct:   result.correct,
+      total:     result.total,
+      miss:      result.miss,
+      timeSec:   result.elapsedSec,
+      noHint:    !result.hintUsed
+    });
+    msgEl.textContent = r.ok
+      ? (r.newBest ? "🎉 ベストスコアを更新しました！" : "✅ 送信済み（今回より前のスコアの方が良いため更新なし）")
+      : "⚠️ " + (r.error || "送信エラー");
+  }catch(e){
+    msgEl.textContent = "⚠️ 送信失敗: " + e.message;
+  }
+}
+
+/* ---------- ランキング表示 ---------- */
+async function loadRanking(id){
+  const el    = document.getElementById("rankingPageContent");
+  const title = document.getElementById("rankingPageTitle");
+  const meta  = document.getElementById("rankingPageMeta");
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">読み込み中…</div>';
+
+  const problemId = id || (challengeState.currentProblem && challengeState.currentProblem.id);
+  if(!problemId){
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">問題が選択されていません</div>';
+    return;
+  }
+  try{
+    const [rankRes, probRes] = await Promise.all([
+      studentGasGet({ action:"getRanking",    id: problemId }),
+      studentGasGet({ action:"getChallenge",  id: problemId })
+    ]);
+    if(probRes.ok && probRes.problem){
+      title.textContent = probRes.problem.title + " ランキング";
+      meta.textContent  = probRes.problem.qCount + "問　" + probRes.problem.status;
+    }
+    if(!rankRes.ok) throw new Error(rankRes.error);
+    renderRankingTable(rankRes.ranking || []);
+  }catch(e){
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">' + e.message + '</div>';
+  }
+}
+
+function renderRankingTable(ranking){
+  const el = document.getElementById("rankingPageContent");
+  const me = getProfile();
+  if(!ranking.length){
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">📭 まだスコアがありません</div>';
+    return;
+  }
+  const rankCls = r => r===1?"gold":r===2?"silver":r===3?"bronze":"";
+  const isMe = e => me.name &&
+    String(e.grade)===String(me.grade) &&
+    String(e.class)===String(me.class) &&
+    String(e.number)===String(me.number);
+  const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+  el.innerHTML = '<table class="rankTable"><thead><tr>'
+    + '<th style="text-align:center">順位</th>'
+    + '<th>名前</th><th>学年/組/番</th>'
+    + '<th style="text-align:center">ヒント</th>'
+    + '<th style="text-align:right">正解</th>'
+    + '<th style="text-align:right">ミス</th>'
+    + '<th style="text-align:right">タイム</th>'
+    + '</tr></thead><tbody>'
+    + ranking.map(e =>
+        '<tr' + (isMe(e)?' class="myRow"':'') + '>'
+        + '<td><div class="rankNum ' + rankCls(e.rank) + '">' + e.rank + '</div></td>'
+        + '<td><strong>' + esc(e.name) + '</strong>'
+          + (isMe(e) ? ' <span style="font-size:11px;color:var(--primary)">（あなた）</span>' : '')
+          + '</td>'
+        + '<td style="font-size:12px;color:var(--muted)">' + e.grade + '年' + e.class + '組 ' + e.number + '番</td>'
+        + '<td style="text-align:center">'
+          + (e.noHint ? '<span class="nohintBadge">ノーヒント</span>' : '<span style="color:var(--muted);font-size:12px">あり</span>')
+          + '</td>'
+        + '<td style="text-align:right;font-weight:700">' + e.correct + '/' + e.total + '</td>'
+        + '<td style="text-align:right;color:' + (Number(e.miss)>0?"#e74c3c":"#1a7a40") + '">' + e.miss + '</td>'
+        + '<td style="text-align:right">' + fmtTimeSec(e.timeSec) + '</td>'
+        + '</tr>'
+      ).join("")
+    + '</tbody></table>';
+}
+
+/* ---------- ユーティリティ ---------- */
+function fmtTimeSec(sec){
+  if(sec===undefined||sec===null||sec==="") return "-";
+  const s = Math.round(Number(sec));
+  const m = Math.floor(s/60);
+  return m>0 ? m+"分"+String(s%60).padStart(2,"0")+"秒" : s+"秒";
+}
+
+function fmtChallengeDate(d){
+  if(!d) return "";
+  try{ return new Date(d).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
+  catch(_){ return String(d); }
+}
+</script>
 </body>
 </html>

@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>かけ算トレーニング 管理画面</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3450;
+  --primary:#4f8aff; --primary-dim:#1e3a7a; --green:#2dd4a0; --red:#ff5c7a;
+  --yellow:#ffc145; --muted:#6b7a9e; --text:#e8ecf8; --text2:#a0aac4;
+  --radius:14px; --mono:'DM Mono',monospace;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{ font-family:'Noto Sans JP',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+.header{ display:flex; align-items:center; gap:14px; padding:14px 24px;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:100; }
+.header-logo{ font-size:22px; font-weight:900; }
+.header-logo span{ color:var(--primary); }
+.header-badge{ font-size:11px; padding:3px 8px; border-radius:999px;
+  background:var(--primary-dim); color:var(--primary); font-weight:700; }
+.header-spacer{ flex:1; }
+.gas-dot{ width:8px; height:8px; border-radius:50%; background:var(--muted); display:inline-block; }
+.gas-ok .gas-dot{ background:var(--green); }
+
+.layout{ display:grid; grid-template-columns:220px 1fr; min-height:calc(100vh - 57px); }
+.sidebar{ background:var(--surface); border-right:1px solid var(--border); padding:16px 0; }
+.nav-item{ display:flex; align-items:center; gap:10px; padding:11px 20px; font-size:14px;
+  color:var(--text2); cursor:pointer; border-left:3px solid transparent; transition:all .15s; }
+.nav-item:hover{ background:var(--surface2); color:var(--text); }
+.nav-item.active{ background:var(--surface2); color:var(--primary); border-left-color:var(--primary); font-weight:700; }
+.nav-sep{ height:1px; background:var(--border); margin:10px 16px; }
+
+.main{ padding:24px; overflow-y:auto; }
+.page{ display:none; }
+.page.active{ display:block; }
+.page-title{ font-size:22px; font-weight:900; margin-bottom:4px; }
+.page-sub{ font-size:13px; color:var(--muted); margin-bottom:20px; }
+
+.card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:16px; }
+.card-title{ font-size:15px; font-weight:700; margin-bottom:14px; }
+.form-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; margin-bottom:14px; }
+.field{ display:flex; flex-direction:column; gap:5px; }
+.field label{ font-size:11px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+.field input,.field select{ background:var(--surface2); border:1px solid var(--border); border-radius:8px;
+  color:var(--text); font-size:14px; font-family:'Noto Sans JP',sans-serif; padding:9px 11px; }
+.field input:focus,.field select:focus{ outline:none; border-color:var(--primary); }
+
+.btn{ display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:10px;
+  border:none; font-size:14px; font-family:'Noto Sans JP',sans-serif; font-weight:700;
+  cursor:pointer; transition:opacity .1s,transform .08s; }
+.btn:active{ transform:scale(.97); }
+.btn-primary{ background:var(--primary); color:white; }
+.btn-green{ background:var(--green); color:#0f1117; }
+.btn-red{ background:var(--red); color:white; }
+.btn-yellow{ background:var(--yellow); color:#0f1117; }
+.btn-ghost{ background:transparent; color:var(--text2); border:1px solid var(--border); }
+.btn-ghost:hover{ border-color:var(--primary); color:var(--primary); }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btn-sm{ padding:6px 11px; font-size:12px; border-radius:8px; }
+.btn-row{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+.problem-card{ background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 16px; display:grid; grid-template-columns:1fr auto; gap:10px; align-items:start; margin-bottom:10px; }
+.problem-card:hover{ border-color:var(--primary); }
+.problem-title{ font-size:15px; font-weight:700; margin-bottom:4px; }
+.problem-meta{ font-size:12px; color:var(--muted); display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.problem-actions{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.status-badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+.s配信中{ background:#1a4a2e; color:var(--green); }
+.s下書き{ background:#2a2e1a; color:var(--yellow); }
+.s終了{ background:#2a1a1a; color:var(--muted); }
+
+.rank-table{ width:100%; border-collapse:collapse; font-size:13px; }
+.rank-table th{ text-align:left; padding:8px 10px; background:var(--surface2); color:var(--muted);
+  font-size:11px; font-weight:700; text-transform:uppercase; border-bottom:1px solid var(--border); }
+.rank-table td{ padding:10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+.rank-table tr:hover td{ background:var(--surface2); }
+.rank-num{ font-family:var(--mono); font-size:18px; font-weight:700; color:var(--muted); width:36px; text-align:center; }
+.rank-num.gold{ color:#ffd700; } .rank-num.silver{ color:#c0c0c0; } .rank-num.bronze{ color:#cd7f32; }
+.nohint{ display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;
+  background:#1a3a1a; color:var(--green); }
+
+.carry-opts{ display:flex; gap:8px; }
+.carry-opt{ flex:1; padding:10px; border-radius:8px; border:2px solid var(--border); background:transparent;
+  color:var(--text2); font-size:13px; font-family:'Noto Sans JP',sans-serif; cursor:pointer; text-align:center; transition:all .15s; }
+.carry-opt.sel{ border-color:var(--primary); background:var(--primary-dim); color:var(--primary); font-weight:700; }
+
+.msg{ padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:12px; display:none; }
+.msg.ok{ background:#0a2a1a; border:1px solid var(--green); color:var(--green); display:block; }
+.msg.err{ background:#2a0a0a; border:1px solid var(--red); color:var(--red); display:block; }
+.msg.info{ background:#0a1a3a; border:1px solid var(--primary); color:var(--primary); display:block; }
+
+.loading{ display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:32px; color:var(--muted); font-size:14px; }
+@keyframes spin{ to{transform:rotate(360deg);} }
+.spinner{ width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--primary);
+  border-radius:50%; animation:spin .8s linear infinite; }
+.empty{ text-align:center; padding:40px; color:var(--muted); }
+.empty-icon{ font-size:40px; margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">✏️ かけ算<span>管理</span></div>
+  <div class="header-badge">先生用</div>
+  <div class="header-spacer"></div>
+  <span id="gasStatusEl" style="font-size:12px;display:flex;align-items:center;gap:6px;color:var(--muted)">
+    <span class="gas-dot"></span>GAS未接続
+  </span>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="nav-item active" data-page="problems" onclick="showPage('problems')"><span>📋</span>問題管理</div>
+    <div class="nav-item" data-page="newProblem" onclick="showPage('newProblem')"><span>➕</span>問題を作る</div>
+    <div class="nav-item" data-page="ranking" onclick="showPage('ranking')"><span>🏆</span>ランキング</div>
+    <div class="nav-sep"></div>
+    <div class="nav-item" data-page="settings" onclick="showPage('settings')"><span>⚙️</span>設定</div>
+  </div>
+
+  <div class="main">
+
+    <!-- 問題管理 -->
+    <div class="page active" id="page-problems">
+      <div class="page-title">📋 問題管理</div>
+      <div class="page-sub">作成した問題の配信・停止・削除ができます</div>
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-primary" onclick="showPage('newProblem')">➕ 新しい問題を作る</button>
+        <button class="btn btn-ghost" onclick="loadProblems()">🔄 更新</button>
+      </div>
+      <div id="problemsMsg" class="msg"></div>
+      <div id="problemList"><div class="loading"><div class="spinner"></div>読み込み中…</div></div>
+    </div>
+
+    <!-- 問題作成 -->
+    <div class="page" id="page-newProblem">
+      <div class="page-title">➕ 問題を作る</div>
+      <div class="page-sub">条件を設定して問題セットをGAS上で生成します</div>
+      <div id="newProblemMsg" class="msg"></div>
+
+      <div class="card">
+        <div class="card-title">📝 基本設定</div>
+        <div class="form-grid">
+          <div class="field"><label>タイトル</label>
+            <input type="text" id="np_title" value="チャレンジ" placeholder="例：5年2組 第1回"></div>
+          <div class="field"><label>締切日時（空欄=無期限）</label>
+            <input type="datetime-local" id="np_deadline"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔢 桁数・問題数</div>
+        <div class="form-grid">
+          <div class="field"><label>かけられる数 最小桁</label>
+            <select id="np_topMin"><option value="1">1桁</option><option value="2" selected>2桁</option><option value="3">3桁</option><option value="4">4桁</option></select></div>
+          <div class="field"><label>かけられる数 最大桁</label>
+            <select id="np_topMax"><option value="1">1桁</option><option value="2">2桁</option><option value="3" selected>3桁</option><option value="4">4桁</option></select></div>
+          <div class="field"><label>かける数 最小桁</label>
+            <select id="np_botMin"><option value="1" selected>1桁</option><option value="2">2桁</option><option value="3">3桁</option></select></div>
+          <div class="field"><label>かける数 最大桁</label>
+            <select id="np_botMax"><option value="1">1桁</option><option value="2" selected>2桁</option><option value="3">3桁</option></select></div>
+          <div class="field"><label>上段小数桁</label>
+            <select id="np_topDp"><option value="0" selected>整数</option><option value="1">小数第1位</option><option value="2">小数第2位</option></select></div>
+          <div class="field"><label>下段小数桁</label>
+            <select id="np_botDp"><option value="0" selected>整数</option><option value="1">小数第1位</option><option value="2">小数第2位</option></select></div>
+          <div class="field"><label>問題数</label>
+            <select id="np_qCount"><option value="5">5問</option><option value="10" selected>10問</option><option value="15">15問</option><option value="20">20問</option></select></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">⬆️ 繰り上がり</div>
+        <div class="carry-opts">
+          <button class="carry-opt" data-carry="random" onclick="selCarry('random')">ランダム</button>
+          <button class="carry-opt sel" data-carry="always" onclick="selCarry('always')">必ずあり</button>
+          <button class="carry-opt" data-carry="never" onclick="selCarry('never')">なし</button>
+        </div>
+        <input type="hidden" id="np_carryMode" value="always">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="createProblem('下書き')">💾 下書き保存</button>
+        <button class="btn btn-green" onclick="createProblem('配信中')">📡 作成して配信</button>
+        <button class="btn btn-ghost" onclick="showPage('problems')">キャンセル</button>
+      </div>
+    </div>
+
+    <!-- ランキング -->
+    <div class="page" id="page-ranking">
+      <div class="page-title">🏆 ランキング</div>
+      <div class="page-sub">問題を選んでランキングを表示します</div>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+          <div class="field" style="flex:1;min-width:200px"><label>問題を選ぶ</label>
+            <select id="rankSel" onchange="loadRanking()"><option value="">-- 選択してください --</option></select></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadRanking()">🔄 更新</button>
+        </div>
+      </div>
+      <div id="rankingContent">
+        <div class="empty"><div class="empty-icon">🏆</div><div>問題を選ぶとランキングが表示されます</div></div>
+      </div>
+    </div>
+
+    <!-- 設定 -->
+    <div class="page" id="page-settings">
+      <div class="page-title">⚙️ 設定</div>
+      <div class="page-sub">GASとの接続を設定します</div>
+      <div class="card">
+        <div class="card-title">🔗 GAS URL</div>
+        <div class="field" style="margin-bottom:12px"><label>デプロイURL</label>
+          <input type="url" id="gasUrlInput" style="font-family:var(--mono);font-size:12px"
+            placeholder="https://script.google.com/macros/s/.../exec"></div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="saveGasUrl()">💾 保存</button>
+          <button class="btn btn-ghost" onclick="testGas()">🔌 接続テスト</button>
+          <button class="btn btn-ghost" onclick="copyGasUrl()">📋 URLをコピー</button>
+        </div>
+        <div id="gasTestMsg" class="msg" style="margin-top:10px"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📖 セットアップ手順</div>
+        <ol style="font-size:13px;color:var(--text2);line-height:2.2;padding-left:18px">
+          <li>Google スプレッドシートを新規作成する</li>
+          <li>「拡張機能」→「Apps Script」を開く</li>
+          <li><code style="background:var(--surface2);padding:2px 5px;border-radius:4px">gas.js</code> の内容を全部貼り付ける</li>
+          <li><code style="background:var(--surface2);padding:2px 5px;border-radius:4px">SPREADSHEET_ID</code> をスプレッドシートのIDに書き換える</li>
+          <li>「デプロイ」→「新しいデプロイ」→ 種類: ウェブアプリ</li>
+          <li>実行者: <strong>自分</strong>　アクセス: <strong>全員（匿名含む）</strong></li>
+          <li>発行されたURLを上に貼り付けて保存</li>
+          <li>同じURLを生徒のkakezan.html「プロフィール設定」にも登録する</li>
+        </ol>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let gasUrl = localStorage.getItem("kanri_gasUrl") || "";
+let carryMode = "always";
+let problems = [];
+
+/* ── ページ切り替え ── */
+function showPage(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
+  document.getElementById("page-"+id).classList.add("active");
+  document.querySelector('[data-page="'+id+'"]')?.classList.add("active");
+  if(id==="problems") loadProblems();
+  if(id==="ranking")  loadProblemsForRankSel();
+  if(id==="settings") document.getElementById("gasUrlInput").value = gasUrl;
+}
+
+/* ── GAS通信 ── */
+async function gasGet(params){
+  if(!gasUrl) throw new Error("GAS URLが設定されていません");
+  const u=new URL(gasUrl);
+  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
+  const r=await fetch(u.toString());
+  if(!r.ok) throw new Error("通信エラー: "+r.status);
+  return r.json();
+}
+async function gasPost(data){
+  if(!gasUrl) throw new Error("GAS URLが設定されていません");
+  const r=await fetch(gasUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+  if(!r.ok) throw new Error("通信エラー: "+r.status);
+  return r.json();
+}
+
+/* ── GAS設定 ── */
+function saveGasUrl(){
+  gasUrl=document.getElementById("gasUrlInput").value.trim();
+  localStorage.setItem("kanri_gasUrl",gasUrl);
+  showMsg("gasTestMsg","💾 URLを保存しました","ok");
+  updateGasStatus();
+}
+async function testGas(){
+  showMsg("gasTestMsg","接続テスト中…","info");
+  try{
+    const r=await gasGet({action:"getProblems"});
+    if(r.ok!==false){ showMsg("gasTestMsg","✅ 接続成功！","ok"); updateGasStatus(true); }
+    else             { showMsg("gasTestMsg","❌ "+(r.error||"エラー"),"err"); }
+  }catch(e){ showMsg("gasTestMsg","❌ "+e.message,"err"); updateGasStatus(false); }
+}
+function copyGasUrl(){ navigator.clipboard.writeText(gasUrl).then(()=>alert("コピーしました:\n"+gasUrl)); }
+function updateGasStatus(ok){
+  const el=document.getElementById("gasStatusEl");
+  if(ok===true)        { el.className="gas-ok"; el.innerHTML='<span class="gas-dot"></span>GAS接続中'; el.style.color="var(--green)"; }
+  else if(ok===false)  { el.innerHTML='<span class="gas-dot"></span>接続エラー'; el.style.color="var(--red)"; }
+  else                 { el.innerHTML='<span class="gas-dot"></span>'+(gasUrl?"URL設定済み":"GAS未接続"); el.style.color="var(--muted)"; }
+}
+
+/* ── 問題管理 ── */
+async function loadProblems(){
+  const el=document.getElementById("problemList");
+  el.innerHTML='<div class="loading"><div class="spinner"></div>読み込み中…</div>';
+  try{
+    const r=await gasGet({action:"getProblems"});
+    if(!r.ok) throw new Error(r.error);
+    problems=r.problems||[];
+    renderProblems();
+  }catch(e){
+    el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><div>'+e.message+'</div></div>';
+  }
+}
+function renderProblems(){
+  const el=document.getElementById("problemList");
+  if(!problems.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div>問題がまだありません</div></div>'; return;
+  }
+  el.innerHTML=problems.map(p=>`
+    <div class="problem-card">
+      <div>
+        <div class="problem-title">${esc(p.title)} <span class="status-badge s${p.status}">${p.status}</span></div>
+        <div class="problem-meta">
+          <span>🔢 ${p.topMin}〜${p.topMax}桁 × ${p.botMin}〜${p.botMax}桁</span>
+          ${p.topDp||p.botDp?'<span>🔸小数あり</span>':""}
+          <span>📝 ${p.qCount}問</span>
+          <span>⬆️ ${p.carryMode==="always"?"繰り上がりあり":p.carryMode==="never"?"なし":"ランダム"}</span>
+          ${p.deadline?`<span>⏰ ${fmtDate(p.deadline)}</span>`:""}
+          <code style="font-size:10px;color:var(--muted)">${p.id}</code>
+        </div>
+      </div>
+      <div class="problem-actions">
+        ${p.status!=="配信中"?`<button class="btn btn-green btn-sm" onclick="chgStatus('${p.id}','配信中')">📡 配信</button>`:""}
+        ${p.status==="配信中"?`<button class="btn btn-yellow btn-sm" onclick="chgStatus('${p.id}','終了')">⏹ 停止</button>`:""}
+        <button class="btn btn-ghost btn-sm" onclick="goRanking('${p.id}')">🏆 順位</button>
+        <button class="btn btn-red btn-sm" onclick="delProblem('${p.id}')">🗑</button>
+      </div>
+    </div>`).join("");
+}
+async function chgStatus(id,status){
+  try{ const r=await gasPost({action:"updateProblem",id,status}); if(!r.ok) throw new Error(r.error);
+    showMsg("problemsMsg","「"+status+"」に変更しました","ok"); loadProblems(); }
+  catch(e){ showMsg("problemsMsg","❌ "+e.message,"err"); }
+}
+async function delProblem(id){
+  if(!confirm("削除しますか？スコアデータは残ります。")) return;
+  try{ const r=await gasPost({action:"deleteProblem",id}); if(!r.ok) throw new Error(r.error);
+    showMsg("problemsMsg","削除しました","ok"); loadProblems(); }
+  catch(e){ showMsg("problemsMsg","❌ "+e.message,"err"); }
+}
+
+/* ── 問題作成 ── */
+function selCarry(v){
+  carryMode=v;
+  document.getElementById("np_carryMode").value=v;
+  document.querySelectorAll(".carry-opt").forEach(b=>b.classList.toggle("sel",b.dataset.carry===v));
+}
+async function createProblem(status){
+  const btn=event.target; btn.disabled=true;
+  try{
+    const r=await gasPost({
+      action:"createProblem",
+      title: document.getElementById("np_title").value.trim()||"チャレンジ",
+      deadline: document.getElementById("np_deadline").value||"",
+      topMin:document.getElementById("np_topMin").value,
+      topMax:document.getElementById("np_topMax").value,
+      botMin:document.getElementById("np_botMin").value,
+      botMax:document.getElementById("np_botMax").value,
+      topDp:document.getElementById("np_topDp").value,
+      botDp:document.getElementById("np_botDp").value,
+      qCount:document.getElementById("np_qCount").value,
+      carryMode,status
+    });
+    if(!r.ok) throw new Error(r.error);
+    showMsg("newProblemMsg","✅ 問題を作成しました（ID: "+r.id+"）","ok");
+    setTimeout(()=>showPage("problems"),1200);
+  }catch(e){ showMsg("newProblemMsg","❌ "+e.message,"err"); }
+  finally{ btn.disabled=false; }
+}
+
+/* ── ランキング ── */
+async function loadProblemsForRankSel(){
+  try{
+    const r=await gasGet({action:"getProblems"}); if(!r.ok) return;
+    const cur=document.getElementById("rankSel").value;
+    document.getElementById("rankSel").innerHTML='<option value="">-- 選択してください --</option>'
+      +(r.problems||[]).map(p=>`<option value="${p.id}"${p.id===cur?" selected":""}>${esc(p.title)} [${p.status}]</option>`).join("");
+    if(cur) loadRanking();
+  }catch(_){}
+}
+async function loadRanking(){
+  const id=document.getElementById("rankSel").value;
+  const el=document.getElementById("rankingContent");
+  if(!id){ el.innerHTML='<div class="empty"><div class="empty-icon">🏆</div><div>問題を選んでください</div></div>'; return; }
+  el.innerHTML='<div class="loading"><div class="spinner"></div>読み込み中…</div>';
+  try{
+    const r=await gasGet({action:"getRanking",id}); if(!r.ok) throw new Error(r.error);
+    renderRanking(r.ranking||[]);
+  }catch(e){ el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div><div>'+e.message+'</div></div>'; }
+}
+function goRanking(id){ showPage("ranking"); document.getElementById("rankSel").value=id; loadRanking(); }
+function renderRanking(ranking){
+  const el=document.getElementById("rankingContent");
+  if(!ranking.length){ el.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>まだスコアがありません</div></div>'; return; }
+  const rc=r=>r===1?"gold":r===2?"silver":r===3?"bronze":"";
+  el.innerHTML=`<div class="card" style="padding:0;overflow:hidden">
+    <table class="rank-table"><thead><tr>
+      <th style="text-align:center">順位</th><th>名前</th><th>学年/組/番</th>
+      <th style="text-align:center">ヒント</th>
+      <th style="text-align:right">正解</th><th style="text-align:right">ミス</th><th style="text-align:right">タイム</th>
+    </tr></thead><tbody>`
+    +ranking.map(e=>`<tr>
+      <td><div class="rank-num ${rc(e.rank)}">${e.rank}</div></td>
+      <td><strong>${esc(String(e.name))}</strong></td>
+      <td style="font-size:12px;color:var(--muted)">${e.grade}年${e.class}組 ${e.number}番</td>
+      <td style="text-align:center">${e.noHint?'<span class="nohint">ノーヒント</span>':'<span style="color:var(--muted);font-size:12px">あり</span>'}</td>
+      <td style="text-align:right;font-weight:700">${e.correct}/${e.total}</td>
+      <td style="text-align:right;color:${+e.miss>0?"var(--red)":"var(--green)"}">${e.miss}</td>
+      <td style="text-align:right;font-family:var(--mono)">${fmtTime(e.timeSec)}</td>
+    </tr>`).join("")
+    +'</tbody></table></div>';
+}
+
+/* ── ユーティリティ ── */
+function showMsg(id,text,type){
+  const el=document.getElementById(id); if(!el) return;
+  el.textContent=text; el.className="msg "+type;
+  clearTimeout(el._t);
+  if(type==="ok") el._t=setTimeout(()=>{el.className="msg";},4000);
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmtDate(d){ try{ return new Date(d).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }catch(_){ return String(d); } }
+function fmtTime(sec){
+  if(!sec&&sec!==0) return "-";
+  const s=Math.round(+sec), m=Math.floor(s/60);
+  return m>0?m+"分"+String(s%60).padStart(2,"0")+"秒":s+"秒";
+}
+
+/* ── 初期化 ── */
+document.addEventListener("DOMContentLoaded",()=>{
+  if(gasUrl){ document.getElementById("gasUrlInput").value=gasUrl; updateGasStatus(); loadProblems(); }
+});
+</script>
+</body>
+</html>
