@@ -9440,22 +9440,9 @@ function studentGasGet(params, url){
   });
 }
 
-async function studentGasPost(data){
-  const gasUrl = getStudentGasUrl();
-  if(!gasUrl) throw new Error("GAS URLが設定されていません。");
-  /* POSTはno-corsで送信後、GETで結果を返す */
-  try{
-    await fetch(gasUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(data)
-    });
-  }catch(e){
-    throw new Error("送信エラー: " + e.message);
-  }
-  await new Promise(r=>setTimeout(r, 1200));
-  return { ok: true, newBest: true };
+/* POSTもJSONPのGETで統一 */
+function studentGasPost(data){
+  return studentGasGet(data);
 }
 
 /* ---------- チャレンジ読み込み ---------- */

@@ -288,22 +288,9 @@ function gasGet(params){
   });
 }
 
-async function gasPost(data){
-  if(!gasUrl) throw new Error("GAS URLが設定されていません");
-  /* POSTはno-corsで送信（レスポンスは読めないためGETで結果確認） */
-  try{
-    await fetch(gasUrl, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(data)
-    });
-  }catch(e){
-    throw new Error("送信エラー: " + e.message);
-  }
-  /* 少し待ってからGETで最新状態を取得して成功とみなす */
-  await new Promise(r=>setTimeout(r, 1200));
-  return { ok: true };
+/* POSTもJSONPのGETで統一（CORSを完全回避） */
+function gasPost(data){
+  return gasGet(data);
 }
 
 /* ── GAS設定 ── */
