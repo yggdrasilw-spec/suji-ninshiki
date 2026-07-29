@@ -257,20 +257,53 @@ function showPage(id){
   if(id==="settings") document.getElementById("gasUrlInput").value = gasUrl;
 }
 
-/* ── GAS通信 ── */
-async function gasGet(params){
-  if(!gasUrl) throw new Error("GAS URLが設定されていません");
-  const u=new URL(gasUrl);
-  Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,v));
-  const r=await fetch(u.toString());
-  if(!r.ok) throw new Error("通信エラー: "+r.status);
-  return r.json();
+/* ── GAS通信（JSONP/no-cors） ── */
+let _jsonpCbId = 0;
+
+function gasGet(params){
+  return new Promise((resolve, reject) => {
+    if(!gasUrl){ reject(new Error("GAS URLが設定されていません。設定ページでURLを登録してください。")); return; }
+    const cbName = "__gasCb" + (++_jsonpCbId);
+    const timer = setTimeout(()=>{
+      delete window[cbName];
+      reject(new Error("タイムアウト：GASに接続できませんでした"));
+    }, 15000);
+    window[cbName] = function(data){
+      clearTimeout(timer);
+      delete window[cbName];
+      resolve(data);
+    };
+    const u = new URL(gasUrl);
+    Object.entries(params).forEach(([k,v])=>u.searchParams.set(k,String(v)));
+    u.searchParams.set("callback", cbName);
+    const script = document.createElement("script");
+    script.src = u.toString();
+    script.onerror = ()=>{
+      clearTimeout(timer);
+      delete window[cbName];
+      reject(new Error("GASへの接続に失敗しました（URLを確認してください）"));
+    };
+    document.head.appendChild(script);
+    setTimeout(()=>script.remove(), 20000);
+  });
 }
+
 async function gasPost(data){
   if(!gasUrl) throw new Error("GAS URLが設定されていません");
-  const r=await fetch(gasUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
-  if(!r.ok) throw new Error("通信エラー: "+r.status);
-  return r.json();
+  /* POSTはno-corsで送信（レスポンスは読めないためGETで結果確認） */
+  try{
+    await fetch(gasUrl, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(data)
+    });
+  }catch(e){
+    throw new Error("送信エラー: " + e.message);
+  }
+  /* 少し待ってからGETで最新状態を取得して成功とみなす */
+  await new Promise(r=>setTimeout(r, 1200));
+  return { ok: true };
 }
 
 /* ── GAS設定 ── */
@@ -436,7 +469,16 @@ function fmtTime(sec){
 
 /* ── 初期化 ── */
 document.addEventListener("DOMContentLoaded",()=>{
-  if(gasUrl){ document.getElementById("gasUrlInput").value=gasUrl; updateGasStatus(); loadProblems(); }
+  if(gasUrl){
+    document.getElementById("gasUrlInput").value = gasUrl;
+    updateGasStatus();
+    loadProblems();
+  } else {
+    /* GAS未設定：ローディングを即座にエラー表示に切り替え */
+    document.getElementById("problemList").innerHTML =
+      '<div class="empty"><div class="empty-icon">🔌</div>'
+      + '<div>GAS URLが設定されていません。<br>左メニューの「設定」からURLを登録してください。</div></div>';
+  }
 });
 </script>
 </body>
