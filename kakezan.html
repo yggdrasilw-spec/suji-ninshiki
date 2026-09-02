@@ -6,8 +6,9 @@
 <title>かけ算の筆算 トレーニング</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <!-- Firebase SDK (レイドボス連動用) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 <style>
 :root{
   --bg:#f4f7fb;
@@ -4936,8 +4937,10 @@ let raidDb = null;
 let raidRoomRef = null;
 let raidRoomListener = null;
 
+let raidAuthPromise = null;
+
 function initRaidFirebase() {
-  if (raidDb) return;
+  if (raidDb && raidAuthPromise) return raidAuthPromise;
   try {
     const firebaseConfig = {
       apiKey: "AIzaSyDdqalOwQFkZnNvFCKzXqM4VeP4IBPhzXo",
@@ -4954,10 +4957,21 @@ function initRaidFirebase() {
         firebase.initializeApp(firebaseConfig);
       }
       raidDb = firebase.database();
+      if (firebase.auth) {
+        raidAuthPromise = firebase.auth().signInAnonymously().catch(err => {
+          console.error("Firebase匿名認証エラー:", err);
+          updateRaidConnBadge('error', 'Firebaseの匿名認証に失敗しました');
+          throw err;
+        });
+      } else {
+        raidAuthPromise = Promise.resolve();
+      }
     }
   } catch (err) {
     console.error("Raid Firebase init error:", err);
+    raidAuthPromise = Promise.reject(err);
   }
+  return raidAuthPromise || Promise.resolve();
 }
 
 function openRaidSetup() {
@@ -5035,14 +5049,8 @@ function updateRaidConnBadge(status, text) {
   }
 }
 
-function connectToRaidCode(code) {
-  initRaidFirebase();
-  if (!raidDb) {
-    updateRaidConnBadge('error', 'Firebaseが利用できません（オフライン演習のみ可能です）');
-    return;
-  }
-
-  const cleanCode = code.trim().toUpperCase();
+async function connectToRaidCode(code) {
+  const cleanCode = (code || '').trim().toUpperCase();
   if (!cleanCode) {
     appState.raidCode = '';
     if (raidRoomRef && raidRoomListener) {
@@ -5053,6 +5061,20 @@ function connectToRaidCode(code) {
     return;
   }
 
+  updateRaidConnBadge('none', `認証中＆ルーム ${cleanCode} に接続中…`);
+
+  try {
+    await initRaidFirebase();
+  } catch (err) {
+    updateRaidConnBadge('error', 'Firebaseへの接続認証に失敗しました');
+    return;
+  }
+
+  if (!raidDb) {
+    updateRaidConnBadge('error', 'Firebaseが利用できません（オフライン演習のみ可能です）');
+    return;
+  }
+
   appState.raidCode = cleanCode;
   localStorage.setItem('raid_boss_student_code', cleanCode);
 
@@ -5060,15 +5082,18 @@ function connectToRaidCode(code) {
     raidRoomRef.off('value', raidRoomListener);
   }
 
-  updateRaidConnBadge('none', `ルーム ${cleanCode} に接続中…`);
-
   raidRoomRef = raidDb.ref(`rooms/${cleanCode}`);
   raidRoomListener = snapshot => {
     const data = snapshot.val();
     const now = Date.now();
 
-    if (!data || !data.boss || (data.expiresAt && data.expiresAt < now)) {
-      updateRaidConnBadge('error', 'レイドコードが見つからないか、期限切れです');
+    if (!data || !data.boss) {
+      updateRaidConnBadge('error', `コード「${cleanCode}」が見つかりません。先生が「バトル開始」を押しているか確認してください。`);
+      return;
+    }
+
+    if (data.expiresAt && data.expiresAt < now) {
+      updateRaidConnBadge('error', `コード「${cleanCode}」は期限切れです。先生に新しいコードを発行してもらってください。`);
       return;
     }
 
@@ -5107,7 +5132,10 @@ function connectToRaidCode(code) {
     }
   };
 
-  raidRoomRef.on('value', raidRoomListener);
+  raidRoomRef.on('value', raidRoomListener, err => {
+    console.error("Firebase Room Listener Error:", err);
+    updateRaidConnBadge('error', 'アクセスが拒否されました。Firebaseの匿名認証設定をご確認ください。');
+  });
 }
 
 function selectRaidAvatar(avatar, save=true) {
