@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>かけ算の筆算 トレーニング</title>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<!-- Firebase SDK (レイドボス連動用) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <style>
 :root{
   --bg:#f4f7fb;
@@ -3717,6 +3720,249 @@ body.handwritingMode .handField.active .handCanvas{
     position:static !important;
   }
 }
+
+/* ===== レイドボスモード スタイル ===== */
+.raidCardHighlight {
+  border: 2px solid #ef4444 !important;
+  background: linear-gradient(180deg, #ffffff, #fff5f5) !important;
+  position: relative;
+  overflow: hidden;
+}
+.raidCardHighlight::after {
+  content: "HOT";
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: #ef4444;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
+}
+
+.raidDifficultyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+.raidDiffBtn {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.raidDiffBtn:hover {
+  border-color: #ef4444;
+  background: #fff8f8;
+  transform: translateY(-2px);
+}
+.raidDiffBtn.selected {
+  border-color: #dc2626;
+  background: #fee2e2;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+.raidDiffBtn .diffTitle {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1e293b;
+}
+.raidDiffBtn .diffDesc {
+  font-size: 13px;
+  color: #64748b;
+}
+.raidDiffBtn .diffDmg {
+  font-size: 12px;
+  font-weight: bold;
+  color: #dc2626;
+  background: #fecaca;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+}
+
+.raidSetupSection {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  margin-bottom: 14px;
+  text-align: left;
+}
+.raidSetupSection h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatarSelectRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+.avatarBtn {
+  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.avatarBtn:hover {
+  border-color: #3b82f6;
+  transform: scale(1.08);
+}
+.avatarBtn.selected {
+  border-color: #dc2626;
+  background: #fee2e2;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.25);
+}
+
+/* レイド専用プレイ画面ヘッダーバー */
+#raidPlayHeader {
+  display: none;
+  background: linear-gradient(135deg, #1e1b4b, #311042);
+  color: #ffffff;
+  border-radius: 16px;
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.raidBossInfoBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  flex: 1;
+}
+.raidBossIcon {
+  font-size: 30px;
+  line-height: 1;
+  animation: bossFloat 2s ease-in-out infinite alternate;
+}
+@keyframes bossFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-4px); }
+}
+.raidBossNameBox {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.raidBossName {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #fca5a5;
+}
+.raidHpTrack {
+  height: 16px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 4px;
+}
+.raidHpFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981);
+  width: 100%;
+  transition: width 0.4s ease;
+  border-radius: 999px;
+}
+.raidHpText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+.raidStreakBox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.12);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.raidStreakCount {
+  color: #fef08a;
+  font-size: 18px;
+}
+
+.raidDamagePopup {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  font-size: 32px;
+  font-weight: 900;
+  color: #ef4444;
+  text-shadow: 0 0 12px rgba(239,68,68,0.8), 0 2px 4px rgba(0,0,0,0.8);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 100000;
+  transition: all 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+.raidDamagePopup.show {
+  transform: translate(-50%, -80%) scale(1.2);
+  opacity: 1;
+}
+
+/* 討伐成功モーダル */
+.raidModalOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 100001;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.raidModalBox {
+  background: #ffffff;
+  border-radius: 24px;
+  max-width: 480px;
+  width: 100%;
+  padding: 28px 24px;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+  animation: modalPop 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+@keyframes modalPop {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
 </style>
 
 </head>
@@ -3756,6 +4002,13 @@ body.handwritingMode .handField.active .handCanvas{
       <p>先生が出した問題をみんなで解いて、クラスでランキングを競います。</p>
       <div id="homeChallengeBadge" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
       <button class="cardBtn" onclick="openChallengePage()">チャレンジをはじめる</button>
+    </div>
+
+    <div class="card raidCardHighlight" id="raidBossHomeCard">
+      <h3 style="color:#dc2626;">⚔️ レイドボスバトル</h3>
+      <p>先生画面のボスをクラス全員で討伐！難易度を選んだら、自動で次々出る問題を解いて大ダメージを与えよう。</p>
+      <div id="homeRaidBadge" style="font-size:13px;color:#dc2626;font-weight:bold;margin-bottom:8px">⚪ コードを入力して出撃</div>
+      <button class="cardBtn" style="background:#dc2626;" onclick="openRaidSetup()">レイドバトルに出撃</button>
     </div>
 
     <div class="card">
@@ -4209,6 +4462,116 @@ body.handwritingMode .handField.active .handCanvas{
   </div>
 </div>
 
+<!-- ========== レイドボス設定・出撃ページ ========== -->
+<div id="raidSetupPage" class="page">
+  <div class="topRow">
+    <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
+    <div class="muted">⚔️ レイドボス討伐バトル</div>
+    <button class="navBtn" onclick="openPractice()" aria-label="自由練習へ">🧩</button>
+  </div>
+
+  <div class="sectionPanel" style="max-width:800px;margin:0 auto 16px;">
+    <h2 style="color:#dc2626;margin-bottom:6px;">⚔️ レイドボス討伐バトル</h2>
+    <p class="muted" style="margin-top:0;">先生画面に表示されている4桁のレイドコードを入力して、クラス全員でボスに挑戦しよう！</p>
+
+    <!-- レイドルーム接続設定 -->
+    <div class="raidSetupSection">
+      <h3>🔑 レイドルーム接続</h3>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:bold;">
+          レイドコード:
+          <input type="text" id="raidCodeInput" maxlength="6" placeholder="例: 1024"
+            style="font-size:20px;letter-spacing:0.1em;padding:6px 12px;border:2px solid #cbd5e1;border-radius:10px;width:120px;text-transform:uppercase;font-weight:bold;">
+        </label>
+        <button class="actionBtn" onclick="connectRaidFromInput()" style="background:#dc2626;color:white;padding:8px 16px;">接続</button>
+        <div id="raidConnStatus" style="font-size:18px;" title="未接続">⚪</div>
+      </div>
+      <div id="raidBossPreview" style="background:#fff1f2;border:1px solid #fecaca;border-radius:12px;padding:10px 14px;display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-weight:bold;margin-bottom:4px;">
+          <span id="raidPreviewName" style="color:#991b1b;font-size:16px;">👹 ボス</span>
+          <span id="raidPreviewHp" style="color:#b91c1c;font-size:14px;">HP: ? / ?</span>
+        </div>
+        <div style="height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden;">
+          <div id="raidPreviewHpBar" style="height:100%;width:100%;background:#ef4444;transition:width 0.3s ease;"></div>
+        </div>
+      </div>
+      <div id="raidConnMsg" style="font-size:13px;color:var(--muted);margin-top:6px;">4桁のレイドコードを入力して「接続」を押してください。</div>
+    </div>
+
+    <!-- プレイヤー設定 -->
+    <div class="raidSetupSection">
+      <h3>🧑‍🎓 なまえ & アバター</h3>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:bold;">
+          なまえ:
+          <input type="text" id="raidStudentNameInput" placeholder="ななし" maxlength="10"
+            style="font-size:16px;padding:6px 12px;border:2px solid #cbd5e1;border-radius:10px;width:140px;">
+        </label>
+      </div>
+      <div style="font-size:14px;font-weight:bold;color:#475569;margin-bottom:4px;">アバターを選択:</div>
+      <div class="avatarSelectRow" id="raidAvatarList">
+        <button type="button" class="avatarBtn selected" onclick="selectRaidAvatar('⚔️')">⚔️</button>
+        <button type="button" class="avatarBtn" onclick="selectRaidAvatar('🏹')">🏹</button>
+        <button type="button" class="avatarBtn" onclick="selectRaidAvatar('🪄')">🪄</button>
+        <button type="button" class="avatarBtn" onclick="selectRaidAvatar('🥷')">🥷</button>
+        <button type="button" class="avatarBtn" onclick="selectRaidAvatar('🛡️')">🛡️</button>
+        <button type="button" class="avatarBtn" onclick="selectRaidAvatar('🐯')">🐯</button>
+        <button type="button" class="avatarBtn" onclick="selectRaidAvatar('🐉')">🐉</button>
+        <button type="button" class="avatarBtn" onclick="selectRaidAvatar('⚡')">⚡</button>
+      </div>
+    </div>
+
+    <!-- 難易度選択（筆算の種類） -->
+    <div class="raidSetupSection">
+      <h3>🎯 筆算の難易度を選択</h3>
+      <p class="muted" style="margin:0 0 10px;font-size:13px;">難易度が高いほど、ボスに与えるダメージがアップ！選んだ難易度の問題が自動で次々出題されます。</p>
+      
+      <div class="raidDifficultyGrid">
+        <div class="raidDiffBtn selected" data-diff="beginner" onclick="selectRaidDifficulty('beginner')">
+          <div class="diffTitle">🥉 初級</div>
+          <div class="diffDesc">2桁 × 1桁 (例: 24×3)</div>
+          <div class="diffDmg">💥 10 DMG</div>
+        </div>
+        <div class="raidDiffBtn" data-diff="intermediate" onclick="selectRaidDifficulty('intermediate')">
+          <div class="diffTitle">🥈 中級</div>
+          <div class="diffDesc">3桁 × 1桁 (例: 234×6)</div>
+          <div class="diffDmg">💥 15 DMG</div>
+        </div>
+        <div class="raidDiffBtn" data-diff="advanced" onclick="selectRaidDifficulty('advanced')">
+          <div class="diffTitle">🥇 上級</div>
+          <div class="diffDesc">2桁 × 2桁 (例: 48×26)</div>
+          <div class="diffDmg">💥 25 DMG</div>
+        </div>
+        <div class="raidDiffBtn" data-diff="expert" onclick="selectRaidDifficulty('expert')">
+          <div class="diffTitle">💎 達人</div>
+          <div class="diffDesc">3桁 × 2桁 (例: 345×28)</div>
+          <div class="diffDmg">💥 40 DMG</div>
+        </div>
+        <div class="raidDiffBtn" data-diff="master" onclick="selectRaidDifficulty('master')">
+          <div class="diffTitle">👑 超人</div>
+          <div class="diffDesc">3桁 × 3桁 (例: 512×324)</div>
+          <div class="diffDmg">💥 60 DMG</div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #cbd5e1;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <label style="font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="raidDecimalCheckbox">
+          <span>小数も含める（難易度UP +5 DMG）</span>
+        </label>
+        <label style="font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          <input type="checkbox" id="raidNoCarryCheckbox">
+          <span>繰り上がりなし（1桁×何桁のみ）</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="footerActions" style="margin-top:20px;">
+      <button class="primaryBtn" style="background:#dc2626;font-size:22px;padding:14px 32px;box-shadow:0 4px 14px rgba(220,38,38,0.4);" onclick="startRaidBattle()">⚔️ レイドバトル開始！</button>
+    </div>
+  </div>
+</div>
+
 <div id="attackSetupPage" class="page">
   <div class="topRow">
     <button class="navBtn" onclick="openHome()" aria-label="ホーム">🏠</button>
@@ -4339,6 +4702,33 @@ body.handwritingMode .handField.active .handCanvas{
     </div>
 
     <div class="attackCenterArea">
+      <!-- レイド専用情報ヘッダー -->
+      <div id="raidPlayHeader">
+        <div class="raidBossInfoBox">
+          <div class="raidBossIcon" id="raidPlayBossIcon">👹</div>
+          <div class="raidBossNameBox">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span class="raidBossName" id="raidPlayBossName">魔王</span>
+              <span id="raidPlayConnBadge" style="font-size:12px;color:#86efac;">🟢 接続中</span>
+            </div>
+            <div class="raidHpTrack">
+              <div class="raidHpFill" id="raidPlayHpFill" style="width:100%;"></div>
+              <div class="raidHpText" id="raidPlayHpText">HP: 1000 / 1000</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="raidStreakBox" id="raidStreakBox">
+            <span>連続正解:</span>
+            <span class="raidStreakCount" id="raidStreakCount">0</span>
+            <span id="raidMultiplierBadge" style="font-size:11px;color:#fca5a5;background:rgba(239,68,68,0.2);padding:1px 6px;border-radius:999px;">x1</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.1);padding:6px 12px;border-radius:999px;font-size:13px;font-weight:bold;">
+            与ダメージ: <span id="raidTotalDamageText" style="color:#f87171;font-size:16px;">0</span>
+          </div>
+        </div>
+      </div>
+
       <div id="attackHint" class="attackHint"></div>
 
       <div class="attackBoardShell">
@@ -4384,6 +4774,38 @@ body.handwritingMode .handField.active .handCanvas{
         <button type="button" class="actionBtn secondary compactAction" onclick="evaluateAttackAnswer()">答え合わせ</button>
         <button type="button" class="actionBtn secondary compactAction" onclick="retryAttackCurrent()" id="attackRetryBtn" style="display:none;">もう一度</button>
         <button type="button" class="actionBtn secondary compactAction" onclick="nextAttackAfterReview()" id="attackNextBtn" style="display:none;">次へ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- レイド用ダメージポップアップ演出 -->
+  <div id="raidDamagePopup" class="raidDamagePopup">💥 -25 DMG!</div>
+
+  <!-- レイドボス討伐成功モーダル -->
+  <div id="raidDefeatModal" class="raidModalOverlay">
+    <div class="raidModalBox">
+      <div style="font-size:50px;margin-bottom:8px;animation:bossFloat 1s ease-in-out infinite alternate;">🎉⚔️👑</div>
+      <h2 style="color:#dc2626;margin:0 0 10px;font-size:26px;">ボス討伐成功！！</h2>
+      <p class="muted" style="margin:0 0 18px;font-size:15px;">クラス全員の力で、見事にボスを倒しました！</p>
+      
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:14px;margin-bottom:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <div>
+          <div style="font-size:12px;color:var(--muted);">解いた問題数</div>
+          <div id="raidModalQuestions" style="font-size:20px;font-weight:bold;color:#1e293b;">0問</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);">与えた総ダメージ</div>
+          <div id="raidModalDamage" style="font-size:20px;font-weight:bold;color:#dc2626;">0</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);">最大連続正解</div>
+          <div id="raidModalMaxStreak" style="font-size:20px;font-weight:bold;color:#f59e0b;">0回</div>
+        </div>
+      </div>
+
+      <div class="footerActions" style="justify-content:center;gap:12px;">
+        <button class="primaryBtn" style="background:#dc2626;" onclick="repeatRaidBattle()">もう一度戦う</button>
+        <button class="actionBtn secondary" onclick="openHome()">🏠 ホームへ戻る</button>
       </div>
     </div>
   </div>
@@ -4465,7 +4887,21 @@ const appState = {
   attackManualCheckMode: false,
   attackQuestionState: "pending",
   attackPendingScale: null,
-  inputMode: "keyboard"
+  inputMode: "keyboard",
+  // レイドボスモード用プロパティ
+  raidActive: false,
+  raidCode: "",
+  raidStudentName: "ななし",
+  raidAvatar: "⚔️",
+  raidDifficulty: "beginner",
+  raidStreak: 0,
+  raidMaxStreak: 0,
+  raidTotalDamage: 0,
+  raidQuestionsSolved: 0,
+  raidBossMaxHp: 1000,
+  raidBossCurrentHp: 1000,
+  raidBossName: "ボス",
+  raidBossDefeated: false
 };
 
 const STORAGE_KEYS = {
@@ -4495,7 +4931,434 @@ let handwritingModelPromise = null;
 let handwritingFields = {};
 let handwritingPendingTimers = {};
 
+// ===== レイドボスモード ロジック =====
+let raidDb = null;
+let raidRoomRef = null;
+let raidRoomListener = null;
+
+function initRaidFirebase() {
+  if (raidDb) return;
+  try {
+    const firebaseConfig = {
+      apiKey: "AIzaSyDdqalOwQFkZnNvFCKzXqM4VeP4IBPhzXo",
+      authDomain: "raid-boss-project.firebaseapp.com",
+      databaseURL: "https://raid-boss-project-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "raid-boss-project",
+      storageBucket: "raid-boss-project.firebasestorage.app",
+      messagingSenderId: "195656323635",
+      appId: "1:195656323635:web:ca2dd1251af61929080946",
+      measurementId: "G-6VBWZVLKLK"
+    };
+    if (typeof firebase !== 'undefined') {
+      if (!firebase.apps || firebase.apps.length === 0) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      raidDb = firebase.database();
+    }
+  } catch (err) {
+    console.error("Raid Firebase init error:", err);
+  }
+}
+
+function openRaidSetup() {
+  stopAttackTimer();
+  clearPracticeWorkspace();
+  clearAttackWorkspace();
+  destroyHandwritingFields();
+  initRaidFirebase();
+
+  // 初期値の読み込み (URLクエリ優先、次にlocalStorage)
+  const urlParams = new URLSearchParams(window.location.search);
+  const codeParam = urlParams.get('code');
+  const savedCode = localStorage.getItem('raid_boss_student_code') || '';
+  const initialCode = (codeParam && codeParam.trim()) ? codeParam.trim() : savedCode;
+
+  const codeInput = document.getElementById('raidCodeInput');
+  if (codeInput) {
+    codeInput.value = initialCode;
+    codeInput.onkeydown = (e) => {
+      if (e.key === 'Enter') connectRaidFromInput();
+    };
+  }
+
+  const savedName = localStorage.getItem('raid_boss_student_name') || 'ななし';
+  const nameInput = document.getElementById('raidStudentNameInput');
+  if (nameInput) {
+    nameInput.value = savedName;
+    appState.raidStudentName = savedName;
+  }
+
+  const savedAvatar = localStorage.getItem('raid_boss_student_avatar') || '⚔️';
+  selectRaidAvatar(savedAvatar, false);
+
+  showPage('raidSetupPage');
+  appState.page = 'raidSetup';
+
+  if (initialCode) {
+    connectToRaidCode(initialCode);
+  }
+}
+
+function connectRaidFromInput() {
+  const codeInput = document.getElementById('raidCodeInput');
+  const code = (codeInput && codeInput.value) ? codeInput.value.trim() : '';
+  connectToRaidCode(code);
+}
+
+function updateRaidConnBadge(status, text) {
+  const statusEl = document.getElementById('raidConnStatus');
+  const msgEl = document.getElementById('raidConnMsg');
+  const homeBadge = document.getElementById('homeRaidBadge');
+  const playBadge = document.getElementById('raidPlayConnBadge');
+  const preview = document.getElementById('raidBossPreview');
+
+  if (statusEl) {
+    statusEl.title = text;
+    statusEl.textContent = status === 'connected' ? '🟢' : (status === 'error' ? '🔴' : '⚪');
+  }
+  if (msgEl) msgEl.textContent = text;
+  if (homeBadge) {
+    if (status === 'connected') {
+      homeBadge.textContent = `🟢 接続中: ${appState.raidBossName || 'ボス'}`;
+      homeBadge.style.color = '#16a34a';
+    } else {
+      homeBadge.textContent = '⚪ コードを入力して出撃';
+      homeBadge.style.color = '#dc2626';
+    }
+  }
+  if (playBadge) {
+    playBadge.textContent = status === 'connected' ? '🟢 接続中' : '🔴 切断';
+    playBadge.style.color = status === 'connected' ? '#86efac' : '#fca5a5';
+  }
+  if (preview) {
+    preview.style.display = status === 'connected' ? 'block' : 'none';
+  }
+}
+
+function connectToRaidCode(code) {
+  initRaidFirebase();
+  if (!raidDb) {
+    updateRaidConnBadge('error', 'Firebaseが利用できません（オフライン演習のみ可能です）');
+    return;
+  }
+
+  const cleanCode = code.trim().toUpperCase();
+  if (!cleanCode) {
+    appState.raidCode = '';
+    if (raidRoomRef && raidRoomListener) {
+      raidRoomRef.off('value', raidRoomListener);
+    }
+    raidRoomRef = null;
+    updateRaidConnBadge('none', '4桁のレイドコードを入力してください');
+    return;
+  }
+
+  appState.raidCode = cleanCode;
+  localStorage.setItem('raid_boss_student_code', cleanCode);
+
+  if (raidRoomRef && raidRoomListener) {
+    raidRoomRef.off('value', raidRoomListener);
+  }
+
+  updateRaidConnBadge('none', `ルーム ${cleanCode} に接続中…`);
+
+  raidRoomRef = raidDb.ref(`rooms/${cleanCode}`);
+  raidRoomListener = snapshot => {
+    const data = snapshot.val();
+    const now = Date.now();
+
+    if (!data || !data.boss || (data.expiresAt && data.expiresAt < now)) {
+      updateRaidConnBadge('error', 'レイドコードが見つからないか、期限切れです');
+      return;
+    }
+
+    appState.raidBossName = data.boss.name || 'ボス';
+    appState.raidBossMaxHp = data.boss.maxHp || 1000;
+    appState.raidBossCurrentHp = Math.max(0, data.boss.currentHp ?? data.boss.maxHp ?? 0);
+
+    updateRaidConnBadge('connected', `接続中: ルーム ${cleanCode}`);
+
+    // 設定画面プレビュー更新
+    const prevName = document.getElementById('raidPreviewName');
+    const prevHp = document.getElementById('raidPreviewHp');
+    const prevBar = document.getElementById('raidPreviewHpBar');
+    if (prevName) prevName.textContent = `👹 ${appState.raidBossName}`;
+    if (prevHp) prevHp.textContent = `HP: ${appState.raidBossCurrentHp} / ${appState.raidBossMaxHp}`;
+    if (prevBar) {
+      const pct = Math.max(0, Math.min(100, (appState.raidBossCurrentHp / appState.raidBossMaxHp) * 100));
+      prevBar.style.width = `${pct}%`;
+    }
+
+    // プレイ画面ヘッダー更新
+    const playName = document.getElementById('raidPlayBossName');
+    const playHpText = document.getElementById('raidPlayHpText');
+    const playHpFill = document.getElementById('raidPlayHpFill');
+    if (playName) playName.textContent = appState.raidBossName;
+    if (playHpText) playHpText.textContent = `HP: ${appState.raidBossCurrentHp} / ${appState.raidBossMaxHp}`;
+    if (playHpFill) {
+      const pct = Math.max(0, Math.min(100, (appState.raidBossCurrentHp / appState.raidBossMaxHp) * 100));
+      playHpFill.style.width = `${pct}%`;
+    }
+
+    // ボス撃破検知
+    if (appState.raidActive && appState.raidBossCurrentHp <= 0 && !appState.raidBossDefeated) {
+      appState.raidBossDefeated = true;
+      showRaidDefeatModal();
+    }
+  };
+
+  raidRoomRef.on('value', raidRoomListener);
+}
+
+function selectRaidAvatar(avatar, save=true) {
+  appState.raidAvatar = avatar;
+  if (save) localStorage.setItem('raid_boss_student_avatar', avatar);
+  const btns = document.querySelectorAll('#raidAvatarList .avatarBtn');
+  btns.forEach(btn => {
+    btn.classList.toggle('selected', btn.textContent.trim() === avatar);
+  });
+}
+
+function selectRaidDifficulty(diff) {
+  appState.raidDifficulty = diff;
+  const btns = document.querySelectorAll('.raidDifficultyGrid .raidDiffBtn');
+  btns.forEach(btn => {
+    btn.classList.toggle('selected', btn.getAttribute('data-diff') === diff);
+  });
+}
+
+function startRaidBattle() {
+  const nameInput = document.getElementById('raidStudentNameInput');
+  const name = (nameInput && nameInput.value.trim()) ? nameInput.value.trim() : 'ななし';
+  appState.raidStudentName = name;
+  localStorage.setItem('raid_boss_student_name', name);
+
+  appState.raidActive = true;
+  appState.mode = "attack";
+  appState.attackActive = true;
+  appState.attackIndex = 0;
+  appState.attackCorrect = 0;
+  appState.attackMiss = 0;
+  appState.raidStreak = 0;
+  appState.raidMaxStreak = 0;
+  appState.raidTotalDamage = 0;
+  appState.raidQuestionsSolved = 0;
+  appState.raidBossDefeated = false;
+  appState.attackQuestionCount = 99999;
+
+  // レイド専用ヘッダーを表示
+  const raidHdr = document.getElementById('raidPlayHeader');
+  if (raidHdr) raidHdr.style.display = 'flex';
+
+  updateRaidPlayHeader();
+  hideRaidModals();
+
+  // ヒント設定リセット
+  uiState.arrow = false;
+  uiState.target = false;
+  uiState.correctness = false;
+  uiState.text = false;
+  uiState.superHint = false;
+  updateToggleButtons();
+
+  showPage('attackPlayPage');
+  nextRaidQuestion();
+}
+
+function updateRaidPlayHeader() {
+  const streakEl = document.getElementById('raidStreakCount');
+  const multEl = document.getElementById('raidMultiplierBadge');
+  const dmgEl = document.getElementById('raidTotalDamageText');
+
+  if (streakEl) streakEl.textContent = String(appState.raidStreak);
+  if (multEl) {
+    if (appState.raidStreak >= 5) {
+      multEl.textContent = 'x3 CRITICAL!!';
+      multEl.style.background = '#ef4444';
+      multEl.style.color = '#ffffff';
+    } else if (appState.raidStreak >= 3) {
+      multEl.textContent = 'x2 CRITICAL!';
+      multEl.style.background = '#f59e0b';
+      multEl.style.color = '#ffffff';
+    } else {
+      multEl.textContent = 'x1';
+      multEl.style.background = 'rgba(239,68,68,0.2)';
+      multEl.style.color = '#fca5a5';
+    }
+  }
+  if (dmgEl) dmgEl.textContent = String(appState.raidTotalDamage);
+}
+
+function nextRaidQuestion() {
+  if (!appState.raidActive) return;
+
+  const diff = appState.raidDifficulty || 'beginner';
+  let topLen = 2, bottomLen = 1;
+  let baseDamage = 10;
+
+  if (diff === 'beginner') {
+    topLen = 2; bottomLen = 1; baseDamage = 10;
+  } else if (diff === 'intermediate') {
+    topLen = 3; bottomLen = 1; baseDamage = 15;
+  } else if (diff === 'advanced') {
+    topLen = 2; bottomLen = 2; baseDamage = 25;
+  } else if (diff === 'expert') {
+    topLen = 3; bottomLen = 2; baseDamage = 40;
+  } else if (diff === 'master') {
+    topLen = 3; bottomLen = 3; baseDamage = 60;
+  }
+
+  const decimalEnabled = document.getElementById('raidDecimalCheckbox')?.checked || false;
+  const noCarry = document.getElementById('raidNoCarryCheckbox')?.checked || false;
+
+  if (decimalEnabled) baseDamage += 5;
+  appState.raidCurrentBaseDamage = baseDamage;
+
+  let top, bottom, topDp = 0, bottomDp = 0;
+  let tries = 0;
+  do {
+    top = generateNumber(topLen);
+    bottom = generateNumber(bottomLen);
+    if (decimalEnabled) {
+      topDp = Math.random() < 0.5 ? 1 : 0;
+      bottomDp = (topDp === 0 && Math.random() < 0.5) ? 1 : 0;
+    }
+    tries++;
+    if (tries > 500) break;
+  } while (noCarry && bottomLen === 1 && !isRaidQuestionNoCarry(top, bottom));
+
+  appState.attackQuestions = [{ top, bottom, topDp, bottomDp }];
+  appState.attackIndex = 0;
+  appState.attackPatternKey = `raid_${diff}`;
+
+  nextAttackQuestion(true);
+  if (typeof window.__fitActiveBoard === 'function') {
+    window.__fitActiveBoard(true);
+  }
+  updateAttackManualMode();
+}
+
+function isRaidQuestionNoCarry(top, bottom) {
+  const topDigits = String(top).split('').map(Number);
+  const b = Number(bottom);
+  for (let digit of topDigits) {
+    if (digit * b >= 10) return false;
+  }
+  return true;
+}
+
+function handleRaidAnswerCorrect() {
+  if (!appState.raidActive) return;
+
+  appState.raidQuestionsSolved++;
+  appState.raidStreak++;
+  if (appState.raidStreak > appState.raidMaxStreak) {
+    appState.raidMaxStreak = appState.raidStreak;
+  }
+
+  // ダメージ計算
+  let mult = 1;
+  let isCrit = false;
+  if (appState.raidStreak >= 5) {
+    mult = 3; isCrit = true;
+  } else if (appState.raidStreak >= 3) {
+    mult = 2; isCrit = true;
+  }
+
+  const finalDamage = (appState.raidCurrentBaseDamage || 10) * mult;
+  appState.raidTotalDamage += finalDamage;
+
+  // Firebase へ送信
+  const q = appState.attackQuestions[0];
+  const qText = q ? `${q.top}×${q.bottom}` : '筆算';
+  sendRaidAttack(finalDamage, `${qText} を正解！`);
+
+  // ポップアップ演出
+  showRaidDamagePopup(finalDamage, isCrit, mult);
+  updateRaidPlayHeader();
+  playQuestionClearSound();
+
+  const resEl = document.getElementById("attackResult");
+  if (resEl) {
+    resEl.innerHTML = isCrit ? `🔥 クリティカル！ ${finalDamage} ダメージ！` : `💥 正解！ ${finalDamage} ダメージ！`;
+  }
+
+  // 650ms後に自動で次の問題へ
+  setTimeout(() => {
+    if (!appState.raidActive) return;
+    if (appState.raidBossDefeated) return;
+    nextRaidQuestion();
+  }, 650);
+}
+
+function handleRaidAnswerMiss() {
+  if (!appState.raidActive) return;
+  appState.raidStreak = 0;
+  updateRaidPlayHeader();
+}
+
+function sendRaidAttack(damage, detail) {
+  if (!raidDb || !raidRoomRef || !appState.raidCode) {
+    console.log("レイドルーム未接続のためローカルのみ演習:", damage, detail);
+    return;
+  }
+
+  const name = appState.raidStudentName || 'ななし';
+  const avatar = appState.raidAvatar || '⚔️';
+
+  // HP減算トランザクション
+  raidRoomRef.child('boss/currentHp').transaction(cur => {
+    return Math.max(0, (cur || 0) - damage);
+  });
+
+  // ログ送信
+  raidRoomRef.child('logs').push({
+    avatar: avatar,
+    name: name,
+    damage: damage,
+    detail: detail,
+    timestamp: Date.now()
+  });
+}
+
+function showRaidDamagePopup(damage, isCrit, mult) {
+  const popup = document.getElementById('raidDamagePopup');
+  if (!popup) return;
+  popup.textContent = isCrit ? `🔥 CRITICAL! -${damage} DMG! (x${mult})` : `💥 -${damage} DMG!`;
+  popup.style.color = isCrit ? '#f59e0b' : '#ef4444';
+  popup.classList.add('show');
+  setTimeout(() => {
+    popup.classList.remove('show');
+  }, 700);
+}
+
+function showRaidDefeatModal() {
+  const modal = document.getElementById('raidDefeatModal');
+  const qEl = document.getElementById('raidModalQuestions');
+  const dEl = document.getElementById('raidModalDamage');
+  const sEl = document.getElementById('raidModalMaxStreak');
+
+  if (qEl) qEl.textContent = `${appState.raidQuestionsSolved}問`;
+  if (dEl) dEl.textContent = `${appState.raidTotalDamage} DMG`;
+  if (sEl) sEl.textContent = `${appState.raidMaxStreak}回`;
+  if (modal) modal.style.display = 'flex';
+}
+
+function hideRaidModals() {
+  const modal = document.getElementById('raidDefeatModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function repeatRaidBattle() {
+  hideRaidModals();
+  startRaidBattle();
+}
+
 function openHome(){
+  appState.raidActive = false;
+  const raidHdr = document.getElementById('raidPlayHeader');
+  if (raidHdr) raidHdr.style.display = 'none';
+  hideRaidModals();
   stopAttackTimer();
   clearPracticeWorkspace();
   clearAttackWorkspace();
@@ -6619,6 +7482,10 @@ function updateAttackTimer(){
 
 function finishAttackQuestion(){
   if(!appState.attackActive) return;
+  if(appState.raidActive){
+    handleRaidAnswerCorrect();
+    return;
+  }
   appState.attackCorrect++;
   if(typeof window.__getBoardScale === 'function'){
     appState.attackPendingScale = window.__getBoardScale('attack');
@@ -6655,6 +7522,7 @@ function evaluateAttackAnswer(){
     if(appState.attackQuestionState !== "wrong"){
       appState.attackQuestionState = "wrong";
       appState.attackMiss++;
+      if(appState.raidActive) handleRaidAnswerMiss();
       updateAttackStats();
     }
     document.getElementById("attackResult").innerHTML = "小数点を合わせよう";
@@ -6664,6 +7532,10 @@ function evaluateAttackAnswer(){
 
   const ok = digitsOk && decimalOk;
   if(ok){
+    if(appState.raidActive){
+      handleRaidAnswerCorrect();
+      return;
+    }
     if(appState.attackQuestionState === "wrong"){
       document.getElementById("attackResult").innerHTML = "正解ですが、記録は不正解のままです。";
       setAttackAnswerBarState("correctAfterWrong");
@@ -6688,6 +7560,7 @@ function evaluateAttackAnswer(){
     if(appState.attackQuestionState !== "wrong"){
       appState.attackQuestionState = "wrong";
       appState.attackMiss++;
+      if(appState.raidActive) handleRaidAnswerMiss();
       updateAttackStats();
     }
     document.getElementById("attackResult").innerHTML = "不正解。もう一度考えるか、次へ進めます。";
@@ -6990,6 +7863,16 @@ document.addEventListener("DOMContentLoaded", ()=>{
   }, { passive:true });
   if(appState.inputMode === "handwriting"){
     ensureHandwritingModel().catch(()=>{});
+  }
+  // レイドボス初期化
+  initRaidFirebase();
+  const urlParams = new URLSearchParams(window.location.search);
+  const codeParam = urlParams.get('code');
+  if(codeParam && codeParam.trim()){
+    connectToRaidCode(codeParam.trim());
+  } else {
+    const savedCode = localStorage.getItem('raid_boss_student_code');
+    if(savedCode) connectToRaidCode(savedCode);
   }
 });
 </script>
