@@ -5271,7 +5271,8 @@ function handleRaidAnswerCorrect() {
   // Firebase へ送信
   const q = appState.attackQuestions[0];
   const qText = q ? `${q.top}×${q.bottom}` : '筆算';
-  sendRaidAttack(finalDamage, `${qText} を正解！`);
+  const detailText = isCrit ? `${qText} を正解！（${mult}倍）` : `${qText} を正解！`;
+  sendRaidAttack(finalDamage, detailText);
 
   // ポップアップ演出
   showRaidDamagePopup(finalDamage, isCrit, mult);
