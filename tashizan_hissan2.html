@@ -175,6 +175,9 @@ body {
 
 /* ===== PRACTICE PAGE - 16:9 fixed layout (No left rail, expanded center) ===== */
 #practicePage {
+  /* 筆算マスの大きさ：画面の高さ・幅に合わせて自動で最大化（4桁＋符号でも収まる） */
+  --cell-h: clamp(56px, min(18vh, calc((100vw - 230px) / 5.4)), 170px);
+  --cell-w: calc(var(--cell-h) * 1.15);
   position: fixed;
   inset: 0;
   display: grid;
@@ -240,24 +243,6 @@ body {
 .typeSelect:focus {
   border-color: var(--primary);
 }
-
-.headerNextBtn {
-  padding: 5px 12px;
-  font-size: 12px;
-  font-weight: 800;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #2b7cff, #1e55cc);
-  color: white;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(43,124,255,.3);
-  font-family: 'Noto Sans JP', sans-serif;
-  white-space: nowrap;
-  transition: all .12s;
-}
-
-.headerNextBtn:hover { transform: translateY(-1px); }
-.headerNextBtn:active { transform: translateY(0); }
 
 .headerRight {
   display: flex;
@@ -477,20 +462,20 @@ body {
 }
 
 #calcTable td {
-  width: 76px;
-  height: 68px;
+  width: var(--cell-w);
+  height: var(--cell-h);
   border: 2px solid #888;
   position: relative;
   background: white;
   vertical-align: middle;
   text-align: right;
-  padding-right: 14px;
+  padding-right: calc(var(--cell-h) * 0.2);
   box-sizing: border-box;
 }
 
 /* 繰り上がり行：足される数の上！ */
 #calcTable tr.carry-row td {
-  height: 38px;
+  height: calc(var(--cell-h) * 0.6);
   border: none !important;
   background: transparent !important;
   text-align: center;
@@ -499,8 +484,8 @@ body {
 }
 
 .carryBox {
-  width: 28px;
-  height: 28px;
+  width: calc(var(--cell-h) * 0.46);
+  height: calc(var(--cell-h) * 0.46);
   margin: 0 auto;
   border: 1.5px dashed #94a3b8;
   background: #fffde7;
@@ -527,7 +512,7 @@ body {
   outline: none;
   background: transparent;
   text-align: center;
-  font-size: 15px;
+  font-size: calc(var(--cell-h) * 0.3);
   font-weight: 900;
   color: #b45309;
   font-family: 'Noto Sans JP', sans-serif;
@@ -540,7 +525,7 @@ body.handwritingMode .carryBox {
 }
 
 .num-cell {
-  font-size: 42px;
+  font-size: calc(var(--cell-h) * 0.7);
   font-weight: 900;
   color: var(--ink);
   line-height: 1;
@@ -549,12 +534,12 @@ body.handwritingMode .carryBox {
 .sign-cell {
   border: none !important;
   background: transparent !important;
-  font-size: 38px;
+  font-size: calc(var(--cell-h) * 0.6);
   font-weight: 900;
   color: var(--accent);
   text-align: center;
   padding: 0 !important;
-  width: 50px !important;
+  width: calc(var(--cell-h) * 0.7) !important;
 }
 
 /* 空白マス（先頭の桁がない部分） */
@@ -593,9 +578,9 @@ body.handwritingMode .carryBox {
   border: none;
   outline: none;
   background: transparent;
-  font-size: 38px;
+  font-size: calc(var(--cell-h) * 0.68);
   text-align: right;
-  padding-right: 12px;
+  padding-right: calc(var(--cell-h) * 0.18);
   box-sizing: border-box;
   font-family: 'Noto Sans JP', sans-serif;
   font-weight: 900;
@@ -611,7 +596,7 @@ body.handwritingMode .carryBox {
   border: none;
   outline: none;
   background: transparent;
-  font-size: 14px;
+  font-size: calc(var(--cell-h) * 0.3);
   font-weight: 900;
   text-align: center;
   font-family: 'Noto Sans JP', sans-serif;
@@ -626,7 +611,7 @@ body.handwritingMode .carryBox {
   display: none;
   align-items: center;
   justify-content: center;
-  font-size: 34px;
+  font-size: calc(var(--cell-h) * 0.5);
   font-weight: 800;
   color: rgba(107,114,128,.18);
   pointer-events: none;
@@ -663,7 +648,7 @@ td.hasValue .ghostDigit { display: none !important; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 34px;
+  font-size: calc(var(--cell-h) * 0.62);
   font-weight: 800;
   color: rgba(43,124,255,.65);
   pointer-events: none;
@@ -678,7 +663,7 @@ td.hasValue .ghostDigit { display: none !important; }
   color: var(--accent);
 }
 .ans-cell .handValue {
-  font-size: 34px;
+  font-size: calc(var(--cell-h) * 0.62);
   font-weight: 900;
   color: #1e40af;
 }
@@ -815,7 +800,7 @@ td.hasValue .ghostDigit { display: none !important; }
   border: 1.5px solid #d0d8e8;
   border-radius: 10px;
   background: white;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 800;
   cursor: pointer;
   font-family: 'Noto Sans JP', sans-serif;
@@ -847,6 +832,8 @@ td.hasValue .ghostDigit { display: none !important; }
 .railActionBtn.secondary { background: #e8edf4; color: var(--ink); }
 .railActionBtn.secondary:hover { background: #d5dce8; }
 .railActionBtn.danger { background: var(--accent); }
+.railActionBtn.next { background: var(--green); }
+.railActionBtn.next:hover { background: #2e7d32; }
 
 /* Correct animation */
 @keyframes correctBounce {
@@ -1158,13 +1145,13 @@ td.hasValue .ghostDigit { display: none !important; }
 
 @media (max-width: 900px) {
   #practicePage {
-    grid-template-columns: 110px 1fr 140px;
+    grid-template-columns: 1fr 150px;
   }
 }
 
 @media (max-width: 600px) {
   #practicePage {
-    grid-template-columns: 0 1fr 130px;
+    grid-template-columns: 1fr 130px;
   }
   #leftRail { display: none; }
 }
@@ -1226,8 +1213,7 @@ td.hasValue .ghostDigit { display: none !important; }
   <div class="settingsCard">
     <h3>✍️ こたえかた</h3>
     <div class="modeButtons">
-      <button class="modeBtn active" data-mode="keyboard" onclick="selectMode(this)">⌨️ キーボード</button>
-      <button class="modeBtn" data-mode="numpad" onclick="selectMode(this)">🔢 電卓ボタン</button>
+      <button class="modeBtn active" data-mode="keyboard" onclick="selectMode(this)">⌨️🔢 キーボード・電卓</button>
       <button class="modeBtn" data-mode="handwriting" onclick="selectMode(this)">✍️ 手書き</button>
     </div>
     <div id="modelStatus" class="modelBadge warn" style="margin-top:10px;display:inline-block">
@@ -1263,14 +1249,12 @@ td.hasValue .ghostDigit { display: none !important; }
         <option value="2">くり上がり：2回</option>
         <option value="all">くり上がり：ぜんぶ</option>
       </select>
-      <button class="headerNextBtn" onclick="nextProblemByType()">つぎの問題 🎲</button>
     </div>
 
     <!-- モード切替・レイド・設定 -->
     <div class="headerRight">
       <div class="modeToggleGroup">
-        <button class="headerModeBtn active" data-mode="keyboard" onclick="switchInputMode('keyboard')" title="キーボード入力">⌨️ キーボード</button>
-        <button class="headerModeBtn" data-mode="numpad" onclick="switchInputMode('numpad')" title="電卓ボタン入力">🔢 電卓</button>
+        <button class="headerModeBtn active" data-mode="keyboard" onclick="switchInputMode('keyboard')" title="キーボードでも電卓ボタンでも入力できます">⌨️🔢 キーボード・電卓</button>
         <button class="headerModeBtn" data-mode="handwriting" onclick="switchInputMode('handwriting')" title="手書き認識入力">✍️ 手書き</button>
       </div>
       <button class="headerRaidBtn" onclick="showPage('raidPage')">👾 レイドボス</button>
@@ -1309,7 +1293,7 @@ td.hasValue .ghostDigit { display: none !important; }
       </div>
     </div>
 
-    <!-- Numpad (shown when mode=numpad) -->
+    <!-- Numpad (キーボード・電卓モードのとき表示。キーボード入力と併用できる) -->
     <div class="railSection" id="numpadSection" style="display:none">
       <div class="railSectionTitle">🔢 でんたく</div>
       <div class="railSectionBody">
@@ -1335,7 +1319,7 @@ td.hasValue .ghostDigit { display: none !important; }
       <div class="railSectionTitle">🎮 アクション</div>
       <div class="railSectionBody" style="display:flex;flex-direction:column;gap:6px">
         <button class="railActionBtn" onclick="checkAnswer()">✓ こたえをかくにん</button>
-        <button class="railActionBtn secondary" onclick="nextProblem()">つぎへ ▶</button>
+        <button class="railActionBtn next" onclick="nextProblemByType()">つぎの問題 🎲</button>
         <button class="railActionBtn danger" onclick="clearAllInputs()">🗑️ マスクリア</button>
       </div>
     </div>
@@ -1520,6 +1504,7 @@ function loadSettings() {
     const s = JSON.parse(localStorage.getItem('tashizan2_settings') || 'null');
     if (s) {
       Object.assign(settings, s);
+      if (settings.inputMode === 'numpad') settings.inputMode = 'keyboard'; // 電卓はキーボードモードに統合
       // Sync UI
       if (document.getElementById('digitsA')) {
         document.getElementById('digitsA').value     = settings.digitsA;
@@ -1652,6 +1637,8 @@ function onProblemTypeChange() {
 function nextProblemByType() {
   currentProblem = generateProblemByType();
   problemIndex++;
+  focusedCell = null;
+  clearAuxOverlay(); // 補助計算メモは次の問題で自動的に全消去
   clearAllInputs();
   buildGrid(currentProblem);
   updateHeader();
@@ -1734,7 +1721,7 @@ function buildGrid(problem) {
         cInp.className = 'carry-input';
         cInp.dataset.pos = pos;
         cInp.dataset.cellType = 'carry';
-        cInp.inputMode = 'numeric';
+        cInp.inputMode = 'none'; // 画面キーボードは出さない（物理キーボードと電卓ボタンの両方で入力可）
         cInp.addEventListener('focus', () => { focusedCell = cInp; });
         cInp.addEventListener('input', e => {
           const v = e.target.value.replace(/[^0-9]/g, '');
@@ -1745,13 +1732,6 @@ function buildGrid(problem) {
           if (e.key === 'Enter') checkAnswer();
         });
         carryBox.appendChild(cInp);
-      } else if (settings.inputMode === 'numpad') {
-        carryBox.tabIndex = 0;
-        carryBox.addEventListener('click', () => {
-          focusedCell = carryBox;
-          document.querySelectorAll('.ans-cell, .carryBox').forEach(el => el.style.outline = '');
-          carryBox.style.outline = '2px solid var(--accent)';
-        });
       }
       // 手書きモードのときは CSS (body.handwritingMode .carryBox { display: none !important; }) で非表示になり、
       // 余白（高さ38px）がそのまま保たれるため足される数の上に直接手書きペンで書ける！
@@ -1835,7 +1815,7 @@ function buildGrid(problem) {
       inp.className = 'mainInput';
       inp.dataset.cellType = 'answer';
       inp.dataset.pos = pos;
-      inp.inputMode = 'numeric';
+      inp.inputMode = 'none'; // 画面キーボードは出さない（物理キーボードと電卓ボタンの両方で入力可）
       inp.setAttribute('autocomplete', 'off');
       inp.addEventListener('focus', () => {
         focusedCell = inp;
@@ -1851,13 +1831,6 @@ function buildGrid(problem) {
         if (e.key === 'Backspace' && !e.target.value) autoRetreat(inp);
       });
       td.appendChild(inp);
-    } else if (settings.inputMode === 'numpad') {
-      td.tabIndex = 0;
-      td.addEventListener('click', () => {
-        focusedCell = td;
-        document.querySelectorAll('.ans-cell, .carryBox').forEach(el => el.style.outline = '');
-        td.style.outline = '2.5px solid var(--primary)';
-      });
     } else {
       // Handwriting
       initHandCell(td, `ans-${pos}`, false);
@@ -1870,9 +1843,7 @@ function buildGrid(problem) {
     if (onesCell) {
       if (settings.inputMode === 'keyboard') {
         const inp = onesCell.querySelector('.mainInput');
-        if (inp) inp.focus();
-      } else if (settings.inputMode === 'numpad') {
-        onesCell.click();
+        if (inp) { focusedCell = inp; inp.focus(); }
       }
     }
   }, 80);
@@ -1901,70 +1872,32 @@ function autoRetreat(inp) {
   if (idx < inputs.length - 1) inputs[idx + 1].focus();
 }
 
-// ===== Numpad =====
+// ===== Numpad（電卓ボタン）：キーボードと同じ入力マスに入力する =====
 function numpadInput(digit) {
-  if (!focusedCell) return;
-  if (focusedCell.tagName === 'INPUT') {
-    focusedCell.value = String(digit);
-    const box = focusedCell.closest('.carryBox') || focusedCell.closest('td');
-    if (box) box.classList.add('hasValue');
-    if (focusedCell.classList.contains('mainInput')) {
-      autoAdvance(focusedCell);
-    }
-  } else if (focusedCell.classList && focusedCell.classList.contains('carryBox')) {
-    focusedCell.dataset.value = String(digit);
-    let span = focusedCell.querySelector('.numpadDisplay');
-    if (!span) {
-      span = document.createElement('span');
-      span.className = 'numpadDisplay';
-      span.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--accent);z-index:2;pointer-events:none;';
-      focusedCell.appendChild(span);
-    }
-    span.textContent = digit;
-    focusedCell.classList.add('hasValue');
+  if (!focusedCell || focusedCell.tagName !== 'INPUT' || !focusedCell.isConnected) return;
+  focusedCell.value = String(digit);
+  const box = focusedCell.closest('.carryBox') || focusedCell.closest('td');
+  if (box) box.classList.add('hasValue');
+  if (focusedCell.classList.contains('mainInput')) {
+    autoAdvance(focusedCell);
   } else {
-    // TD element (ans-cell in numpad mode)
-    focusedCell.dataset.value = String(digit);
-    let span = focusedCell.querySelector('.numpadDisplay');
-    if (!span) {
-      span = document.createElement('span');
-      span.className = 'numpadDisplay';
-      span.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:900;color:var(--primary);z-index:2;pointer-events:none;';
-      focusedCell.appendChild(span);
-    }
-    span.textContent = digit;
-    focusedCell.classList.add('hasValue');
-    // Advance: 右から左（一の位→十の位→百の位）へ進む
-    const allAnsCells = [...document.querySelectorAll('.ans-cell')];
-    const idx = allAnsCells.indexOf(focusedCell);
-    if (idx > 0) {
-      setTimeout(() => allAnsCells[idx - 1].click(), 60);
-    }
+    focusedCell.focus();
   }
 }
 
 function numpadDelete() {
-  if (!focusedCell) return;
-  if (focusedCell.tagName === 'INPUT') {
-    focusedCell.value = '';
-    const box = focusedCell.closest('.carryBox') || focusedCell.closest('td');
-    if (box) box.classList.remove('hasValue');
-  } else if (focusedCell.classList && focusedCell.classList.contains('carryBox')) {
-    delete focusedCell.dataset.value;
-    const sp = focusedCell.querySelector('.numpadDisplay');
-    if (sp) sp.textContent = '';
-    focusedCell.classList.remove('hasValue');
-  } else {
-    delete focusedCell.dataset.value;
-    const sp = focusedCell.querySelector('.numpadDisplay');
-    if (sp) sp.textContent = '';
-    focusedCell.classList.remove('hasValue');
-    focusedCell.style.outline = '2.5px solid var(--primary)';
-    // Retreat: 右の桁に戻る
-    const allAnsCells = [...document.querySelectorAll('.ans-cell')];
-    const idx = allAnsCells.indexOf(focusedCell);
-    if (idx < allAnsCells.length - 1) setTimeout(() => allAnsCells[idx + 1].click(), 60);
+  if (!focusedCell || focusedCell.tagName !== 'INPUT' || !focusedCell.isConnected) return;
+  let target = focusedCell;
+  // 空のマスで消すときは、右のマスに戻ってそこを消す（キーボードのBackspaceと同じ感覚）
+  if (!target.value && target.classList.contains('mainInput')) {
+    const inputs = [...document.querySelectorAll('.mainInput')];
+    const idx = inputs.indexOf(target);
+    if (idx >= 0 && idx < inputs.length - 1) target = inputs[idx + 1];
   }
+  target.value = '';
+  const box = target.closest('.carryBox') || target.closest('td');
+  if (box) box.classList.remove('hasValue');
+  target.focus();
 }
 
 // ===== Clear inputs =====
@@ -2138,19 +2071,6 @@ function showErrorHint(types) {
   const { type } = types[0];
   const h = ERROR_HINTS[type] || ERROR_HINTS.general_wrong;
   updateHintBox(h.title, h.desc);
-}
-
-// ===== Next problem =====
-function nextProblem() {
-  problemIndex++;
-  if (problemIndex >= settings.problemCount) {
-    showResult();
-    return;
-  }
-  stepsCompleted = {};
-  currentStep = 'ones';
-  clearArrowSvg();
-  loadCurrentProblem();
 }
 
 // ===== Result page =====
@@ -2399,10 +2319,14 @@ function applyInputModeUI() {
   document.body.classList.remove('keyboardMode','numpadMode','handwritingMode');
   document.body.classList.add(mode + 'Mode');
 
+  // 電卓ボタンはキーボードモードで常に表示（手書きのときだけ非表示）
   const numpadSec = document.getElementById('numpadSection');
   if (numpadSec) {
-    numpadSec.style.display = (mode === 'numpad') ? '' : 'none';
+    numpadSec.style.display = (mode === 'keyboard') ? '' : 'none';
   }
+  document.querySelectorAll('.headerModeBtn, .modeBtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
 }
 
 // ===== TensorFlow.js MNIST GraphModel =====
