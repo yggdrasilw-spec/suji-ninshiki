@@ -1166,6 +1166,36 @@ td.hasValue .ghostDigit { display: none !important; }
 .pos-highlight-ones   { outline: 3px solid var(--accent) !important; outline-offset: 1px; z-index: 10; }
 .pos-highlight-tens   { outline: 3px solid var(--blue)   !important; outline-offset: 1px; z-index: 10; }
 .pos-highlight-hundreds { outline: 3px solid var(--purple) !important; outline-offset: 1px; z-index: 10; }
+
+/* ===== かいせつウィンドウ（tashizan_hissan.html を表示） ===== */
+.explainModal {
+  position: fixed; inset: 0; z-index: 20000;
+  background: rgba(15,23,42,.55);
+  display: none; align-items: center; justify-content: center;
+  padding: 2vh 2vw;
+}
+.explainModal.open { display: flex; }
+.explainWin {
+  display: flex; flex-direction: column;
+  width: min(96vw, 1200px); height: 94vh;
+  background: #fff; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+.explainBar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; background: linear-gradient(135deg,#4a9eff,#2d7dd2); color: #fff;
+  flex: none;
+}
+.explainTitle { font-size: 16px; font-weight: 900; letter-spacing: 1px; }
+.explainClose {
+  border: none; border-radius: 999px; padding: 7px 18px;
+  font-size: 14px; font-weight: 900; font-family: inherit;
+  background: #fff; color: #1e55cc; cursor: pointer;
+}
+.explainClose:hover { background: #e8f0ff; }
+.explainFrame { flex: 1; width: 100%; border: 0; background: #f5f0e8; }
+.railActionBtn.hint { background: #f59e0b; }
+.railActionBtn.hint:hover { background: #d98706; }
 </style>
 </head>
 <body>
@@ -1319,6 +1349,7 @@ td.hasValue .ghostDigit { display: none !important; }
       <div class="railSectionTitle">🎮 アクション</div>
       <div class="railSectionBody" style="display:flex;flex-direction:column;gap:6px">
         <button class="railActionBtn" onclick="checkAnswer()">✓ こたえをかくにん</button>
+        <button class="railActionBtn hint" onclick="openExplanation()">💡 ヒント（かいせつ）</button>
         <button class="railActionBtn next" onclick="nextProblemByType()">つぎの問題 🎲</button>
         <button class="railActionBtn danger" onclick="clearAllInputs()">🗑️ マスクリア</button>
       </div>
@@ -1423,6 +1454,17 @@ td.hasValue .ghostDigit { display: none !important; }
 
   <div style="text-align:center;margin-top:16px">
     <button class="resultBtn secondary" onclick="showPage('topPage')">← もどる</button>
+  </div>
+</div>
+
+<!-- ===== かいせつウィンドウ ===== -->
+<div id="explainModal" class="explainModal" aria-hidden="true">
+  <div class="explainWin" role="dialog" aria-label="かいせつ">
+    <div class="explainBar">
+      <span class="explainTitle" id="explainTitle">📖 かいせつ</span>
+      <button class="explainClose" onclick="closeExplanation()">✕ とじる</button>
+    </div>
+    <iframe id="explainFrame" class="explainFrame" title="かいせつ" src="about:blank"></iframe>
   </div>
 </div>
 
@@ -1995,7 +2037,51 @@ function checkAnswer() {
     const errTypes = analyzeErrors(errors);
     showErrorHint(errTypes);
     problemHistory.push({ problem: currentProblem, correct: false, errors: errTypes });
+    // 間違えたら、少し待ってから かいせつウィンドウを開く
+    const wrongProblem = currentProblem;
+    setTimeout(() => {
+      if (currentProblem === wrongProblem) openExplanation();
+    }, 900);
   }
+}
+
+// ===== かいせつウィンドウ（tashizan_hissan.html を問題の数字つきで表示） =====
+const EXPLAIN_URL = 'tashizan_hissan.html';
+
+function isExplanationOpen() {
+  const m = document.getElementById('explainModal');
+  return !!(m && m.classList.contains('open'));
+}
+
+function openExplanation() {
+  if (!currentProblem || isExplanationOpen()) return;
+  const { a, b } = currentProblem;
+  const modal = document.getElementById('explainModal');
+  const frame = document.getElementById('explainFrame');
+  document.getElementById('explainTitle').textContent = `📖 かいせつ　${a} ＋ ${b}`;
+  frame.onload = () => { try { frame.contentWindow.focus(); } catch (e) {} };
+  frame.src = `${EXPLAIN_URL}?a=${a}&b=${b}&embed=1`;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+
+// 解説ウィンドウ（iframe）内でEscが押されたときの通知を受けて閉じる
+window.addEventListener('message', e => {
+  const frame = document.getElementById('explainFrame');
+  if (frame && e.source === frame.contentWindow && e.data && e.data.type === 'closeExplanation') {
+    closeExplanation();
+  }
+});
+
+function closeExplanation() {
+  const modal = document.getElementById('explainModal');
+  const frame = document.getElementById('explainFrame');
+  try { frame.contentWindow.speechSynthesis.cancel(); } catch (e) {}
+  frame.onload = null;
+  frame.src = 'about:blank';
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
 }
 
 function getUserValue(td) {
@@ -3028,6 +3114,10 @@ function escHtml(str) {
 
 // ===== Keyboard shortcut: Enter on practice page =====
 document.addEventListener('keydown', e => {
+  if (isExplanationOpen()) {
+    if (e.key === 'Escape') closeExplanation();
+    return;
+  }
   const pp = document.getElementById('practicePage');
   if (!pp || !pp.classList.contains('active')) return;
   if (e.key === 'Enter') {

@@ -1,0 +1,2778 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>たし算の ひっ算</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-user-select:none;}
+html,body{height:100%;overflow:hidden;background:#f5f0e8;}
+body{font-family:'Noto Sans JP',sans-serif;}
+
+/* ===== 画面フィット用ステージ =====
+   数図表の大きさを先に守り、問題ごとに必要なときだけ設計幅を広げる。
+   2桁・3桁など表が小さい問題では従来タイルの設計サイズを維持し、
+   4桁や大きな数図表のときだけ表＋右パネルが収まる幅まで拡張する。
+   最後に #stage 全体を画面内へ収めるが、右パネルを広げるためだけに
+   数図表の最終表示倍率が下がらない範囲の「実際の余白」しか使わない。 */
+#stage-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  overflow:hidden;background:#f5f0e8;}
+#stage{width:1040px;flex:none;background:#f5f0e8;transform-origin:center center;opacity:0;}
+
+.app-header{background:linear-gradient(135deg,#4a9eff,#2d7dd2);color:#fff;text-align:center;
+  padding:10px 16px 8px;box-shadow:0 3px 10px rgba(0,0,0,.15);}
+.app-header h1{font-size:20px;font-weight:900;letter-spacing:2px;}
+
+.input-area{background:#fff;border-bottom:2px solid #ddd;padding:10px 12px;}
+.input-row{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;}
+.input-row label{font-size:13px;font-weight:bold;color:#555;}
+.num-input{width:72px;padding:6px 8px;font-size:18px;font-weight:bold;text-align:center;
+  border:2px solid #aaa;border-radius:8px;font-family:'Noto Sans JP',sans-serif;}
+.num-input:focus{border-color:#4a9eff;outline:none;}
+.plus-label{font-size:22px;font-weight:bold;color:#e67e22;}
+.gen-btn{padding:7px 20px;font-size:14px;font-weight:bold;border:none;border-radius:20px;
+  background:linear-gradient(135deg,#4a9eff,#2d7dd2);color:#fff;cursor:pointer;
+  font-family:'Noto Sans JP',sans-serif;box-shadow:0 2px 6px rgba(74,158,255,.3);transition:all .2s;}
+.gen-btn:hover{transform:translateY(-1px);box-shadow:0 4px 10px rgba(74,158,255,.4);}
+.err-msg{color:#e74c3c;font-size:12px;font-weight:bold;text-align:center;margin-top:4px;display:none;}
+
+.settings-open-btn{padding:7px 16px;font-size:14px;font-weight:bold;border:2px solid #cbd5e1;border-radius:20px;
+  background:#fff;color:#475569;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+  font-family:'Noto Sans JP',sans-serif;box-shadow:0 2px 5px rgba(0,0,0,.06);transition:all .2s;margin-left:8px;}
+.settings-open-btn:hover{background:#f1f5f9;border-color:#94a3b8;color:#1e293b;transform:translateY(-1px);}
+
+/* 設定モーダル */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:9999;opacity:0;transition:opacity .2s ease;}
+.modal-overlay.open{display:flex;opacity:1;}
+.modal-card{background:#fff;border-radius:20px;box-shadow:0 12px 36px rgba(0,0,0,.22);width:90%;max-width:540px;
+  overflow:hidden;transform:scale(.92);transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+  display:flex;flex-direction:column;}
+.modal-overlay.open .modal-card{transform:scale(1);}
+.modal-header{background:linear-gradient(135deg,#4a9eff,#2d7dd2);color:#fff;padding:14px 20px;display:flex;
+  align-items:center;justify-content:space-between;}
+.modal-header h2{font-size:17px;font-weight:900;letter-spacing:1px;display:flex;align-items:center;gap:8px;}
+.modal-close-btn{background:none;border:none;color:#fff;font-size:24px;line-height:1;cursor:pointer;
+  padding:2px 8px;border-radius:50%;transition:background .2s;display:flex;align-items:center;justify-content:center;}
+.modal-close-btn:hover{background:rgba(255,255,255,.2);}
+.modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:18px;max-height:80vh;overflow-y:auto;}
+.setting-section{display:flex;flex-direction:column;gap:8px;padding-bottom:14px;border-bottom:1px solid #edf2f7;}
+.setting-section:last-child{border-bottom:none;padding-bottom:0;}
+.setting-title{font-size:14px;font-weight:bold;color:#334155;display:flex;align-items:center;gap:6px;}
+.setting-desc{font-size:12px;color:#64748b;line-height:1.5;}
+.setting-options{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.setting-btn{padding:8px 16px;font-size:13px;font-weight:bold;border:2px solid #cbd5e1;
+  border-radius:12px;background:#fff;color:#475569;cursor:pointer;transition:all .18s;
+  font-family:'Noto Sans JP',sans-serif;display:inline-flex;align-items:center;gap:6px;}
+.setting-btn.active{background:#3b82f6;color:#fff;border-color:#2563eb;box-shadow:0 3px 8px rgba(59,130,246,.3);}
+.setting-btn:hover:not(.active){background:#f8fafc;border-color:#94a3b8;}
+
+.gap-setting-row{display:flex;align-items:center;gap:6px;margin-top:6px;padding:8px 12px;background:#f8fafc;border-radius:10px;}
+.gap-setting-label{font-size:12px;color:#64748b;font-weight:bold;}
+.gap-input{width:60px;padding:4px 8px;font-size:14px;font-weight:bold;text-align:center;
+  border:2px solid #cbd5e1;border-radius:8px;font-family:'Noto Sans JP',sans-serif;}
+.gap-input:focus{border-color:#3b82f6;outline:none;}
+
+/* ===== 数図表＋右パネルの可変レイアウト ===== */
+.main-area{display:flex;gap:12px;padding:12px 8px;width:100%;max-width:none;margin:0;
+  align-items:flex-start;justify-content:center;overflow:visible;}
+
+/* 数図ブロックは問題ごとに縦横同比率で拡大する。transformはレイアウト寸法を
+   変えないため、tile-slotが拡大後の実占有幅・高さを受け持つ。 */
+.tile-slot{flex:0 0 auto;position:relative;overflow:visible;}
+
+/* ===== タイル図エリア：<table>で列位置を保証 ===== */
+.tile-area{width:max-content;display:inline-flex;justify-content:center;align-items:flex-start;
+  background:#fff;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.08);
+  position:relative;overflow:visible;transform-origin:top left;}
+
+#tile-table{border-collapse:collapse;table-layout:fixed;border-radius:12px;overflow:hidden;}
+
+/* col要素は表示/非表示と幅をJSが一括設定する。
+   theadとtbodyが同じ<col>を共有するため、列のズレは構造的に発生しない。*/
+#tile-table col.col-label{width:28px;}
+#tile-table col.col-sen{width:110px;}
+#tile-table col.col-hyaku{width:124px;}
+#tile-table col.col-juu{width:124px;}
+#tile-table col.col-ichi{width:110px;}
+
+#tile-table thead th{
+  font-size:10px;font-weight:bold;padding:6px 0;height:30px;
+  box-sizing:border-box;border-bottom:2px solid #ddd;
+}
+#tile-table th.th-label{background:#fafafa;}
+#tile-table th.th-sen  {background:#ffffff;color:#555;   }
+#tile-table th.th-hyaku{background:#cce8f4;color:#1a5276;}
+#tile-table th.th-juu  {background:#fff9cc;color:#6b5700;}
+#tile-table th.th-ichi {background:#fce4ec;color:#880e4f;}
+
+#tile-table tbody td{
+  position:relative;text-align:center;vertical-align:middle;
+  box-sizing:border-box;height:110px;border-bottom:1px dashed #e0e0e0;
+}
+#tile-table tbody tr:last-child td{border-bottom:none;}
+#tile-table tbody tr.tile-result-row td{border-top:3px solid #444;height:120px;}
+
+#tile-table td.td-label{font-size:15px;font-weight:bold;color:#4a9eff;background:#fff;}
+#tile-table td.td-label.plus{color:#e67e22;}
+#tile-table td.td-label.equals{color:#27ae60;font-size:17px;}
+
+#tile-table td.td-sen  {background:#ffffff;}
+#tile-table td.td-hyaku{background:#e8f4fb;}
+#tile-table td.td-juu  {background:#fffde7;}
+#tile-table td.td-ichi {background:#fce4ec;}
+
+#tile-table th.th-sen,  #tile-table td.td-sen  {border-right:2px solid #999;}
+#tile-table th.th-hyaku,#tile-table td.td-hyaku{border-right:2px solid #85c1e9;}
+#tile-table th.th-juu,  #tile-table td.td-juu  {border-right:2px solid #f0d800;}
+
+#anim-layer{position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;overflow:visible;z-index:100;}
+#mark-layer{position:absolute;top:0;left:0;width:100%;height:100%;
+  pointer-events:none;overflow:visible;z-index:90;}
+
+/* ===== 筆算＋説明：問題全体で固定する可変ズーム =====
+   中身だけを拡大するが、outerの実レイアウト高も倍率に合わせて更新するため、
+   transformだけが見た目を大きくして親要素からはみ出す状態を作らない。 */
+.right-panel{flex:0 0 auto;width:auto;display:flex;flex-direction:column;gap:10px;min-width:0;}
+#hissan-scale-outer{position:relative;}
+#step-scale-outer{position:relative;}
+#step-scale-inner{width:230px;margin:0 auto;}
+.hissan-box{background:#fff;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.08);
+  padding:10px 14px 14px;overflow:visible;}
+.hissan-title{font-size:12px;font-weight:bold;color:#666;margin-bottom:4px;text-align:center;}
+.hissan-inner{display:flex;justify-content:center;align-items:flex-start;}
+#hissan-svg{display:block;}
+
+.step-box{background:#fff;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.08);
+  padding:14px 18px;min-height:100px;flex:none;overflow:visible;}
+.step-number{display:inline-block;background:#4a9eff;color:#fff;border-radius:50%;
+  width:26px;height:26px;line-height:26px;text-align:center;font-size:14px;
+  font-weight:bold;margin-right:6px;}
+.step-title{font-size:16px;font-weight:bold;color:#333;margin-bottom:10px;display:flex;align-items:center;}
+.step-desc{font-size:15px;color:#444;line-height:2;height:auto;overflow:visible;}
+.step-desc .ic{color:#c2185b;font-weight:bold;}
+.step-desc .jc{color:#b7950b;font-weight:bold;}
+.step-desc .hc{color:#1a5276;font-weight:bold;}
+.step-desc .sc{color:#555;font-weight:bold;}
+.step-desc .cc{color:#e74c3c;font-weight:bold;}
+.step-desc .ac{color:#1a7f37;font-weight:bold;}
+.step-desc .rc{color:#7f3fbf;font-weight:bold;}
+
+.nav-area{display:flex;justify-content:center;align-items:center;gap:12px;
+  padding:10px 12px;background:#fff;border-top:2px solid #eee;}
+.nav-btn{padding:10px 24px;font-size:15px;font-weight:bold;border:none;border-radius:25px;
+  cursor:pointer;transition:all .2s;font-family:'Noto Sans JP',sans-serif;
+  box-shadow:0 3px 8px rgba(0,0,0,.12);}
+.nav-btn.prev{background:#eee;color:#666;}
+.nav-btn.prev:hover{background:#ddd;}
+.nav-btn.next{background:linear-gradient(135deg,#4a9eff,#2d7dd2);color:#fff;}
+.nav-btn.next:hover{transform:translateY(-1px);box-shadow:0 5px 12px rgba(74,158,255,.35);}
+
+.voice-btn{font-size:22px;line-height:1;border:none;background:none;cursor:pointer;
+  padding:6px 10px;border-radius:50%;transition:all .2s;filter:none;opacity:1;}
+.voice-btn:hover{background:#f0f0f0;}
+.voice-btn.off{filter:grayscale(1);opacity:.45;}
+.nav-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.step-indicator{font-size:13px;color:#888;font-weight:bold;min-width:80px;text-align:center;}
+
+@keyframes popIn{
+  0%{opacity:0;transform:scale(.2);}
+  65%{opacity:1;transform:scale(1.2);}
+  100%{opacity:1;transform:scale(1);}
+}
+.pop-in{animation:popIn .4s cubic-bezier(.34,1.56,.64,1) forwards;}
+
+/* 別ウィンドウ（iframe）埋め込み時は入力欄・見出しを隠して解説だけ表示 */
+html.embed .app-header,html.embed .input-area{display:none !important;}
+</style>
+</head>
+<body>
+<div id="stage-wrap"><div id="stage">
+<div class="app-header"><h1>たし算の ひっ算</h1></div>
+
+<div class="input-area">
+  <div class="input-row">
+    <label>たされる数：</label>
+    <input type="number" id="inp-a" class="num-input" value="35" min="1" max="999">
+    <span class="plus-label">＋</span>
+    <label>たす数：</label>
+    <input type="number" id="inp-b" class="num-input" value="12" min="1" max="999">
+    <button class="gen-btn" onclick="generateFromInput()">説明生成 ▶</button>
+    <button class="settings-open-btn" onclick="openSettingsModal()" title="せっていをひらく">⚙ 設定</button>
+  </div>
+  <div id="err-msg" class="err-msg">1〜999の整数を入力してください</div>
+</div>
+
+<!-- 設定モーダルダイアログ -->
+<div id="settings-modal" class="modal-overlay" onclick="onModalOverlayClick(event)">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>⚙ 設定</h2>
+      <button class="modal-close-btn" onclick="closeSettingsModal()" title="とじる">×</button>
+    </div>
+    <div class="modal-body">
+      <!-- 補助計算の位置 -->
+      <div class="setting-section">
+        <div class="setting-title">✏️ くり上がりの位置（補助計算）</div>
+        <div class="setting-desc">繰り上がった「1」を書く位置と、ブロックの移動先・足す順序を選べます。</div>
+        <div class="setting-options">
+          <button class="setting-btn" id="carry-pos-top" onclick="setCarryPosMode('top')">
+            <span>上のマス（たす数の上）</span>
+          </button>
+          <button class="setting-btn" id="carry-pos-ans" onclick="setCarryPosMode('ans-sub')">
+            <span>直線の下（答えマスの右上・小さく）</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 図の表示 -->
+      <div class="setting-section">
+        <div class="setting-title">🟨 図のひょうじ</div>
+        <div class="setting-desc">数図の表示スタイルを選べます。</div>
+        <div class="setting-options">
+          <button class="setting-btn active" id="mode-btn-tile" onclick="setDisplayMode('tile')">🟨 タイル</button>
+          <button class="setting-btn" id="mode-btn-card" onclick="setDisplayMode('card')">🔢 カード</button>
+        </div>
+      </div>
+
+      <!-- 動くタイミング -->
+      <div class="setting-section">
+        <div class="setting-title">⏱️ うごくタイミング</div>
+        <div class="setting-desc">図と筆算のアニメーションの順序を設定します。</div>
+        <div class="setting-options">
+          <button class="setting-btn active" id="timing-btn-sync" onclick="setTimingMode('sync')">同時</button>
+          <button class="setting-btn" id="timing-btn-tile-first" onclick="setTimingMode('tile-first')">図 → 筆算</button>
+          <button class="setting-btn" id="timing-btn-hissan-first" onclick="setTimingMode('hissan-first')">筆算 → 図</button>
+        </div>
+        <div class="gap-setting-row" id="seq-gap-row" style="display:none;">
+          <span class="gap-setting-label">アニメーションの間（ま）：</span>
+          <input type="number" id="seq-gap-input" class="gap-input" value="0.4" min="0" max="5" step="0.1" onchange="setSeqGap(this.value)">
+          <span class="gap-setting-label">秒</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main-area">
+  <div class="tile-slot" id="tile-slot">
+  <div class="tile-area" id="tile-area">
+    <table id="tile-table">
+      <colgroup>
+        <col class="col-label">
+        <col class="col-sen"   id="colgrp-sen">
+        <col class="col-hyaku" id="colgrp-hyaku">
+        <col class="col-juu">
+        <col class="col-ichi">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="th-label"></th>
+          <th class="th-sen"   id="hdr-sen">せんのくらい</th>
+          <th class="th-hyaku" id="hdr-hyaku">ひゃくのくらい</th>
+          <th class="th-juu"   id="hdr-juu">じゅうのくらい</th>
+          <th class="th-ichi" id="hdr-ichi">いちのくらい</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- A行 -->
+        <tr id="row-a">
+          <td class="td-label" id="lbl-a"></td>
+          <td class="td-sen"   id="col-sen-a">  <svg id="svg-sen-a"   width="110" height="110" viewBox="0 0 110 110"></svg></td>
+          <td class="td-hyaku" id="col-hyaku-a"><svg id="svg-hyaku-a" width="124" height="110" viewBox="0 0 124 110"></svg></td>
+          <td class="td-juu">                   <svg id="svg-juu-a"   width="124" height="110" viewBox="0 0 124 110"></svg></td>
+          <td class="td-ichi">                  <svg id="svg-ichi-a"  width="110" height="110" viewBox="0 0 110 110"></svg></td>
+        </tr>
+        <!-- B行 -->
+        <tr id="row-b">
+          <td class="td-label plus">＋</td>
+          <td class="td-sen"   id="col-sen-b">  <svg id="svg-sen-b"   width="110" height="110" viewBox="0 0 110 110"></svg></td>
+          <td class="td-hyaku" id="col-hyaku-b"><svg id="svg-hyaku-b" width="124" height="110" viewBox="0 0 124 110"></svg></td>
+          <td class="td-juu">                   <svg id="svg-juu-b"   width="124" height="110" viewBox="0 0 124 110"></svg></td>
+          <td class="td-ichi">                  <svg id="svg-ichi-b"  width="110" height="110" viewBox="0 0 110 110"></svg></td>
+        </tr>
+        <!-- 答え行 -->
+        <tr class="tile-result-row" id="row-ans">
+          <td class="td-label equals">＝</td>
+          <td class="td-sen"   id="col-sen-ans">  <svg id="svg-sen-ans"   width="110" height="120" viewBox="0 0 110 120"></svg></td>
+          <td class="td-hyaku" id="col-hyaku-ans"><svg id="svg-hyaku-ans" width="124" height="120" viewBox="0 0 124 120"></svg></td>
+          <td class="td-juu">                                  <svg id="svg-juu-ans"   width="124" height="120" viewBox="0 0 124 120"></svg></td>
+          <td class="td-ichi">                                 <svg id="svg-ichi-ans"  width="110" height="120" viewBox="0 0 110 120"></svg></td>
+        </tr>
+      </tbody>
+    </table>
+    <svg id="mark-layer"></svg>
+    <svg id="anim-layer"></svg>
+  </div>
+  </div><!-- /#tile-slot -->
+
+  <div class="right-panel">
+    <div class="hissan-box">
+      <div class="hissan-title">ひっ算</div>
+      <div id="hissan-scale-outer">
+        <div class="hissan-inner">
+          <svg id="hissan-svg" width="210" height="230" viewBox="0 0 210 230"></svg>
+        </div>
+      </div>
+    </div>
+    <div class="step-box">
+      <div id="step-scale-outer">
+        <div id="step-scale-inner">
+          <div class="step-title">
+            <span class="step-number" id="step-num">1</span>
+            <span id="step-title-text"></span>
+          </div>
+          <div class="step-desc" id="step-desc"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="nav-area">
+  <button class="nav-btn prev" id="btn-prev" onclick="goStep(-1)">◀ もどる</button>
+  <span class="step-indicator" id="step-ind">1 / 1</span>
+  <button class="nav-btn next" id="btn-next" onclick="goStep(1)">すすむ ▶</button>
+  <button class="voice-btn" id="btn-voice" onclick="toggleVoice()" title="読み上げON/OFF">🔊</button>
+</div>
+
+</div></div><!-- /#stage /#stage-wrap -->
+
+<script>
+// ============================================================
+// SVG ユーティリティ
+// ============================================================
+const NS='http://www.w3.org/2000/svg';
+const U=7;
+const FC='#f5c542', SC='#c8960a', SC5='#7a5500';
+
+function mk(tag,a,parent){
+  const e=document.createElementNS(NS,tag);
+  for(const[k,v]of Object.entries(a))e.setAttribute(k,v);
+  if(parent)parent.appendChild(e);
+  return e;
+}
+function eio(t){return t<.5?2*t*t:-1+(4-2*t)*t;}
+
+// ===== 十の位：棒1本 =====
+function drawStick(parent,cx,cy,u,alpha,strokeColor){
+  alpha=alpha??1; u=u??U; strokeColor=strokeColor??SC;
+  const G=u*.15,S=u+G,H=10*u+9*G;
+  const ox=cx-u/2,oy=cy-H/2;
+  for(let i=0;i<10;i++)
+    mk('rect',{x:ox,y:oy+i*S,width:u,height:u,fill:FC,stroke:strokeColor,'stroke-width':.6,rx:.3,opacity:alpha},parent);
+  mk('line',{x1:ox-1,x2:ox+u+1,y1:oy+5*S-G/2,y2:oy+5*S-G/2,stroke:SC5,'stroke-width':1.2,opacity:alpha},parent);
+  mk('rect',{x:ox-1,y:oy-1,width:u+2,height:H+2,fill:'none',stroke:strokeColor,'stroke-width':.8,rx:1,opacity:alpha},parent);
+}
+
+// ===== タイル画像（PNG, Base64埋め込み）=====
+// 100の塊・1000の塊は格子を毎フレームSVGで描き直すと重いため、
+// 静止画(PNG)を<image>として1枚配置し、移動はtransformのみで行う。
+const IMG_HYAKU = "data:image/png;base64,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";
+const IMG_SEN = "data:image/png;base64,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";
+
+// ===== 百の位：正方形タイル1枚 =====
+// PNG画像を<image>1枚で配置（格子100個のSVG描画をやめて軽量化）。
+// くり上がりの強調表示(strokeColor指定時)は、画像の外周にreact枠を重ねて表現する。
+function drawHyakuScaled(parent,cx,cy,u,alpha,strokeColor){
+  alpha=alpha??1;
+  const G=u*.15,TW=10*u+9*G,TH=10*u+9*G;
+  const ox=cx-TW/2,oy=cy-TH/2;
+  mk('image',{href:IMG_HYAKU,x:ox,y:oy,width:TW,height:TH,opacity:alpha,
+    'preserveAspectRatio':'none'},parent);
+  if(strokeColor && strokeColor!==SC){
+    // くり上がり等の強調色が指定された場合のみ、外枠を重ねて目立たせる
+    mk('rect',{x:ox-1,y:oy-1,width:TW+2,height:TH+2,fill:'none',
+      stroke:strokeColor,'stroke-width':2,rx:3,opacity:alpha},parent);
+  }
+}
+
+// ===== 千の位：百タイル10枚重ねの束 =====
+// PNG画像(立体的な重なり・テープを描き込み済み)を<image>1枚で配置。
+function drawSenScaled(parent,cx,cy,u,alpha,strokeColor){
+  alpha=alpha??1;
+  // 画像自体に奥行き(重なり)が含まれているため、表示領域は正方形(10u分)より
+  // やや大きく取る必要がある。元のdrawSenScaledの見た目に合わせて1.34倍を確保。
+  const G=u*.15,baseSide=10*u+9*G;
+  const side=baseSide*1.34;
+  const ox=cx-side/2*0.94, oy=cy-side/2*1.06; // 画像内の重心が右下寄りなので微調整
+  mk('image',{href:IMG_SEN,x:ox,y:oy,width:side,height:side,opacity:alpha,
+    'preserveAspectRatio':'none'},parent);
+  if(strokeColor && strokeColor!==SC){
+    const m=side*0.04;
+    mk('rect',{x:ox-m,y:oy-m,width:side+m*2,height:side+m*2,
+      fill:'none',stroke:strokeColor,'stroke-width':2,rx:3,opacity:alpha},parent);
+  }
+}
+
+// ===== 一の位：個別ブロック =====
+function drawIchi(parent,count,svgW,svgH,alpha,hColor){
+  if(!count)return[];
+  const u=U,gap=u*.18,S=u+gap,bGap=u*.7,BH=5*u+4*gap;
+  const full=Math.floor(count/5),rem=count%5,nBlocks=full+(rem?1:0);
+  const cols=nBlocks<=2?1:2,colPitch=u+10;
+  const totW=cols*u+(cols-1)*(colPitch-u);
+  const sx=svgW/2-totW/2+u/2;
+  const pos=[];let drawn=0;
+  for(let b=0;b<nBlocks&&drawn<count;b++){
+    const col=b%cols,brow=Math.floor(b/cols);
+    const inB=(b===nBlocks-1&&rem)?rem:5;
+    const cx=sx+col*colPitch,botY=svgH-14;
+    const blockBotY=botY-brow*(BH+bGap);
+    for(let i=0;i<inB&&drawn<count;i++){
+      const cy=blockBotY-i*S;
+      mk('rect',{x:cx-u/2,y:cy-u/2,width:u,height:u,fill:FC,
+        stroke:alpha<.5?'#aaa':SC,'stroke-width':1,rx:.6,opacity:alpha},parent);
+      pos.push({cx,cy});drawn++;
+    }
+  }
+  if(hColor){
+    const xs=pos.map(p=>p.cx),ys=pos.map(p=>p.cy),m=5;
+    mk('rect',{x:Math.min(...xs)-u/2-m,y:Math.min(...ys)-u/2-m,
+      width:Math.max(...xs)-Math.min(...xs)+u+m*2,
+      height:Math.max(...ys)-Math.min(...ys)+u+m*2,
+      fill:'none',stroke:hColor,'stroke-width':2.5,'stroke-dasharray':'5,3',rx:4},parent);
+  }
+  return pos;
+}
+
+// ===== render系（SVGに静的描画）=====
+// 棒(十の位)
+function renderSticks(svgEl,count,alpha,hColor,strokeColor){
+  svgEl.innerHTML='';if(!count)return[];
+  const W=parseInt(svgEl.getAttribute('viewBox').split(' ')[2]),H=parseInt(svgEl.getAttribute('height'))||110;
+  const{xs,totW}=stickLayout(count);
+  const sx0=(W-totW)/2,centers=[];
+  for(let i=0;i<count;i++){
+    const cx=sx0+xs[i]+STICK_W/2,cy=H/2;
+    const g=mk('g',{},svgEl);
+    drawStick(g,cx,cy,U,alpha??1,strokeColor||SC);
+    centers.push({cx,cy});
+  }
+  if(hColor){
+    const G=U*.15,TH=10*U+9*G,m=4;
+    mk('rect',{x:sx0-m,y:H/2-TH/2-m,width:totW+m*2,height:TH+m*2,
+      fill:'none',stroke:hColor,'stroke-width':2.5,'stroke-dasharray':'5,3',rx:4},svgEl);
+  }
+  return centers;
+}
+
+// ひゃくタイルを重ねて並べるときの「ずらす距離」（x軸・y軸）。ひき算アプリと同じ量にして視認性を確保する。
+const HYAKU_STEP_X=24, HYAKU_STEP_Y=20, HYAKU_SIDE=10*U+9*U*.15;
+// 1行あたりの最大枚数。6枚目以降は次の行として右にHYAKU_ROW2_OFFSET_TILES枚分ずらして開始する（ひき算アプリと同じロジック）。
+// 足し算は答えの繰り上がり前で最大19枚まで表示しうるため、5枚を超えるたびに行を分けて「横には伸ばすが、縦には伸ばしすぎない」ようにする。
+const HYAKU_ROW1_MAX=5;
+const HYAKU_ROW2_OFFSET_TILES=2;
+
+// 百の位タイルの「相対」配置(まだ中心寄せしていない生の座標)を計算する。ひき算アプリのhyakuRawPosを拡張したロジック。
+// ・5枚ごとに1行とし、各行は「5枚のときの配置」に固定する（すでに埋まった行は後から枚数が増えても動かない）。
+// ・最後の（まだ埋まっていない）行だけは、その行の枚数に応じて中央寄せする。
+// ・2行目以降は、1行目と同じ高さ範囲のまま、HYAKU_ROW2_OFFSET_TILES枚分ずつ右にずらして重ねる
+//   （縦方向の広がりを1行分に抑えつつ、横方向にはひき算アプリと同じ間隔で伸ばす）。
+function hyakuRawPos(i,total,su){
+  const side2=10*su+9*su*.15;
+  const rowIdx=Math.floor(i/HYAKU_ROW1_MAX);
+  const rowStart=rowIdx*HYAKU_ROW1_MAX;
+  const rowLen=Math.min(HYAKU_ROW1_MAX,total-rowStart);
+  const withinIdx=i-rowStart;
+  const off=withinIdx-(rowLen-1)/2;
+  const x=off*HYAKU_STEP_X+rowIdx*HYAKU_ROW2_OFFSET_TILES*side2;
+  const y=-off*HYAKU_STEP_Y;
+  return{x,y};
+}
+// total枚を配置したときの、生座標(hyakuRawPos)でのバウンディングボックス
+function hyakuBBox(total,su){
+  const side2=10*su+9*su*.15;
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for(let i=0;i<total;i++){
+    const p=hyakuRawPos(i,total,su);
+    minX=Math.min(minX,p.x-side2/2);maxX=Math.max(maxX,p.x+side2/2);
+    minY=Math.min(minY,p.y-side2/2);maxY=Math.max(maxY,p.y+side2/2);
+  }
+  return{minX,maxX,minY,maxY};
+}
+// 百の位タイルの配置を計算する共通関数。バウンディングボックスの中心を枠の中心(W/2,H/2)に合わせる。
+function hyakuTilePos(i,total,W,H,su){
+  const bbox=hyakuBBox(total,su);
+  const shiftX=W/2-(bbox.minX+bbox.maxX)/2;
+  const shiftY=H/2-(bbox.minY+bbox.maxY)/2;
+  const p=hyakuRawPos(i,total,su);
+  return{cx:p.x+shiftX, cy:p.y+shiftY};
+}
+// total枚のタイルを配置したときに必要な、バウンディングボックスの幅・高さを返す（枠の自動サイズ計算用）。
+function hyakuFootprint(total,su){
+  const bbox=hyakuBBox(total,su);
+  return{width:bbox.maxX-bbox.minX, height:bbox.maxY-bbox.minY};
+}
+
+// 百タイル
+function renderHyakus(svgEl,count,alpha,hColor,strokeColor){
+  svgEl.innerHTML='';if(!count)return[];
+  const W=parseInt(svgEl.getAttribute('viewBox').split(' ')[2]),H=parseInt(svgEl.getAttribute('height'))||110;
+  const u=U,G=u*.15,side=HYAKU_SIDE;
+  const sc=Math.min((W-8)/side,(H-8)/side,1);
+  const su=u*sc,centers=[];
+  for(let i=0;i<count;i++){
+    const{cx,cy}=hyakuTilePos(i,count,W,H,su);
+    const g=mk('g',{},svgEl);
+    drawHyakuScaled(g,cx,cy,su,alpha??1,strokeColor||SC);
+    centers.push({cx,cy});
+  }
+  if(hColor){
+    // 全タイルが収まるバウンディングボックスを求めて囲む
+    const side2=10*su+9*su*.15,m=4;
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+    centers.forEach(({cx,cy})=>{
+      minX=Math.min(minX,cx-side2/2);maxX=Math.max(maxX,cx+side2/2);
+      minY=Math.min(minY,cy-side2/2);maxY=Math.max(maxY,cy+side2/2);
+    });
+    mk('rect',{x:minX-m,y:minY-m,width:(maxX-minX)+m*2,height:(maxY-minY)+m*2,
+      fill:'none',stroke:hColor,'stroke-width':2.5,'stroke-dasharray':'5,3',rx:4},svgEl);
+  }
+  return centers;
+}
+
+// 千タイル
+function renderSens(svgEl,count,alpha,hColor,strokeColor){
+  svgEl.innerHTML='';if(!count)return[];
+  const W=parseInt(svgEl.getAttribute('viewBox').split(' ')[2]),H=parseInt(svgEl.getAttribute('height'))||110;
+  const u=U,G=u*.15,W10=10*u+9*G,H10=10*u+9*G;
+  const OX=u*.35,OY=u*.35;
+  const totalW=W10+(count-1)*OX*9+(count-1)*6;// rough
+  // スケールをセルに収める
+  const needW=W10+(9)*OX,needH=H10+(9)*OY;
+  const sc=Math.min((W-8)/needW,(H-8)/needH);
+  const su=u*sc,centers=[];
+  // 1枚ずつ横に並べる（最大は通常1枚）
+  const step=su*0.25;
+  for(let i=0;i<count;i++){
+    const cx=W/2+(i-(count-1)/2)*(10*su+9*su*.15+4);
+    const cy=H/2;
+    const g=mk('g',{},svgEl);
+    drawSenScaled(g,cx,cy,su,alpha??1,strokeColor||SC);
+    centers.push({cx,cy});
+  }
+  return centers;
+}
+
+// 一の位
+function renderIchi(svgEl,count,alpha,hColor){
+  svgEl.innerHTML='';if(!count)return[];
+  const W=parseInt(svgEl.getAttribute('viewBox').split(' ')[2]),H=parseInt(svgEl.getAttribute('height'))||110;
+  return drawIchi(svgEl,count,W,H,alpha??1,hColor);
+}
+
+// ============================================================
+// カード方式（位取り表アプリを参考にしたSVG数字カード）
+// タイル/棒/百タイル/千タイルの代わりに「1」「10」「100」「1000」と
+// 数字を書いた長方形カードを使う表現。桁が増えても CARD_CFG に
+// エントリを足すだけで対応できる（例：1万＝'man'を追加するだけ）。
+// ============================================================
+const CARD_CFG={
+  ichi : {label:'1',    w:34,h:26,fs:13,bg:'#fce4ec',stroke:'#e91e63',tc:'#c2185b'},
+  juu  : {label:'10',   w:34,h:26,fs:13,bg:'#fff9cc',stroke:'#d4ac0d',tc:'#b7950b'},
+  hyaku: {label:'100',  w:34,h:26,fs:12,bg:'#cce8f4',stroke:'#2980b9',tc:'#1a5276'},
+  sen  : {label:'1000', w:34,h:26,fs:11,bg:'#ffffff',stroke:'#222222',tc:'#222222'}
+};
+
+// ===== カード1枚描画（中心座標cx,cy基準。drawStick等と座標系をそろえる）=====
+function drawCardSingle(parent,cx,cy,place,scale,alpha,strokeColor){
+  const cfg=CARD_CFG[place];
+  scale=scale??1;alpha=alpha??1;
+  const w=cfg.w*scale,h=cfg.h*scale;
+  const x=cx-w/2,y=cy-h/2;
+  mk('rect',{x,y,width:w,height:h,fill:cfg.bg,
+    stroke:strokeColor||cfg.stroke,'stroke-width':1.6*scale,rx:3*scale,opacity:alpha},parent);
+  mk('text',{x:cx,y:cy+cfg.fs*scale*.36,'text-anchor':'middle',
+    'font-size':cfg.fs*scale,'font-weight':'bold',fill:cfg.tc,
+    'font-family':"'Noto Sans JP',sans-serif",opacity:alpha},parent).textContent=cfg.label;
+}
+
+// ===== カードの格子配置 =====
+// 「縦5枚×横2列」を基本とする格子レイアウト。1列目に下から5枚積み、
+// 6枚目からは2列目を使う。すべての位でカードサイズが同じなので、
+// 列の横幅は常に「2列分」を基準に固定し、桁の列幅とぴったり合わせる
+// （= はみ出しが起こらない）。縦に入りきらない場合のみスケールを縮小する。
+// count枚のカードの中心座標配列を返す（描画はしない・座標計算のみ）。
+function cardPositions(count,place,svgW,svgH){
+  if(!count)return[];
+  const cfg=CARD_CFG[place];
+  const margin=6;
+  const perCol=5;
+  const nCols=Math.max(1,Math.ceil(count/perCol));
+  const gapX0=10,gapYRatio=.22;
+
+  // 横幅は「実際に必要な列数」で固定計算する（無限幅でプローブすると
+  // 列数が暴走して位取り表からはみ出すため、常にperCol基準で決定する）
+  const needW=nCols*cfg.w+(nCols-1)*gapX0;
+  const needH=perCol*cfg.h+(perCol-1)*cfg.h*gapYRatio;
+  let scale=1;
+  if(needW>svgW-margin*2) scale=Math.min(scale,(svgW-margin*2)/needW);
+  if(needH>svgH-margin*2) scale=Math.min(scale,(svgH-margin*2)/needH);
+  scale=Math.max(scale,.45); // 縮小しすぎて読めなくなるのを防ぐ下限
+
+  const w=cfg.w*scale,h=cfg.h*scale,gapX=gapX0*scale,gapY=h*gapYRatio,colW=w+gapX;
+  const totW=nCols*w+(nCols-1)*gapX;
+  const sx=svgW/2-totW/2+w/2;
+  const botY=svgH-margin-h/2;
+  const pos=[];let drawn=0;
+  for(let c=0;c<nCols&&drawn<count;c++){
+    const remain=count-drawn;
+    const inCol=Math.min(perCol,remain);
+    const cx=sx+c*colW;
+    for(let i=0;i<inCol;i++){
+      pos.push({cx,cy:botY-i*(h+gapY),scale});drawn++;
+    }
+  }
+  return pos;
+}
+
+// ===== カード版render（タイル版render系と同じシグネチャ）=====
+function renderCard(svgEl,count,place,alpha,hColor){
+  svgEl.innerHTML='';if(!count)return[];
+  const W=parseInt(svgEl.getAttribute('viewBox').split(' ')[2]),H=parseInt(svgEl.getAttribute('height'))||110;
+  const pos=cardPositions(count,place,W,H);
+  pos.forEach(p=>drawCardSingle(svgEl,p.cx,p.cy,place,p.scale??1,alpha??1,null));
+  if(hColor){
+    const cfg=CARD_CFG[place];
+    const sc=pos[0].scale??1;
+    const xs=pos.map(p=>p.cx),ys=pos.map(p=>p.cy),m=5;
+    mk('rect',{x:Math.min(...xs)-cfg.w*sc/2-m,y:Math.min(...ys)-cfg.h*sc/2-m,
+      width:Math.max(...xs)-Math.min(...xs)+cfg.w*sc+m*2,
+      height:Math.max(...ys)-Math.min(...ys)+cfg.h*sc+m*2,
+      fill:'none',stroke:hColor,'stroke-width':2.5,'stroke-dasharray':'5,3',rx:4},svgEl);
+  }
+  return pos;
+}
+// 桁ごとの薄い別名（paintTiles等から呼びやすくするため）
+function renderIchiCard(svgEl,count,alpha,hColor){return renderCard(svgEl,count,'ichi',alpha,hColor);}
+function renderJuuCard(svgEl,count,alpha,hColor){return renderCard(svgEl,count,'juu',alpha,hColor);}
+function renderHyakuCard(svgEl,count,alpha,hColor){return renderCard(svgEl,count,'hyaku',alpha,hColor);}
+function renderSenCard(svgEl,count,alpha,hColor){return renderCard(svgEl,count,'sen',alpha,hColor);}
+
+// ============================================================
+// 筆算SVG描画  viewBox="0 0 210 230"
+// 位置: 千=35, 百=73, 十=111, 一=149  (2桁なら十=111,一=149)
+// ============================================================
+const HSX=35,H2X=73,HJX=111,HIX=149;
+const HG=38; // ノートのマス目1個分の大きさ（数字1つ・記号1つがちょうど1マスに収まる）
+const HCARRY_Y=30,HROW1_Y=70,HROW2_Y=108,HLINE_Y=114,HROW3_Y=146;
+
+function drawHissan(svgEl,state){
+  svgEl.innerHTML='';
+  const S=state;
+
+  // 実際に使う列だけを枠に収める（未使用の位の列ぶんの余白は作らない）。
+  // これによりビューポートの横幅が必要な分だけに縮み、同じ表示幅(CSS側は
+  // width:100%;height:auto)ではその分だけ縦方向に大きく表示される＝
+  // 余っていた左右の白マスを縦の見やすさに回す。
+  const leftmostCol=S.maxDigits>=3?H2X:(S.maxDigits===2?HJX:HIX);
+  const usedLeftCol=S.has4?HSX:(S.has3?H2X:HJX); // 答えのくり上がりで桁が増える場合も含める
+  const leftEdge=Math.min(leftmostCol-1.5*HG,usedLeftCol-HG/2);
+  const VBX=Math.max(0,leftEdge),VBH=230,VBW=210-VBX;
+  svgEl.setAttribute('viewBox',`${VBX} 0 ${VBW} ${VBH}`);
+  svgEl.setAttribute('width',VBW);
+  svgEl.setAttribute('height',VBH);
+
+  // ノートのマス目（薄いグレーの格子）を背景に敷く。
+  // 1マス＝1つの数字・記号の大きさ(HG)にして、数字の列・行とぴったり重なるようにする。
+  const gx0=HSX-HG/2; // gx0：いちばん左の列(HSX)がマスの中心になるように原点をずらす
+  for(let gx=gx0;gx<=210;gx+=HG)mk('line',{x1:gx,y1:0,x2:gx,y2:VBH,stroke:'#000','stroke-width':.5,opacity:.08},svgEl);
+  for(let gy=0;gy<=VBH;gy+=HG)mk('line',{x1:VBX,y1:gy,x2:210,y2:gy,stroke:'#000','stroke-width':.5,opacity:.08},svgEl);
+
+  function txt(content,x,y,fs,fw,color,cls){
+    const t=mk('text',{x,y,'font-size':fs||34,'font-weight':fw||'bold',
+      fill:color||'#222','text-anchor':'middle','font-family':'Noto Sans JP,sans-serif'},svgEl);
+    t.textContent=content;
+    if(cls)t.setAttribute('class',cls);
+    return t;
+  }
+  function hl(x,y,w,h,color,a){
+    mk('rect',{x,y,width:w,height:h,rx:5,fill:color,opacity:a||.18},svgEl);
+  }
+
+  // ＋記号（「たす数」＝B の桁数の、いちばん大きい位の1つ左のマスに書く。答えの桁数は関係ない）
+  const plusX=leftmostCol-HG;
+  if(S.showPlus) txt('＋',plusX,HROW2_Y+4,20,'bold','#e67e22');
+
+  // 横線（＋記号の下のマスも含めて伸ばす）
+  if(S.showLine){
+    const lx1=plusX-HG/2;
+    mk('line',{x1:lx1,y1:HLINE_Y,x2:168,y2:HLINE_Y,stroke:'#333','stroke-width':2.5},svgEl);
+  }
+
+  // 各位の計算中：その位の列全体を破線の色枠で囲む
+  // グリッド境界: 0,38,76,114,152 — A行上端=38, こたえ行下端=152, くり上がり行上端=0
+  {
+    const m=2,gBot=Math.ceil(HROW3_Y/HG)*HG; // こたえ行の下端グリッド線 = 152
+    // 一の位：ピンク（くり上がり行なし → A行上端から3マス）
+    if(S.hlColIchi){
+      const gTop=Math.floor(HROW1_Y/HG)*HG; // = 38
+      const cx=HIX,cw=HG;
+      mk('rect',{x:cx-cw/2+m,y:gTop+m,width:cw-m*2,height:gBot-gTop-m*2,
+        fill:'none',stroke:'#e91e63','stroke-width':2,'stroke-dasharray':'5,3',rx:4},svgEl);
+    }
+    // 十の位：黄色（くり上がり補助数字があれば上端=0の4マス、なければ38の3マス）
+    if(S.hlColJuu){
+      const gTop=S.showCarryJ?Math.floor(HCARRY_Y/HG)*HG:Math.floor(HROW1_Y/HG)*HG;
+      const cx=HJX,cw=HG;
+      mk('rect',{x:cx-cw/2+m,y:gTop+m,width:cw-m*2,height:gBot-gTop-m*2,
+        fill:'none',stroke:'#d4ac0d','stroke-width':2,'stroke-dasharray':'5,3',rx:4},svgEl);
+    }
+    // 百の位：水色（同様）
+    if(S.hlColHyaku&&(S.has3||S.has4)){
+      const gTop=S.showCarryH?Math.floor(HCARRY_Y/HG)*HG:Math.floor(HROW1_Y/HG)*HG;
+      const cx=H2X,cw=HG;
+      mk('rect',{x:cx-cw/2+m,y:gTop+m,width:cw-m*2,height:gBot-gTop-m*2,
+        fill:'none',stroke:'#2980b9','stroke-width':2,'stroke-dasharray':'5,3',rx:4},svgEl);
+    }
+  }
+  if(S.hlIchi){hl(HIX-18,HROW1_Y-32,38,38,'#fce4ec');hl(HIX-18,HROW2_Y-32,38,38,'#fce4ec');}
+  if(S.hlJuu){
+    hl(HJX-18,HROW1_Y-32,38,38,'#fff9cc');hl(HJX-18,HROW2_Y-32,38,38,'#fff9cc');
+    if(S.showCarryJ)hl(HJX-14,HCARRY_Y-20,30,26,'#ffe0e0',.35);
+  }
+  if(S.hlHyaku&&(S.has3||S.has4)){
+    hl(H2X-18,HROW1_Y-32,38,38,'#cce8f4');hl(H2X-18,HROW2_Y-32,38,38,'#cce8f4');
+    if(S.showCarryH)hl(H2X-14,HCARRY_Y-20,30,26,'#ffe0e0',.35);
+  }
+
+  // 数字A行
+  if(S.showAS&&S.has4) txt(S.aS,HSX,HROW1_Y,34,'bold','#222');
+  if(S.showAH&&(S.has3||S.has4)) txt(S.aH,H2X,HROW1_Y,34,'bold','#222');
+  if(S.showAJ) txt(S.aJ,HJX,HROW1_Y,34,'bold','#222');
+  if(S.showAI) txt(S.aI,HIX,HROW1_Y,34,'bold','#222');
+  // 数字B行
+  if(S.showBS&&S.has4) txt(S.bS,HSX,HROW2_Y,34,'bold','#222');
+  if(S.showBH&&(S.has3||S.has4)) txt(S.bH,H2X,HROW2_Y,34,'bold','#222');
+  if(S.showBJ) txt(S.bJ,HJX,HROW2_Y,34,'bold','#222');
+  if(S.showBI) txt(S.bI,HIX,HROW2_Y,34,'bold','#222');
+
+  // くり上がり：数字「1」自体は showCarryJ/showCarryH が true の間ずっと表示するが、
+  // ポップ（拡大縮小）アニメーションは carryJPop/carryHPop が true の最初の1ステップだけ再生する
+  if(S.showCarryJ) {
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    const cx = isAnsSub ? (HJX + 11) : HJX;
+    const cy = isAnsSub ? (HLINE_Y + 13) : HCARRY_Y;
+    const fs = isAnsSub ? 13 : 19;
+    const ct = mk('text',{x:cx,y:cy,'font-size':fs,'font-weight':'bold',fill:'#e74c3c','text-anchor':'middle','font-family':'Noto Sans JP,sans-serif'},svgEl);
+    ct.textContent='1';
+    if(S.carryJPop) ct.setAttribute('class','pop-in');
+  }
+  if(S.showCarryH&&(S.has3||S.has4)) {
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    const cx = isAnsSub ? (H2X + 11) : H2X;
+    const cy = isAnsSub ? (HLINE_Y + 13) : HCARRY_Y;
+    const fs = isAnsSub ? 13 : 19;
+    const ct = mk('text',{x:cx,y:cy,'font-size':fs,'font-weight':'bold',fill:'#e74c3c','text-anchor':'middle','font-family':'Noto Sans JP,sans-serif'},svgEl);
+    ct.textContent='1';
+    if(S.carryHPop) ct.setAttribute('class','pop-in');
+  }
+
+  // こたえ
+  // くり上がり前：その位の答え欄に「2桁の生の合計」を2つの数字として並べて表示する
+  // （1つの位には1つの数字しか入らないことを視覚的に示すため、わざと桁の幅から
+  //  はみ出すように見せる。後でくり上がりアニメーションがこれを2つに割る）
+  function tempPair(raw,cx,id){
+    const tens=Math.floor(raw/10),ones=raw%10,off=11;
+    const t1=txt(String(tens),cx-off,HROW3_Y,34,'bold','#1a7f37');t1.id=id+'-tens';
+    const t2=txt(String(ones),cx+off,HROW3_Y,34,'bold','#1a7f37');t2.id=id+'-ones';
+  }
+  if(S.showAnsITemp) tempPair(S.iSum,HIX,'hs-ansI');
+  else if(S.showAnsI) txt(S.iAns,HIX,HROW3_Y,34,'bold','#1a7f37');
+  if(S.showAnsJTemp) tempPair(S.jRaw,HJX,'hs-ansJ');
+  else if(S.showAnsJ) txt(S.jAns,HJX,HROW3_Y,34,'bold','#1a7f37');
+  if(S.showAnsHTemp&&(S.has3||S.has4)) tempPair(S.hRaw,H2X,'hs-ansH');
+  else if(S.showAnsH&&(S.has3||S.has4)) txt(S.hAns,H2X,HROW3_Y,34,'bold','#1a7f37');
+  if(S.showAnsS&&S.has4) txt(S.sAns,HSX,HROW3_Y,34,'bold','#1a7f37');
+
+  // 完成枠（答えの行のマスにぴったり重ねる）
+  if(S.ansBox){
+    const bx=S.has4?16:(S.has3?54:92);
+    mk('rect',{x:bx+1,y:HLINE_Y+1,width:168-bx-2,height:HG-2,
+      fill:'none',stroke:'#1a7f37','stroke-width':2.5,rx:6},svgEl);
+  }
+}
+
+// ============================================================
+// アニメーションエンジン
+// ============================================================
+// 逐次モードでは筆算側・図解側のtweenが同時に走ることがある（syncモードのcarry-i/j/h等）ため、
+// 単一のanimId変数ではcancelAnim()が片方しか止められず取りこぼしが起きうる。
+// 実行中のrequestAnimationFrame IDをSetで管理し、cancelAnim()で全て確実に止める。
+let animIds=new Set();
+function cancelAnim(){animIds.forEach(id=>cancelAnimationFrame(id));animIds.clear();}
+// SVG要素の現在のviewBox幅を取得（updateLayoutで動的変更されるため都度取得）
+function vbW(id){
+  const svg=document.getElementById(id);
+  return parseFloat(svg.getAttribute('viewBox').split(' ')[2]);
+}
+// SVG要素の現在のviewBox高さを取得
+function vbH(id){
+  const svg=document.getElementById(id);
+  return parseFloat(svg.getAttribute('viewBox').split(' ')[3]);
+}
+
+// じゅうの棒を「5本・すきま・5本」とグルーピングして並べたときのx座標(中心からの相対オフセット)を返す。
+// renderSticksと、くり上がりアニメーション側で同じ式を使うことで、見た目の食い違いを防ぐ。
+const STICK_W=U+1, STICK_GAP=5, STICK_GROUP_GAP=16;
+function stickLayout(count){
+  const xs=[0];
+  for(let i=1;i<count;i++){
+    const g=(i%5===0)?STICK_GROUP_GAP:STICK_GAP;
+    xs.push(xs[i-1]+STICK_W+g);
+  }
+  const totW=count>0?(xs[xs.length-1]+STICK_W):0;
+  return{xs,totW};
+}
+
+function tween(ms,onFrame,onDone){
+  const t0=performance.now();
+  let rafId;
+  function loop(now){
+    const t=Math.min((now-t0)/ms,1);
+    onFrame(eio(t));
+    if(t<1){rafId=requestAnimationFrame(loop);animIds.add(rafId);}
+    else{animIds.delete(rafId);if(onDone)onDone();}
+  }
+  rafId=requestAnimationFrame(loop);
+  animIds.add(rafId);
+}
+
+// ひっ算：くり上がり前に答え欄に表示した「2桁の生の合計」を、
+// 「1の位はそのまま残る数字」と「くり上がってよそへ飛んでいく数字」の2つに分けるアニメーション。
+// drawHissan(prevH)が描いた hs-ans{I/J/H}-tens / -ones の2つのテキスト要素をそのまま動かす。
+function runHissanCarrySplit(svgEl,spec,onDone){
+  const{raw,colX,destX,destY,idSuffix}=spec;
+  const destFontSize=spec.destFontSize||19, destColor=spec.destColor||'#e74c3c';
+  const off=11;
+  const tEl=document.getElementById('hs-ans'+idSuffix+'-tens');
+  const oEl=document.getElementById('hs-ans'+idSuffix+'-ones');
+  if(!tEl||!oEl){onDone();return;}
+  tween(480,t=>{
+    // 1の位（残る数字）はわずかに中央へ寄るだけ
+    oEl.setAttribute('x',String((colX+off)+(colX-(colX+off))*t));
+    // くり上がる数字は、目的地へ移動しながら大きさ・色が変わる
+    const x=(colX-off)+(destX-(colX-off))*t;
+    const y=HROW3_Y+(destY-HROW3_Y)*t;
+    const fs=34+(destFontSize-34)*t;
+    tEl.setAttribute('x',String(x));
+    tEl.setAttribute('y',String(y));
+    tEl.setAttribute('font-size',String(fs));
+    tEl.setAttribute('fill', t<0.5?'#1a7f37':destColor);
+  },onDone);
+}
+
+// SVG座標 → アニメレイヤー座標
+// ※ getBoundingClientRect()は「画面に見えている(STAGE_SCALEで拡大縮小された後の)ピクセル」を
+//   返すが、mark-layer/anim-layerの内部座標系はレイアウト上のサイズ(拡大縮小前)のまま。
+//   そのままだと二重にスケールされて位置がずれるため、STAGE_SCALE×数図ローカル倍率で割って戻す。
+function svgToLayer(svgEl,svgX,svgY){
+  const tileRect=document.getElementById('tile-area').getBoundingClientRect();
+  const svgRect=svgEl.getBoundingClientRect();
+  const vbW=parseFloat(svgEl.getAttribute('viewBox').split(' ')[2]);
+  const vbH=parseFloat(svgEl.getAttribute('viewBox').split(' ')[3]);
+  return{
+    x:((svgRect.left-tileRect.left)+svgX*(svgRect.width/vbW))/(STAGE_SCALE*stableTilePanelFactor),
+    y:((svgRect.top-tileRect.top)+svgY*(svgRect.height/vbH))/(STAGE_SCALE*stableTilePanelFactor)
+  };
+}
+
+// ヘッダー要素の中心座標（layer基準）
+function hdrCenter(id){
+  const el=document.getElementById(id);
+  const tileRect=document.getElementById('tile-area').getBoundingClientRect();
+  const r=el.getBoundingClientRect();
+  return{x:(r.left-tileRect.left+r.width/2)/(STAGE_SCALE*stableTilePanelFactor), y:(r.top-tileRect.top+r.height/2)/(STAGE_SCALE*stableTilePanelFactor)};
+}
+
+// ヘッダー要素の「真上」座標（ヘッダー上辺のすぐ外）
+// ※ この-18(旧値)は見出しの上端から離れすぎており、くり上がりのタイル束
+//    （高さ約79pxの棒／正方形）が画面上端よりさらに上まではみ出す原因になっていた。
+//    見出しの文字は padding-top:6px の内側（おおむねy:8〜22あたり）にあり、
+//    タイルの束はもともとその文字帯をまたぐ大きさのため、多少下げても
+//    「文字が見えている／隠れている」の見え方はほぼ変わらない。
+//    そこで、見出しのタイトル文字を消してしまわない範囲で値を小さくし、
+//    上方向のはみ出しを最小限に抑える。
+function aboveHdr(id){
+  const el=document.getElementById(id);
+  const tileRect=document.getElementById('tile-area').getBoundingClientRect();
+  const r=el.getBoundingClientRect();
+  return{x:(r.left-tileRect.left+r.width/2)/(STAGE_SCALE*stableTilePanelFactor), y:(r.top-tileRect.top)/(STAGE_SCALE*stableTilePanelFactor)-8};
+}
+
+// 答えマスの「右上」座標（CARRY_POS_MODE === 'ans-sub' 用）
+// 1つ上の位の答えのグリッドの右上（ブロックが約20%上にはみ出す位置）
+function ansTopRight(place){
+  const svgId = (place==='sen') ? 'svg-sen-ans' : ((place==='hyaku') ? 'svg-hyaku-ans' : 'svg-juu-ans');
+  const svgEl = document.getElementById(svgId);
+  const tileRect = document.getElementById('tile-area').getBoundingClientRect();
+  const r = svgEl.getBoundingClientRect();
+  // 横はグリッド右端から少し内側、縦は答えマスの最上部（B行との境界線）付近に置くことで、
+  // ブロック（高さ79pxなど）の中心が境界線上〜やや上（約20%上にはみ出す）になる
+  const x = (r.right - tileRect.left - 18) / (STAGE_SCALE * stableTilePanelFactor);
+  const y = (r.top - tileRect.top + 10) / (STAGE_SCALE * stableTilePanelFactor);
+  return {x, y};
+}
+
+// ============================================================
+// アプリ状態
+// ============================================================
+let numA=35,numB=12,stepIdx=0,steps=[],animBusy=false;
+
+// URLパラメータ ?a=35&b=12&embed=1 で問題を指定（問題集アプリからの呼び出し用）
+(function(){
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get('embed')==='1')document.documentElement.classList.add('embed');
+    const pa=parseInt(q.get('a'),10),pb=parseInt(q.get('b'),10);
+    if(Number.isInteger(pa)&&Number.isInteger(pb)&&pa>=1&&pa<=999&&pb>=1&&pb<=999){
+      numA=pa;numB=pb;
+      document.getElementById('inp-a').value=pa;
+      document.getElementById('inp-b').value=pb;
+    }
+  }catch(e){}
+  // 解説ウィンドウ内でEscを押したら、親（問題集）に閉じてもらう
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&window.parent&&window.parent!==window){
+      try{window.parent.postMessage({type:'closeExplanation'},'*');}catch(err){}
+    }
+  });
+})();
+
+// ============================================================
+// 音声読み上げ（すべての数字・演算記号を日本語の読みに変換してから話す）
+// ============================================================
+let voiceOn=true,ttsWarmedUp=false,currentUtter=null;
+
+// 0〜9999の整数を日本語の読み（ひらがな）に変換する
+function numToYomi(n){
+  n=Math.round(n);
+  if(n===0)return'ぜろ';
+  if(n<0)return'まいなす '+numToYomi(-n);
+  const ichiMap=['','いち','に','さん','よん','ご','ろく','なな','はち','きゅう'];
+  const juuMap  =['','じゅう','にじゅう','さんじゅう','よんじゅう','ごじゅう','ろくじゅう','ななじゅう','はちじゅう','きゅうじゅう'];
+  const hyakuMap=['','ひゃく','にひゃく','さんびゃく','よんひゃく','ごひゃく','ろっぴゃく','ななひゃく','はっぴゃく','きゅうひゃく'];
+  const senMap  =['','せん','にせん','さんぜん','よんせん','ごせん','ろくせん','ななせん','はっせん','きゅうせん'];
+  const sen=Math.floor(n/1000)%10, hyaku=Math.floor(n/100)%10, juu=Math.floor(n/10)%10, ichi=n%10;
+  let s='';
+  s+=senMap[sen];
+  s+=hyakuMap[hyaku];
+  s+=juuMap[juu];
+  s+=ichiMap[ichi];
+  return s;
+}
+
+// HTML（タグ・数字・演算記号入り）を読み上げ用の日本語テキストに変換する
+function toSpeechText(html){
+  let s=String(html);
+  s=s.replace(/<br\s*\/?>/gi,'。');     // 改行は「、」のように一拍おく
+  s=s.replace(/<[^>]+>/g,'');           // 残りのタグは除去
+  // 読み間違えやすい言葉は先に決まった読みへ置き換える（数字変換より前に処理する）
+  s=s.replace(/1つ/g,'ひとつ');
+  s=s.replace(/10こ/g,'じゅっこ');
+  s=s.replace(/10本/g,'じゅっぽん');
+  s=s.replace(/くり上/g,'くりあ');
+  s=s.replace(/入らない/g,'はいらない');
+  s=s.replace(/＋|\+/g,' たす ');
+  s=s.replace(/－|-/g,' ひく ');
+  s=s.replace(/×/g,' かける ');
+  s=s.replace(/÷/g,' わる ');
+  s=s.replace(/＝|=/g,' は ');
+  s=s.replace(/▶|◀/g,'');
+  s=s.replace(/\d+/g,m=>numToYomi(parseInt(m,10))); // 数字をすべて日本語の読みに変換
+  s=s.replace(/\s+/g,' ').trim();
+  return s;
+}
+
+// 無音のウォームアップ発話（一部のブラウザは最初の発話が無視されることがあるため、
+// 起動直後（や音声ON直後）に1音だけ無音で読み上げてエンジンを起こしておく）
+function warmupTTS(){
+  if(ttsWarmedUp)return;
+  if(!('speechSynthesis'in window))return;
+  try{
+    const u=new SpeechSynthesisUtterance('ん');
+    u.lang='ja-JP';u.volume=0;
+    window.speechSynthesis.speak(u);
+    ttsWarmedUp=true;
+  }catch(e){/* 読み上げ非対応環境では無視 */}
+}
+
+function speakText(text){
+  if(!voiceOn)return;
+  if(!('speechSynthesis'in window))return;
+  try{
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang='ja-JP';u.rate=.95;u.pitch=1.05;
+    currentUtter=u;
+    window.speechSynthesis.speak(u);
+  }catch(e){/* 読み上げ非対応環境では無視 */}
+}
+
+function speakStep(descHtml){
+  speakText(toSpeechText(descHtml));
+}
+
+function toggleVoice(){
+  voiceOn=!voiceOn;
+  const btn=document.getElementById('btn-voice');
+  btn.classList.toggle('off',!voiceOn);
+  if(voiceOn){
+    warmupTTS();
+  } else if('speechSynthesis'in window){
+    window.speechSynthesis.cancel();
+  }
+}
+let CARRY_POS_MODE='top'; // 'top'：上のマス（たす数の上）／'ans-sub'：直線の下（答えマスの右上・小さく）
+try{
+  const savedCarryPos=localStorage.getItem('tashizan_carry_pos');
+  if(savedCarryPos==='top'||savedCarryPos==='ans-sub') CARRY_POS_MODE=savedCarryPos;
+}catch(e){}
+
+let DISPLAY_MODE='tile'; // 'tile'：実物タイル／'card'：数字カード
+try{
+  const savedDisp=localStorage.getItem('tashizan_display_mode');
+  if(savedDisp==='tile'||savedDisp==='card') DISPLAY_MODE=savedDisp;
+}catch(e){}
+
+// 'sync'：筆算と図解を同時に動かす（従来どおり）
+// 'tile-first'：図解が先に完了してから筆算を動かす
+// 'hissan-first'：筆算が先に完了してから図解を動かす
+let TIMING_MODE='sync';
+try{
+  const savedTiming=localStorage.getItem('tashizan_timing_mode');
+  if(savedTiming==='sync'||savedTiming==='tile-first'||savedTiming==='hissan-first') TIMING_MODE=savedTiming;
+}catch(e){}
+
+// 逐次モード（tile-first/hissan-first）で前半と後半の間に置く「一呼吸」の間（ミリ秒）。
+// 同時モードではこの間は入れない（見た目は現状のまま）。
+// 先生が画面上のボックスで0.1秒単位に調整できるようlet変数にしている（初期値0.4秒）。
+let SEQ_GAP_MS=400;
+try{
+  const savedGap=localStorage.getItem('tashizan_seq_gap');
+  if(savedGap){const g=parseFloat(savedGap);if(Number.isFinite(g)&&g>=0&&g<=5)SEQ_GAP_MS=Math.round(g*1000);}
+}catch(e){}
+
+function cloneState(s){return JSON.parse(JSON.stringify(s));}
+
+// ============================================================
+// ステップ定義
+// ============================================================
+function buildSteps(){
+  const aH=Math.floor(numA/100),aJ=Math.floor((numA%100)/10),aI=numA%10;
+  const bH=Math.floor(numB/100),bJ=Math.floor((numB%100)/10),bI=numB%10;
+  const ans=numA+numB;
+
+  const hasCarryI=(aI+bI>=10);
+  const iSum=aI+bI,iAns=iSum%10;
+  const jRaw=aJ+bJ+(hasCarryI?1:0);
+  const hasCarryJ=(jRaw>=10);
+  const jAns=jRaw%10;
+  const hRaw=aH+bH+(hasCarryJ?1:0);
+  const hasCarryH=(hRaw>=10);
+  const hAns=hRaw%10;
+  const sAns=hasCarryH?1:0; // 千の位答え（繰り上がり分のみ、入力<=999なので最大1）
+
+  // 表示する列の判定
+  // has3: 百の位の列が必要（入力が3桁、または答えが3桁以上）
+  const has3=(aH>0||bH>0||ans>=100);
+  // has4: 千の位の列が必要（答えが4桁、つまり1000以上）
+  const has4=(ans>=1000);
+
+  const aDigits=numA>=100?3:(numA>=10?2:1);
+  const bDigits=numB>=100?3:(numB>=10?2:1);
+  const maxDigits=Math.max(aDigits,bDigits); // ＋記号は「たす数・たされる数のうち多い方の桁数」で位置を決める
+  const hBase={
+    aS:0,aH,aJ,aI,bS:0,bH,bJ,bI,maxDigits,
+    iSum,jRaw,hRaw, // くり上がり前の「2桁になってしまう」生の合計（くり上がり説明の表示用）
+    iAns,jAns,hAns,sAns,has3,has4,
+    showAS:false,showAH:false,showAJ:false,showAI:false,
+    showBS:false,showBH:false,showBJ:false,showBI:false,
+    showPlus:false,showLine:false,
+    showCarryJ:false,showCarryH:false,
+    carryJPop:false,carryHPop:false, // trueの間だけpop-inアニメを再生（くり上がり直後の1ステップのみ）
+    showAnsI:false,showAnsJ:false,showAnsH:false,showAnsS:false,
+    showAnsITemp:false,showAnsJTemp:false,showAnsHTemp:false, // くり上がり前：答え欄に2桁の生の合計を表示する
+    hlIchi:false,hlJuu:false,hlHyaku:false,hlColIchi:false,hlColJuu:false,hlColHyaku:false,ansBox:false
+  };
+
+  const tBase={
+    senA:{count:0,alpha:1,hl:null},   hyakuA:{count:0,alpha:1,hl:null},
+    juuA:{count:0,alpha:1,hl:null},   ichiA:{count:0,alpha:1,hl:null},
+    senB:{count:0,alpha:1,hl:null},   hyakuB:{count:0,alpha:1,hl:null},
+    juuB:{count:0,alpha:1,hl:null},   ichiB:{count:0,alpha:1,hl:null},
+    senAns:{count:0,alpha:1,hl:null}, hyakuAns:{count:0,alpha:1,hl:null},
+    juuAns:{count:0,alpha:1,hl:null}, ichiAns:{count:0,alpha:1,hl:null},
+    markJ:{show:false,alpha:1}, markH:{show:false,alpha:1}, // じゅう／ひゃくのヘッダー上に残るくり上がりマーク
+    showAnsRow:false
+  };
+
+  const list=[];
+  function prev(){
+    if(!list.length)return{h:cloneState(hBase),t:cloneState(tBase),title:'',desc:'',anim:null,hissanSplit:null};
+    const c=cloneState(list[list.length-1]);
+    c.hissanSplit=null; // ワンショットの演出トリガーなので、次のステップには引き継がない
+    return c;
+  }
+
+  // Step0: 空スタート
+  {
+    const p=prev();
+    p.title='はじめましょう！';
+    p.desc=`<span class="ac">${numA} ＋ ${numB}</span> を ひっ算で けいさんします。<br>じゅんばんに すうじを かいていきましょう。`;
+    list.push(p);
+  }
+
+  // 百の位A（3桁入力のとき）
+  if(aH>0){
+    const p=prev();
+    p.title=`<span class="hc">${aH}</span> を書く（ひゃくのくらい）`;
+    p.desc=`<span class="hc">ひゃくのくらい</span>の <span class="hc">${aH}</span> を書きます。<br>大きな正方形タイルが <span class="hc">${aH}まい</span> あります。`;
+    p.h.showAH=true;
+    p.t.hyakuA={count:aH,alpha:1,hl:'#2980b9'};
+    p.anim='appear-hyaku-a';
+    list.push(p);
+  }
+
+  // 十の位A
+  {
+    const p=prev();
+    p.title=`<span class="jc">${aJ}</span> を書く（じゅうのくらい）`;
+    p.desc=`<span class="jc">じゅうのくらい</span>の <span class="jc">${aJ}</span> を書きます。`;
+    p.h.showAJ=true;
+    p.t.hyakuA={count:aH,alpha:1,hl:null};
+    p.t.juuA={count:aJ,alpha:1,hl:'#f39c12'};
+    p.anim='appear-juu-a';
+    list.push(p);
+  }
+
+  // 一の位A
+  {
+    const p=prev();
+    p.title=`<span class="ic">${aI}</span> を書く（いちのくらい）`;
+    p.desc=`<span class="ic">いちのくらい</span>の <span class="ic">${aI}</span> を書きます。`;
+    p.h.showAI=true;
+    p.t.juuA={count:aJ,alpha:1,hl:null};
+    p.t.ichiA={count:aI,alpha:1,hl:'#e91e63'};
+    p.anim='appear-ichi-a';
+    list.push(p);
+  }
+
+  // ＋
+  {
+    const p=prev();
+    p.title='＋ を書く';
+    p.desc='たし算の きごうを 書きます。';
+    p.h.showPlus=true;
+    p.t.ichiA={count:aI,alpha:1,hl:null};
+    p.anim=null;
+    list.push(p);
+  }
+
+  // 百の位B（3桁入力のとき）
+  if(bH>0){
+    const p=prev();
+    p.title=`<span class="hc">${bH}</span> を書く（ひゃくのくらい）`;
+    p.desc=`たす数の <span class="hc">ひゃくのくらい</span> の <span class="hc">${bH}</span> を書きます。`;
+    p.h.showBH=true;
+    p.t.hyakuB={count:bH,alpha:1,hl:'#2980b9'};
+    p.anim='appear-hyaku-b';
+    list.push(p);
+  }
+
+  // 十の位B
+  {
+    const p=prev();
+    p.title=`<span class="jc">${bJ}</span> を書く（じゅうのくらい）`;
+    p.desc=`たす数の <span class="jc">じゅうのくらい</span> の <span class="jc">${bJ}</span> を書きます。`;
+    p.h.showBJ=true;
+    p.t.hyakuB={count:bH,alpha:1,hl:null};
+    p.t.juuB={count:bJ,alpha:1,hl:'#f39c12'};
+    p.anim='appear-juu-b';
+    list.push(p);
+  }
+
+  // 一の位B
+  {
+    const p=prev();
+    p.title=`<span class="ic">${bI}</span> を書く（いちのくらい）`;
+    p.desc=`たす数の <span class="ic">いちのくらい</span> の <span class="ic">${bI}</span> を書きます。`;
+    p.h.showBI=true;
+    p.t.juuB={count:bJ,alpha:1,hl:null};
+    p.t.ichiB={count:bI,alpha:1,hl:'#e91e63'};
+    p.anim='appear-ichi-b';
+    list.push(p);
+  }
+
+  // 横線
+  {
+    const p=prev();
+    p.title='横線を引く';
+    p.desc='<span class="rc">定規でまっすぐ 線を引きます。</span><br>この線の下に こたえを書きます。';
+    p.h.showLine=true;
+    p.t.ichiB={count:bI,alpha:1,hl:null};
+    p.anim=null;
+    list.push(p);
+  }
+
+  // 一の位計算
+  {
+    const p=prev();
+    p.title=`いちのくらいの けいさん：${aI}＋${bI}＝${iSum}`;
+    p.desc=`<span class="ic">いちのくらい</span>を けいさんします。<br>`
+      +`<span class="ic">${aI} ＋ ${bI} ＝ ${iSum}</span><br>`
+      +(hasCarryI?`10より おおきいので <span class="cc">くり上がり</span> があります。`
+               :`答えの いちのくらいは <span class="ic">${iAns}</span> です。`);
+    p.h.hlIchi=true;p.h.hlColIchi=true;
+    if(hasCarryI)p.h.showAnsITemp=true; else p.h.showAnsI=true;
+    p.t.ichiA={count:aI,alpha:.25,hl:null};
+    p.t.ichiB={count:bI,alpha:.25,hl:null};
+    p.t.ichiAns={count:iSum,alpha:1,hl:null};
+    p.t.showAnsRow=true;
+    p.anim='ichi-calc';
+    list.push(p);
+  }
+
+  // 一の位：1つの位には1つの数字しか入らないことの説明（くり上がりがあるときだけ）
+  if(hasCarryI){
+    const p=prev();
+    p.title='1つの位には1つの数字しか入らないよ';
+    p.desc=`<span class="ic">${iSum}</span> は 2けたの 数字です。<br>`
+      +`<span class="cc">1つの位には、1つの数字しか入らないよ。</span><br>`
+      +`10の まとまりを <span class="jc">じゅうのくらい</span> に くり上げて かんがえます。`;
+    p.anim=null;
+    list.push(p);
+  }
+
+  // 一→十くり上がり
+  if(hasCarryI){
+    const p=prev();
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    p.title='10の たばが できた！ じゅうに くり上げる';
+    p.desc=`<span class="ic">いちのくらい</span>の <span class="ic">${iSum}</span>こ のうち、<br>`
+      +`<span class="cc">10こ</span> が 10の たばに なります。<br>`
+      +`その たばを <span class="jc">じゅうのくらい</span> に くり上げます。<br>`
+      +`のこり <span class="ic">${iAns}こ</span> が いちのくらいの こたえです。`;
+    p.h.showAnsITemp=false;p.h.showAnsI=true;
+    p.h.showCarryJ=true;p.h.hlIchi=true;p.h.hlColIchi=true;
+    p.h.carryJPop=true; // この「くり上げる」ステップでだけポップ演出
+    const destX = isAnsSub ? (HJX + 11) : HJX;
+    const destY = isAnsSub ? (HLINE_Y + 13) : HCARRY_Y;
+    const destFontSize = isAnsSub ? 13 : 19;
+    p.hissanSplit={raw:iSum,colX:HIX,destX,destY,destFontSize,idSuffix:'I'};
+    p.t.ichiAns={count:iAns,alpha:1,hl:null};
+    p.t.juuAns={count:1,alpha:1,hl:'#e74c3c'};
+    p.t.markJ={show:true,alpha:1}; // くり上がりは、まだ使われていないのでしっかり表示
+    p.anim='carry-i';
+    list.push(p);
+  }
+
+  // 十の位計算
+  {
+    const p=prev();
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    let titleStr, descMiddle;
+    if(hasCarryI){
+      if(isAnsSub){
+        titleStr = `じゅうのくらいの けいさん：${aJ}＋${bJ}＋1＝${jRaw}`;
+        descMiddle = `<span class="jc">${aJ} ＋ ${bJ}</span> に くり上がった <span class="cc">1</span> を たして<br>`
+          +`<span class="jc">${aJ} ＋ ${bJ} ＋ 1 ＝ ${jRaw}</span>`;
+      } else {
+        titleStr = `じゅうのくらいの けいさん：1＋${aJ}＋${bJ}＝${jRaw}`;
+        descMiddle = `くり上がった <span class="cc">1</span> と <span class="jc">${aJ} ＋ ${bJ}</span> で<br>`
+          +`<span class="jc">1＋${aJ} ＋ ${bJ} ＝ ${jRaw}</span>`;
+      }
+    } else {
+      titleStr = `じゅうのくらいの けいさん：${aJ}＋${bJ}＝${jRaw}`;
+      descMiddle = `<span class="jc">${aJ} ＋ ${bJ} ＝ ${jRaw}</span>`;
+    }
+    p.title = titleStr;
+    p.desc = `<span class="jc">じゅうのくらい</span>を けいさんします。<br>`
+      + descMiddle
+      +(hasCarryJ?`<br>10より おおきいので <span class="cc">くり上がり</span> があります。`:'');
+    p.h.hlIchi=false;p.h.hlJuu=true;p.h.hlColIchi=false;p.h.hlColJuu=true;
+    if(hasCarryJ&&has3)p.h.showAnsJTemp=true; else p.h.showAnsJ=true;
+    p.h.carryJPop=false; // ここから先は静的表示（ポップ演出は再生しない）
+    p.t.juuA={count:aJ,alpha:.25,hl:null};
+    p.t.juuB={count:bJ,alpha:.25,hl:null};
+    p.t.juuAns={count:jRaw,alpha:1,hl:null};
+    if(hasCarryI)p.t.markJ={show:true,alpha:.35}; // 使われたので以後は半透明のまま残す
+    p.anim='juu-calc';
+    list.push(p);
+  }
+
+  // 十の位：1つの位には1つの数字しか入らないことの説明（くり上がりがあるときだけ）
+  if(hasCarryJ&&has3){
+    const p=prev();
+    p.title='1つの位には1つの数字しか入らないよ';
+    p.desc=`<span class="jc">${jRaw}</span> は 2けたの 数字です。<br>`
+      +`<span class="cc">1つの位には、1つの数字しか入らないよ。</span><br>`
+      +`10の まとまりを <span class="hc">ひゃくのくらい</span> に くり上げて かんがえます。`;
+    p.anim=null;
+    list.push(p);
+  }
+
+  // 十→百くり上がり（has3のとき）
+  if(hasCarryJ&&has3){
+    const p=prev();
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    p.title='10の たばが できた！ ひゃくに くり上げる';
+    p.desc=`<span class="jc">じゅうのくらい</span>の <span class="jc">${jRaw}</span>本 のうち、<br>`
+      +`<span class="cc">10本</span> が ひゃくの タイルに なります。<br>`
+      +`その タイルを <span class="hc">ひゃくのくらい</span> に くり上げます。<br>`
+      +`のこり <span class="jc">${jAns}本</span> が じゅうのくらいの こたえです。`;
+    p.h.showAnsJTemp=false;p.h.showAnsJ=true;
+    p.h.showCarryH=true;p.h.hlJuu=true;p.h.showAnsJ=true;p.h.hlColJuu=true;
+    p.h.carryHPop=true; // この「くり上げる」ステップでだけポップ演出
+    const destX = isAnsSub ? (H2X + 11) : H2X;
+    const destY = isAnsSub ? (HLINE_Y + 13) : HCARRY_Y;
+    const destFontSize = isAnsSub ? 13 : 19;
+    p.hissanSplit={raw:jRaw,colX:HJX,destX,destY,destFontSize,idSuffix:'J'};
+    p.t.juuAns={count:jAns,alpha:1,hl:null};
+    p.t.hyakuAns={count:1,alpha:1,hl:'#e74c3c'};
+    p.t.markH={show:true,alpha:1}; // くり上がりは、まだ使われていないのでしっかり表示
+    p.anim='carry-j';
+    list.push(p);
+  }
+
+  // 百の位計算（has3のとき）
+  if(has3){
+    const p=prev();
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    const totalH=hRaw;
+    let titleStr, descMiddle;
+    if(hasCarryJ){
+      if(isAnsSub){
+        titleStr = `ひゃくのくらいの けいさん：${aH}＋${bH}＋1＝${totalH}`;
+        descMiddle = `<span class="hc">${aH} ＋ ${bH}</span> に くり上がった <span class="cc">1</span> を たして<br>`
+          +`<span class="hc">${aH} ＋ ${bH} ＋ 1 ＝ ${totalH}</span>`;
+      } else {
+        titleStr = `ひゃくのくらいの けいさん：1＋${aH}＋${bH}＝${totalH}`;
+        descMiddle = `くり上がった <span class="cc">1</span> と <span class="hc">${aH} ＋ ${bH}</span> で<br>`
+          +`<span class="hc">1＋${aH} ＋ ${bH} ＝ ${totalH}</span>`;
+      }
+    } else {
+      titleStr = `ひゃくのくらいの けいさん：${aH}＋${bH}＝${totalH}`;
+      descMiddle = `<span class="hc">${aH} ＋ ${bH} ＝ ${totalH}</span>`;
+    }
+    p.title = titleStr;
+    p.desc = `<span class="hc">ひゃくのくらい</span>を けいさんします。<br>`
+      + descMiddle
+      +(hasCarryH?`<br>10より おおきいので <span class="cc">くり上がり</span> があります。`:'');
+    p.h.hlJuu=false;p.h.hlHyaku=true;p.h.hlColJuu=false;p.h.hlColHyaku=true;
+    if(hasCarryH&&has4)p.h.showAnsHTemp=true; else p.h.showAnsH=true;
+    p.h.carryHPop=false; // 十→百のポップ演出はここで終了（数字「1」自体は表示し続ける）
+    p.t.hyakuA={count:aH,alpha:.25,hl:null};
+    p.t.hyakuB={count:bH,alpha:.25,hl:null};
+    p.t.hyakuAns={count:hRaw,alpha:1,hl:null};
+    if(hasCarryJ)p.t.markH={show:true,alpha:.35}; // 下の段に降りて使われたので、以後は半透明のまま残す
+    p.anim='hyaku-calc';
+    list.push(p);
+  }
+
+  // 百の位：1つの位には1つの数字しか入らないことの説明（くり上がりがあるときだけ）
+  if(hasCarryH&&has4){
+    const p=prev();
+    p.title='1つの位には1つの数字しか入らないよ';
+    p.desc=`<span class="hc">${hRaw}</span> は 2けたの 数字です。<br>`
+      +`<span class="cc">1つの位には、1つの数字しか入らないよ。</span><br>`
+      +`10の まとまりを <span class="sc">せんのくらい</span> に くり上げて かんがえます。`;
+    p.anim=null;
+    list.push(p);
+  }
+
+  // 百→千くり上がり（has4のとき）
+  if(hasCarryH&&has4){
+    const p=prev();
+    p.title='ひゃくが10まいに！ せんに くり上げる';
+    p.desc=`<span class="hc">ひゃくのくらい</span>の <span class="hc">${hRaw}まい</span> のうち、<br>`
+      +`<span class="cc">10まい</span> が せんのたばに なります。<br>`
+      +`その たばを <span class="sc">せんのくらい</span> に くり上げます。<br>`
+      +`のこり <span class="hc">${hAns}まい</span> が ひゃくのくらいの こたえです。`;
+    p.h.showAnsHTemp=false;p.h.showAnsH=true;
+    p.h.showAnsS=true;p.h.hlHyaku=true;p.h.hlColHyaku=true;
+    // 千の位は他の桁のような「小さい赤字のくり上がり」ではなく、そのまま答えの数字になる
+    p.hissanSplit={raw:hRaw,colX:H2X,destX:HSX,destY:HROW3_Y,destFontSize:34,destColor:'#1a7f37',idSuffix:'H'};
+    p.t.hyakuAns={count:hAns,alpha:1,hl:null};
+    p.t.senAns={count:0,alpha:1,hl:null}; // まだ答え行には降りていない(ヘッダー上に留まっている)
+    p.anim='carry-h';
+    list.push(p);
+  }
+
+  // せんのくらいの計算（has4のとき）：ヘッダー上のせんタイルが答え行に降りてくる
+  if(has4){
+    const p=prev();
+    p.title=`せんのくらいの こたえ：${sAns}`;
+    p.desc=`<span class="sc">せんのくらい</span>には、くり上がった `
+      +`<span class="cc">1まい</span> がそのまま こたえになります。`;
+    p.h.hlHyaku=false;
+    p.t.senAns={count:sAns,alpha:1,hl:null};
+    p.anim='sen-calc';
+    list.push(p);
+  }
+
+  // 最終
+  {
+    const p=prev();
+    p.title=`こたえは ${ans} です！`;
+    const parts=[];
+    if(has4) parts.push(`<span class="sc">せんのくらい ${sAns}</span>`);
+    if(has3) parts.push(`<span class="hc">ひゃくのくらい ${hAns}</span>`);
+    parts.push(`<span class="jc">じゅうのくらい ${jAns}</span>`);
+    parts.push(`<span class="ic">いちのくらい ${iAns}</span>`);
+    p.desc=parts.join('、')+`<br><span class="ac">${numA} ＋ ${numB} ＝ ${ans}</span>`;
+    p.h.hlJuu=false;p.h.hlHyaku=false;p.h.ansBox=true;
+    p.h.carryJPop=false;p.h.carryHPop=false;
+    p.t.juuA={count:aJ,alpha:.25,hl:null};p.t.juuB={count:bJ,alpha:.25,hl:null};
+    if(has3){p.t.hyakuA={count:aH,alpha:.25,hl:null};p.t.hyakuB={count:bH,alpha:.25,hl:null};}
+    p.anim=null;
+    list.push(p);
+  }
+
+  return list;
+}
+
+// ============================================================
+// タイル描画
+// ============================================================
+function paintTiles(ts){
+  const rSen  =DISPLAY_MODE==='card'?renderSenCard  :renderSens;
+  const rHyaku=DISPLAY_MODE==='card'?renderHyakuCard:renderHyakus;
+  const rJuu  =DISPLAY_MODE==='card'?renderJuuCard  :renderSticks;
+  const rIchi =DISPLAY_MODE==='card'?renderIchiCard :renderIchi;
+
+  rSen  (document.getElementById('svg-sen-a'),   ts.senA.count,  ts.senA.alpha,  ts.senA.hl);
+  rHyaku(document.getElementById('svg-hyaku-a'), ts.hyakuA.count,ts.hyakuA.alpha,ts.hyakuA.hl);
+  rJuu  (document.getElementById('svg-juu-a'),   ts.juuA.count,  ts.juuA.alpha,  ts.juuA.hl);
+  rIchi (document.getElementById('svg-ichi-a'),  ts.ichiA.count, ts.ichiA.alpha, ts.ichiA.hl);
+  rSen  (document.getElementById('svg-sen-b'),   ts.senB.count,  ts.senB.alpha,  ts.senB.hl);
+  rHyaku(document.getElementById('svg-hyaku-b'), ts.hyakuB.count,ts.hyakuB.alpha,ts.hyakuB.hl);
+  rJuu  (document.getElementById('svg-juu-b'),   ts.juuB.count,  ts.juuB.alpha,  ts.juuB.hl);
+  rIchi (document.getElementById('svg-ichi-b'),  ts.ichiB.count, ts.ichiB.alpha, ts.ichiB.hl);
+
+  // 答え欄の「枠」自体は最初から常に表示しておく（あとから枠が出現すると
+  // レイアウトがガクッと変わって見えるため）。中身(タイル)はcount=0のときは
+  // render関数側が何も描かないので、空の枠だけが見える状態になる。
+  const rowAns=document.getElementById('row-ans');
+  rowAns.style.display='table-row';
+  rSen  (document.getElementById('svg-sen-ans'),   ts.senAns.count,  ts.senAns.alpha,  ts.senAns.hl);
+  rHyaku(document.getElementById('svg-hyaku-ans'), ts.hyakuAns.count,ts.hyakuAns.alpha,ts.hyakuAns.hl);
+  rJuu  (document.getElementById('svg-juu-ans'),   ts.juuAns.count,  ts.juuAns.alpha,  ts.juuAns.hl);
+  rIchi (document.getElementById('svg-ichi-ans'),  ts.ichiAns.count, ts.ichiAns.alpha, ts.ichiAns.hl);
+
+  drawHeaderMarks(ts);
+}
+
+// じゅう／ひゃくのヘッダーの真上に残る「くり上がりマーク」を描く。
+// アニメーション専用のanim-layerとは別の常設レイヤー(mark-layer)に描くため、
+// ステップを進めてもanim-layerがクリアされても消えずに残り続ける。
+// くり上がった直後はしっかり表示（alpha:1）、下の段の計算に使われた後は
+// 半透明（alpha:.35）になり、そのまま手順の最後まで残る。
+function drawHeaderMarks(ts){
+  const layer=document.getElementById('mark-layer');
+  layer.innerHTML='';
+  const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+  if(DISPLAY_MODE==='card'){
+    if(ts.markJ&&ts.markJ.show){
+      const pos=isAnsSub ? ansTopRight('juu') : aboveHdr('hdr-juu');
+      drawCardSingle(mk('g',{},layer),pos.x,pos.y,'juu',1,ts.markJ.alpha,'#e74c3c');
+    }
+    if(ts.markH&&ts.markH.show){
+      const pos=isAnsSub ? ansTopRight('hyaku') : aboveHdr('hdr-hyaku');
+      drawCardSingle(mk('g',{},layer),pos.x,pos.y,'hyaku',1,ts.markH.alpha,'#e74c3c');
+    }
+  } else {
+    if(ts.markJ&&ts.markJ.show){
+      const pos=isAnsSub ? ansTopRight('juu') : aboveHdr('hdr-juu');
+      const JH=10*U+9*U*.15,bx=pos.x-U/2,by=pos.y-JH/2;
+      const g=mk('g',{opacity:ts.markJ.alpha},layer);
+      for(let i=0;i<10;i++){const sh=JH/10;mk('rect',{x:bx,y:by+i*sh,width:U,height:sh-.3,fill:FC,stroke:SC,'stroke-width':.6,rx:.3},g);}
+      mk('rect',{x:bx-1,y:by-1,width:U+2,height:JH+2,fill:'none',stroke:'#e74c3c','stroke-width':2,rx:1},g);
+    }
+    if(ts.markH&&ts.markH.show){
+      const pos=isAnsSub ? ansTopRight('hyaku') : aboveHdr('hdr-hyaku');
+      const HW=vbW('svg-hyaku-ans'),HH_SVG=vbH('svg-hyaku-ans');
+      const su=U*Math.min((HW-8)/HYAKU_SIDE,(HH_SVG-8)/HYAKU_SIDE,1);
+      drawHyakuScaled(mk('g',{},layer),pos.x,pos.y,su,ts.markH.alpha,'#e74c3c');
+    }
+  }
+}
+
+// ============================================================
+// カード方式 専用アニメーション
+// タイル版にある「appear / ○○-calc / carry-○」の3パターンを、
+// 桁(place)を引数に取る汎用関数3つで表現する。
+// 新しい桁（例：万の位 'man'）を追加したときも、CARD_CFGに
+// エントリを足すだけでこの3関数がそのまま動く。
+// ============================================================
+const PLACE_HDR={ichi:'hdr-ichi',juu:'hdr-juu',hyaku:'hdr-hyaku',sen:'hdr-sen'};
+const PLACE_SVG={ichi:'svg-ichi',juu:'svg-juu',hyaku:'svg-hyaku',sen:'svg-sen'};
+
+// place方向の1つ上の桁を返す（ichi→juu→hyaku→sen）
+function upperPlace(place){
+  return {ichi:'juu',juu:'hyaku',hyaku:'sen'}[place]||null;
+}
+
+// --- カードが1枚ずつポップインで出現 ---
+function runAppearCard(place,who,count,onDone){
+  const svgEl=document.getElementById(`${PLACE_SVG[place]}-${who}`);
+  svgEl.innerHTML='';
+  const W=vbW(svgEl.id),H=parseInt(svgEl.getAttribute('height'))||110;
+  const pos=cardPositions(count,place,W,H);
+  let i=0;
+  (function next(){
+    if(i>=pos.length){onDone();return;}
+    const g=mk('g',{opacity:0},svgEl);
+    drawCardSingle(g,pos[i].cx,pos[i].cy,place,pos[i].scale??1,1,null);
+    tween(180,t=>g.setAttribute('opacity',t),()=>{i++;next();});
+  })();
+}
+
+// --- A・Bのカードが答え行へ集まる（くり上がり分は見出し上から合流）---
+function runCalcCard(place,countA,countB,sumCount,hasCarryIn,onDone,layer){
+  document.getElementById('row-ans').style.display='table-row';
+  const svgA=document.getElementById(`${PLACE_SVG[place]}-a`);
+  const svgB=document.getElementById(`${PLACE_SVG[place]}-b`);
+  const svgAns=document.getElementById(`${PLACE_SVG[place]}-ans`);
+  const Wa=vbW(svgA.id),Ha=parseInt(svgA.getAttribute('height'))||110;
+  const Wb=vbW(svgB.id),Hb=parseInt(svgB.getAttribute('height'))||110;
+  const Wans=vbW(svgAns.id),Hans=parseInt(svgAns.getAttribute('height'))||94;
+
+  const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+  const carryAbove = hasCarryIn ? (isAnsSub ? ansTopRight(place) : aboveHdr(PLACE_HDR[place])) : null;
+  const carrySrc=hasCarryIn?[{...carryAbove,scale:1}]:[];
+  const posA=cardPositions(countA,place,Wa,Ha).map(p=>({...svgToLayer(svgA,p.cx,p.cy),scale:p.scale??1}));
+  const posB=cardPositions(countB,place,Wb,Hb).map(p=>({...svgToLayer(svgB,p.cx,p.cy),scale:p.scale??1}));
+  const dstAll=cardPositions(sumCount,place,Wans,Hans).map(p=>({...svgToLayer(svgAns,p.cx,p.cy),scale:p.scale??1}));
+  const allSrc=[...carrySrc,...posA,...posB];
+
+  renderCard(svgA,countA,place,.25);
+  renderCard(svgB,countB,place,.25);
+  svgAns.innerHTML='';layer.innerHTML='';
+
+  const cardGs=allSrc.map((p,i)=>{
+    const g=mk('g',{},layer);
+    const isCarry=(hasCarryIn&&i===0);
+    drawCardSingle(g,p.x,p.y,place,p.scale,1,isCarry?'#e74c3c':null);
+    return g;
+  });
+  tween(560,t=>{
+    cardGs.forEach((g,i)=>{
+      const dst=dstAll[i]||dstAll[dstAll.length-1];
+      const tx=allSrc[i].x+(dst.x-allSrc[i].x)*t;
+      const ty=allSrc[i].y+(dst.y-allSrc[i].y)*t;
+      const sc=allSrc[i].scale+(dst.scale-allSrc[i].scale)*t;
+      g.innerHTML='';
+      drawCardSingle(g,tx,ty,place,sc,1,(hasCarryIn&&i===0)?'#e74c3c':null);
+    });
+  },()=>{
+    layer.innerHTML='';
+    renderCard(svgAns,sumCount,place,1);
+    onDone();
+  });
+}
+
+// --- 10枚のカードが弾けて1枚の上位カードに変わり、上の桁へ移動 ---
+function runCarryCard(place,totalCount,remainCount,onDone,layer){
+  const upper=upperPlace(place);
+  const svgAns=document.getElementById(`${PLACE_SVG[place]}-ans`);
+  const W=vbW(svgAns.id),H=parseInt(svgAns.getAttribute('height'))||94;
+  const allPos=cardPositions(totalCount,place,W,H);
+  const baseScale=allPos[0]?.scale??1;
+  const pos10L=allPos.slice(0,10).map(p=>({...svgToLayer(svgAns,p.cx,p.cy),scale:p.scale??1}));
+  const posR=allPos.slice(10);
+
+  const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+  const dest = isAnsSub ? ansTopRight(upper) : aboveHdr(PLACE_HDR[upper]);
+  const srcCx=pos10L.reduce((s,p)=>s+p.x,0)/pos10L.length;
+  const srcCy=pos10L.reduce((s,p)=>s+p.y,0)/pos10L.length;
+  const cfg=CARD_CFG[place];
+  const cw=cfg.w*baseScale,ch=cfg.h*baseScale;
+
+  // 点線で「10枚のかたまり」だけを囲む。残りはそのまま通常表示で動かさない。
+  const xs=pos10L.map(p=>p.x),ys=pos10L.map(p=>p.y),m=6;
+  const bx0=Math.min(...xs)-cw/2-m, by0=Math.min(...ys)-ch/2-m;
+  const bw0=Math.max(...xs)-Math.min(...xs)+cw+m*2, bh0=Math.max(...ys)-Math.min(...ys)+ch+m*2;
+  const dash=mk('rect',{x:bx0,y:by0,width:bw0,height:bh0,fill:'none',stroke:'#e74c3c','stroke-width':2,'stroke-dasharray':'5,4',rx:5,opacity:0},layer);
+  tween(220,t=>dash.setAttribute('opacity',t),()=>{
+    setTimeout(()=>{
+      // 囲んだ10枚を元の場所から外し、残りカードだけ通常表示で描き直す
+      svgAns.innerHTML='';
+      posR.forEach(p=>drawCardSingle(mk('g',{},svgAns),p.cx,p.cy,place,p.scale??1,1));
+      // phase1: 点線で囲んだ部分（10枚＋枠）だけを中心に縮小する
+      const gs=pos10L.map(p=>{
+        const g=mk('g',{},layer);
+        drawCardSingle(g,p.x,p.y,place,p.scale,1,'#e74c3c');
+        return g;
+      });
+      tween(320,t=>{
+        gs.forEach((g,i)=>{
+          const sx=pos10L[i].x+(srcCx-pos10L[i].x)*t;
+          const sy=pos10L[i].y+(srcCy-pos10L[i].y)*t;
+          const sc=1-0.55*t;
+          g.setAttribute('transform',`translate(${sx-pos10L[i].x},${sy-pos10L[i].y}) translate(${pos10L[i].x},${pos10L[i].y}) scale(${sc}) translate(${-pos10L[i].x},${-pos10L[i].y})`);
+        });
+        const bw=bw0*(1-.85*t), bh=bh0*(1-.85*t);
+        dash.setAttribute('x',srcCx-bw/2);dash.setAttribute('y',srcCy-bh/2);
+        dash.setAttribute('width',bw);dash.setAttribute('height',bh);
+        dash.setAttribute('opacity',1-t);
+      },()=>{
+        layer.innerHTML='';
+        // phase2: 1枚の上位カードに変わってポップ
+        const gUp=mk('g',{opacity:0},layer);
+        drawCardSingle(gUp,srcCx,srcCy,upper,baseScale*0.4,1,'#e74c3c');
+        tween(260,t=>{
+          const sc=baseScale*(0.4+0.6*Math.min(1,t*1.3));
+          gUp.innerHTML='';
+          drawCardSingle(gUp,srcCx,srcCy,upper,sc,1,'#e74c3c');
+          gUp.setAttribute('opacity',Math.min(1,t*2));
+        },()=>{
+          // phase3: 上位の見出しの真上へ移動
+          tween(360,t=>{
+            const cx=srcCx+(dest.x-srcCx)*t;
+            const cy=srcCy+(dest.y-srcCy)*t;
+            gUp.innerHTML='';
+            drawCardSingle(gUp,cx,cy,upper,baseScale,1,'#e74c3c');
+          },()=>{
+            layer.innerHTML='';
+            // 元の桁：残りカードを正式に描画
+            svgAns.innerHTML='';
+            if(remainCount>0)renderCard(svgAns,remainCount,place,1);
+            // 上位の見出しの真上にしっかり表示で残す（まだ使われていないので半透明にしない。
+            // ichi→juu, juu→hyakuの場合はこの直後にpaintTilesがmark-layerへ引き継ぐ）
+            const gRest=mk('g',{},layer);
+            drawCardSingle(gRest,dest.x,dest.y,upper,baseScale,1,'#e74c3c');
+            onDone();
+          });
+        });
+      });
+    },480);
+  });
+}
+
+function runAnimCard(animType,n,layer,onDone){
+  const{aH,aJ,aI,bH,bJ,bI,hasCarryI,iSum,iAns,jRaw,hasCarryJ,jAns,hRaw,hasCarryH,hAns}=n;
+
+  if(animType==='appear-hyaku-a'){runAppearCard('hyaku','a',aH,onDone);return;}
+  if(animType==='appear-hyaku-b'){runAppearCard('hyaku','b',bH,onDone);return;}
+  if(animType==='appear-juu-a'){runAppearCard('juu','a',aJ,onDone);return;}
+  if(animType==='appear-juu-b'){runAppearCard('juu','b',bJ,onDone);return;}
+  if(animType==='appear-ichi-a'){runAppearCard('ichi','a',aI,onDone);return;}
+  if(animType==='appear-ichi-b'){runAppearCard('ichi','b',bI,onDone);return;}
+
+  if(animType==='ichi-calc'){runCalcCard('ichi',aI,bI,iSum,false,onDone,layer);return;}
+  if(animType==='juu-calc'){runCalcCard('juu',aJ,bJ,jRaw,hasCarryI,onDone,layer);return;}
+  if(animType==='hyaku-calc'){runCalcCard('hyaku',aH,bH,hRaw,hasCarryJ,onDone,layer);return;}
+
+  if(animType==='carry-i'){runCarryCard('ichi',iSum,iAns,onDone,layer);return;}
+  if(animType==='carry-j'){runCarryCard('juu',jRaw,jAns,onDone,layer);return;}
+  if(animType==='carry-h'){runCarryCard('hyaku',hRaw,hAns,onDone,layer);return;}
+
+  // --- sen-calc: ヘッダー真上のせんカードが答え行(せんのくらい)へ降りてくる ---
+  if(animType==='sen-calc'){
+    document.getElementById('row-ans').style.display='table-row';
+    const svgSenAns=document.getElementById('svg-sen-ans');
+    svgSenAns.innerHTML='';
+    const src=aboveHdr('hdr-sen');
+    const cx=vbW('svg-sen-ans')/2, cy=120/2;
+    const dest=svgToLayer(svgSenAns,cx,cy);
+    layer.innerHTML='';
+    const g=mk('g',{},layer);
+    drawCardSingle(g,src.x,src.y,'sen',1,1,'#e74c3c');
+    tween(420,t=>{
+      const tx=src.x+(dest.x-src.x)*t;
+      const ty=src.y+(dest.y-src.y)*t;
+      g.setAttribute('transform',`translate(${tx-src.x},${ty-src.y})`);
+    },()=>{
+      layer.innerHTML='';
+      renderCard(svgSenAns,1,'sen',1);
+      onDone();
+    });
+    return;
+  }
+
+  layer.innerHTML='';
+  onDone();
+}
+
+// ============================================================
+// アニメーション本体
+// ============================================================
+function runAnim(animType,prevState,nextState,onDone){
+  const layer=document.getElementById('anim-layer');
+  layer.innerHTML='';
+  if(!animType){onDone();return;}
+
+  const aH=Math.floor(numA/100),aJ=Math.floor((numA%100)/10),aI=numA%10;
+  const bH=Math.floor(numB/100),bJ=Math.floor((numB%100)/10),bI=numB%10;
+  const ans=numA+numB;
+  const hasCarryI=(aI+bI>=10);
+  const iSum=aI+bI,iAns=iSum%10;
+  const jRaw=aJ+bJ+(hasCarryI?1:0);
+  const hasCarryJ=(jRaw>=10);
+  const jAns=jRaw%10;
+  const hRaw=aH+bH+(hasCarryJ?1:0);
+  const hasCarryH=(hRaw>=10);
+  const hAns=hRaw%10;
+  const has3=(aH>0||bH>0||ans>=100);
+  const has4=(ans>=1000);
+
+  // 百タイル描画スケール（hyakuセル用：動的に広がった幅・高さに対応）
+  const HW=vbW('svg-hyaku-ans'),HH_SVG=vbH('svg-hyaku-ans');
+  const su=U*Math.min((HW-8)/HYAKU_SIDE,(HH_SVG-8)/HYAKU_SIDE,1);
+
+  // ============================================================
+  // カードモード：アニメーションはタイル版と完全に別ルートで処理する。
+  // 桁の種類（ichi/juu/hyaku/sen）に関わらず同じ4つの汎用関数で
+  // 表現できるため、桁数が増えても新しい分岐を追加する必要がない。
+  // ============================================================
+  if(DISPLAY_MODE==='card'){
+    runAnimCard(animType,{aH,aJ,aI,bH,bJ,bI,ans,hasCarryI,iSum,iAns,jRaw,hasCarryJ,jAns,hRaw,hasCarryH,hAns,has3,has4},layer,onDone);
+    return;
+  }
+
+  // --- appear-hyaku-a / b ---
+  if(animType==='appear-hyaku-a'||animType==='appear-hyaku-b'){
+    const id=animType==='appear-hyaku-a'?'svg-hyaku-a':'svg-hyaku-b';
+    const count=animType==='appear-hyaku-a'?aH:bH;
+    const svgEl=document.getElementById(id);
+    svgEl.innerHTML='';
+    // renderHyakusと完全に同じ式で位置・縮尺を計算する（最初の出現位置と最終位置を一致させる）
+    const W=vbW(id),H=vbH(id),side=HYAKU_SIDE;
+    const sc=Math.min((W-8)/side,(H-8)/side,1);
+    const suA=U*sc;let si=0;
+    (function next(){
+      if(si>=count){onDone();return;}
+      const{cx,cy}=hyakuTilePos(si,count,W,H,suA);
+      const g=mk('g',{opacity:0},svgEl);
+      drawHyakuScaled(g,cx,cy,suA,1,SC);
+      tween(280,t=>g.setAttribute('opacity',t),()=>{si++;next();});
+    })();
+    return;
+  }
+
+  // --- appear-juu-a / b ---
+  if(animType==='appear-juu-a'||animType==='appear-juu-b'){
+    const id=animType==='appear-juu-a'?'svg-juu-a':'svg-juu-b';
+    const count=animType==='appear-juu-a'?aJ:bJ;
+    const svgEl=document.getElementById(id);
+    svgEl.innerHTML='';
+    // renderSticksと完全に同じ式で位置を計算する（最初の出現位置と最終位置を一致させる）
+    const W=vbW(id),H=vbH(id);
+    const{xs,totW}=stickLayout(count);
+    const sx0=(W-totW)/2;
+    let si=0;
+    (function next(){
+      if(si>=count){onDone();return;}
+      const cx=sx0+xs[si]+STICK_W/2,cy=H/2;
+      const g=mk('g',{opacity:0},svgEl);
+      drawStick(g,cx,cy,U,1);
+      tween(200,t=>g.setAttribute('opacity',t),()=>{si++;next();});
+    })();
+    return;
+  }
+
+  // --- appear-ichi-a / b ---
+  if(animType==='appear-ichi-a'||animType==='appear-ichi-b'){
+    const id=animType==='appear-ichi-a'?'svg-ichi-a':'svg-ichi-b';
+    const count=animType==='appear-ichi-a'?aI:bI;
+    const svgEl=document.getElementById(id);
+    svgEl.innerHTML='';
+    const W=110,H=110;
+    const tmp=mk('svg',{width:0,height:0,style:'position:absolute;visibility:hidden'});
+    document.body.appendChild(tmp);
+    const pos=drawIchi(tmp,count,W,H,1,null);
+    document.body.removeChild(tmp);
+    let ii=0;
+    (function next(){
+      if(ii>=pos.length){onDone();return;}
+      const{cx,cy}=pos[ii];
+      const r=mk('rect',{x:cx-U/2,y:cy-U/2,width:U,height:U,fill:FC,stroke:SC,'stroke-width':1,rx:.6,opacity:0},svgEl);
+      tween(140,t=>r.setAttribute('opacity',t),()=>{ii++;next();});
+    })();
+    return;
+  }
+
+  // --- ichi-calc ---
+  if(animType==='ichi-calc'){
+    document.getElementById('row-ans').style.display='table-row';
+    ['svg-sen-ans','svg-hyaku-ans','svg-juu-ans','svg-ichi-ans'].forEach(id=>document.getElementById(id).innerHTML='');
+    const W=110,HH=110,HA=120;
+    const svgA=document.getElementById('svg-ichi-a');
+    const svgB=document.getElementById('svg-ichi-b');
+    const svgAns=document.getElementById('svg-ichi-ans');
+    const posA=drawIchi(mk('svg',{width:0,height:0}),aI,W,HH,1,null);
+    const posB=drawIchi(mk('svg',{width:0,height:0}),bI,W,HH,1,null);
+    const posAns=drawIchi(mk('svg',{width:0,height:0}),iSum,W,HA,1,null);
+    const lA=posA.map(p=>svgToLayer(svgA,p.cx,p.cy));
+    const lB=posB.map(p=>svgToLayer(svgB,p.cx,p.cy));
+    const lAns=posAns.map((_,i)=>svgToLayer(svgAns,posAns[i].cx,posAns[i].cy));
+    renderIchi(svgA,aI,.25);renderIchi(svgB,bI,.25);
+    const allSrc=[...lA,...lB];
+    const rects=allSrc.map(p=>mk('rect',{x:p.x-U/2,y:p.y-U/2,width:U,height:U,fill:FC,stroke:SC,'stroke-width':1,rx:.6},layer));
+    tween(520,t=>{
+      rects.forEach((r,i)=>{
+        const dst=lAns[i]||lAns[lAns.length-1];
+        r.setAttribute('x',allSrc[i].x+(dst.x-allSrc[i].x)*t-U/2);
+        r.setAttribute('y',allSrc[i].y+(dst.y-allSrc[i].y)*t-U/2);
+      });
+    },()=>{layer.innerHTML='';renderIchi(svgAns,iSum,1);onDone();});
+    return;
+  }
+
+  // --- carry-i: 一→十くり上がり ---
+  if(animType==='carry-i'){
+    const svgAnsI=document.getElementById('svg-ichi-ans');
+    const W=110,HA=120;
+    const posAll=drawIchi(mk('svg',{width:0,height:0}),iSum,W,HA,1,null);
+    const pos10=posAll.slice(0,10);
+    const posR=posAll.slice(10);
+    const l10=pos10.map(p=>svgToLayer(svgAnsI,p.cx,p.cy));
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    const dest = isAnsSub ? ansTopRight('juu') : aboveHdr('hdr-juu');
+    const srcCx=l10.reduce((s,p)=>s+p.x,0)/10;
+    const srcCy=l10.reduce((s,p)=>s+p.y,0)/10;
+
+    // 点線で「10個のかたまり」だけを囲む。囲んでいない残りは通常表示のまま動かさない。
+    const xs=l10.map(p=>p.x),ys=l10.map(p=>p.y),m=U*.8;
+    const bx0=Math.min(...xs)-U/2-m, by0=Math.min(...ys)-U/2-m;
+    const bw0=Math.max(...xs)-Math.min(...xs)+U+m*2, bh0=Math.max(...ys)-Math.min(...ys)+U+m*2;
+    const dash=mk('rect',{x:bx0,y:by0,width:bw0,height:bh0,fill:'none',stroke:'#e74c3c','stroke-width':2,'stroke-dasharray':'5,4',rx:4,opacity:0},layer);
+    tween(220,t=>dash.setAttribute('opacity',t),()=>{
+      setTimeout(()=>{
+        // 囲んだ10個を元の場所から外し、残り（iAns個）だけを通常表示で描き直す
+        svgAnsI.innerHTML='';
+        posR.forEach(p=>mk('rect',{x:p.cx-U/2,y:p.cy-U/2,width:U,height:U,fill:FC,stroke:SC,'stroke-width':1,rx:.6},svgAnsI));
+        // phase1: 点線で囲んだ部分（10個＋枠）だけを中心に縮小する
+        const rects=l10.map(p=>mk('rect',{x:p.x-U/2,y:p.y-U/2,width:U,height:U,fill:FC,stroke:SC,'stroke-width':1,rx:.6},layer));
+        tween(320,t=>{
+          rects.forEach((r,i)=>{
+            const cx=l10[i].x+(srcCx-l10[i].x)*t, cy=l10[i].y+(srcCy-l10[i].y)*t;
+            const sz=U*(1-.5*t);
+            r.setAttribute('x',cx-sz/2);r.setAttribute('y',cy-sz/2);
+            r.setAttribute('width',sz);r.setAttribute('height',sz);
+          });
+          const bw=bw0+(U*1.2-bw0)*t, bh=bh0+(U*1.2-bh0)*t;
+          dash.setAttribute('x',srcCx-bw/2);dash.setAttribute('y',srcCy-bh/2);
+          dash.setAttribute('width',bw);dash.setAttribute('height',bh);
+          dash.setAttribute('opacity',1-t);
+        },()=>{
+          // phase2: 棒に変形
+          layer.innerHTML='';
+          const JH=10*U+9*U*.15;
+          tween(260,t=>{
+            layer.innerHTML='';
+            const curH=U+(JH-U)*t;
+            const bx=srcCx-U/2,by=srcCy-curH/2;
+            for(let i=0;i<10;i++){const sh=curH/10;mk('rect',{x:bx,y:by+i*sh,width:U,height:sh-.3,fill:FC,stroke:SC,'stroke-width':.6*(.2+t*.8),rx:.3,opacity:.4+.6*t},layer);}
+            mk('rect',{x:bx-1,y:by-1,width:U+2,height:curH+2,fill:'none',stroke:'#e74c3c','stroke-width':2},layer);
+          },()=>{
+            // phase3: 目的地へ飛ぶ
+            tween(380,t=>{
+              layer.innerHTML='';
+              const cx=srcCx+(dest.x-srcCx)*t;
+              const cy=srcCy+(dest.y-srcCy)*t;
+              const bx=cx-U/2,by=cy-JH/2;
+              for(let i=0;i<10;i++){const sh=JH/10;mk('rect',{x:bx,y:by+i*sh,width:U,height:sh-.3,fill:FC,stroke:SC,'stroke-width':.6,rx:.3},layer);}
+              mk('rect',{x:bx-1,y:by-1,width:U+2,height:JH+2,fill:'none',stroke:'#e74c3c','stroke-width':2*(1-t*.7),rx:1},layer);
+            },()=>{
+              layer.innerHTML='';
+              onDone();
+            });
+          });
+        });
+      },480);
+    });
+    return;
+  }
+
+  // --- juu-calc: 十の位 ---
+  if(animType==='juu-calc'){
+    document.getElementById('row-ans').style.display='table-row';
+    const svgJA=document.getElementById('svg-juu-a');
+    const svgJB=document.getElementById('svg-juu-b');
+    const svgJAns=document.getElementById('svg-juu-ans');
+    const W=vbW('svg-juu-a'),H=vbH('svg-juu-a'),HA=vbH('svg-juu-ans'),stW=STICK_W;
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    // carry棒の出発位置
+    const carryAbove = isAnsSub ? ansTopRight('juu') : aboveHdr('hdr-juu');
+    const carrySrc=hasCarryI?[carryAbove]:[];
+    // A棒・B棒出発位置（renderSticksと同じグループ間隔の式を使う）
+    const layA=stickLayout(aJ),sxA0=(W-layA.totW)/2;
+    const srcA=layA.xs.map(x=>svgToLayer(svgJA,sxA0+x+stW/2,H/2));
+    const layB=stickLayout(bJ),sxB0=(W-layB.totW)/2;
+    const srcB=layB.xs.map(x=>svgToLayer(svgJB,sxB0+x+stW/2,H/2));
+    // 移動先
+    const layAns=stickLayout(jRaw),sxAns0=(W-layAns.totW)/2;
+    const dstAll=layAns.xs.map(x=>svgToLayer(svgJAns,sxAns0+x+stW/2,HA/2));
+    const allSrc=[...carrySrc,...srcA,...srcB];
+    renderSticks(svgJA,aJ,.25);renderSticks(svgJB,bJ,.25);
+    svgJAns.innerHTML='';layer.innerHTML='';
+    const stickGs=allSrc.map((p,i)=>{
+      const g=mk('g',{},layer);
+      const isC=(hasCarryI&&i===0);
+      drawStick(g,p.x,p.y,U,1,isC?'#e74c3c':SC); // 移動するタイル自体は濃い色のまま
+      return g;
+    });
+    // くり上がり棒が出発した瞬間に、残像（mark-layer）を半透明に切り替える
+    if(hasCarryI){
+      const ml=document.getElementById('mark-layer');ml.innerHTML='';
+      const pos = isAnsSub ? ansTopRight('juu') : aboveHdr('hdr-juu');
+      const JH=10*U+9*U*.15,bx=pos.x-U/2,by=pos.y-JH/2;
+      const g=mk('g',{opacity:.35},ml);
+      for(let i=0;i<10;i++){const sh=JH/10;mk('rect',{x:bx,y:by+i*sh,width:U,height:sh-.3,fill:FC,stroke:SC,'stroke-width':.6,rx:.3},g);}
+    }
+    tween(600,t=>{
+      stickGs.forEach((g,i)=>{
+        const tx=allSrc[i].x+(dstAll[i].x-allSrc[i].x)*t;
+        const ty=allSrc[i].y+(dstAll[i].y-allSrc[i].y)*t;
+        g.setAttribute('transform',`translate(${tx-allSrc[i].x},${ty-allSrc[i].y})`);
+      });
+    },()=>{
+      layer.innerHTML='';
+      renderSticks(svgJAns,jRaw,1);
+      onDone();
+    });
+    return;
+  }
+
+  // --- carry-j: 十→百くり上がり ---
+  if(animType==='carry-j'){
+    const svgJAns=document.getElementById('svg-juu-ans');
+    const HA=vbH('svg-juu-ans'),stW=STICK_W;
+    const{xs,totW}=stickLayout(jRaw);
+    const W=vbW('svg-juu-ans'),sx0=(W-totW)/2;
+    const allPos=xs.map(x=>({x:sx0+x+stW/2,y:HA/2}));
+    const pos10=allPos.slice(0,10);
+    const posR=allPos.slice(10);
+    const src10=pos10.map(p=>svgToLayer(svgJAns,p.x,p.y));
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    const dest = isAnsSub ? ansTopRight('hyaku') : aboveHdr('hdr-hyaku');
+    const srcCx=src10.reduce((s,p)=>s+p.x,0)/10;
+    const srcCy=src10.reduce((s,p)=>s+p.y,0)/10;
+
+    // 点線で「10本のかたまり」だけを囲む。残り（jAns本）は通常表示のまま動かさない。
+    // 縦方向は棒1本分の高さ(JH=10ユニット分)を基準にする（U単位の高さだと10倍狭すぎる）
+    const JH0=10*U+9*U*.15;
+    const xs2=src10.map(p=>p.x),m=4;
+    const bx0=Math.min(...xs2)-stW/2-m, by0=srcCy-JH0/2-m;
+    const bw0=Math.max(...xs2)-Math.min(...xs2)+stW+m*2, bh0=JH0+m*2;
+    const dash=mk('rect',{x:bx0,y:by0,width:bw0,height:bh0,fill:'none',stroke:'#e74c3c','stroke-width':2,'stroke-dasharray':'5,4',rx:4,opacity:0},layer);
+    tween(220,t=>dash.setAttribute('opacity',t),()=>{
+      setTimeout(()=>{
+        // 囲んだ10本を元の場所から外し、残りだけ通常表示で描き直す
+        svgJAns.innerHTML='';
+        posR.forEach(p=>{const g=mk('g',{},svgJAns);drawStick(g,p.x,p.y,U,1,SC);});
+        // phase1: 点線で囲んだ部分（10本＋枠）だけを中心に縮小する
+        const gs=src10.map(p=>{const g=mk('g',{},layer);drawStick(g,p.x,p.y,U,1,SC);return g;});
+        tween(320,t=>{
+          gs.forEach((g,i)=>{
+            const cx=src10[i].x+(srcCx-src10[i].x)*t, cy=src10[i].y+(srcCy-src10[i].y)*t;
+            const sc=1-.5*t;
+            const dx=cx-src10[i].x, dy=cy-src10[i].y;
+            g.setAttribute('transform',`translate(${dx},${dy}) translate(${src10[i].x},${src10[i].y}) scale(${sc}) translate(${-src10[i].x},${-src10[i].y})`);
+          });
+          const bw=bw0+(stW*1.2-bw0)*t, bh=bh0+(U*1.2-bh0)*t;
+          dash.setAttribute('x',srcCx-bw/2);dash.setAttribute('y',srcCy-bh/2);
+          dash.setAttribute('width',bw);dash.setAttribute('height',bh);
+          dash.setAttribute('opacity',1-t);
+        },()=>{
+          // phase2: ひゃくタイルに変形しつつ目的地へ飛ぶ
+          layer.innerHTML='';
+          const g2=mk('g',{},layer);
+          drawHyakuScaled(g2,srcCx,srcCy,su*.001,1,'#e74c3c'); // 初期はごく小さく
+          tween(420,t=>{
+            const cx=srcCx+(dest.x-srcCx)*t;
+            const cy=srcCy+(dest.y-srcCy)*t;
+            const sc=su*(.15+.85*t);
+            layer.innerHTML='';
+            const g3=mk('g',{},layer);
+            drawHyakuScaled(g3,cx,cy,sc,1,'#e74c3c');
+          },()=>{
+            layer.innerHTML='';
+            onDone();
+          });
+        });
+      },480);
+    });
+    return;
+  }
+
+  // --- hyaku-calc: 百の位 ---
+  if(animType==='hyaku-calc'){
+    document.getElementById('row-ans').style.display='table-row';
+    const svgHA=document.getElementById('svg-hyaku-a');
+    const svgHB=document.getElementById('svg-hyaku-b');
+    const svgHAns=document.getElementById('svg-hyaku-ans');
+    const W=vbW('svg-hyaku-a'),H=vbH('svg-hyaku-a'),HB=vbH('svg-hyaku-b'),HA=vbH('svg-hyaku-ans');
+    const isAnsSub = (CARRY_POS_MODE === 'ans-sub');
+    // carry百タイルの出発位置
+    const carryAbove = isAnsSub ? ansTopRight('hyaku') : aboveHdr('hdr-hyaku');
+    const carrySrc=hasCarryJ?[carryAbove]:[];
+    const srcA=Array.from({length:aH},(_,i)=>{
+      const p=hyakuTilePos(i,aH,W,H,su);return svgToLayer(svgHA,p.cx,p.cy);});
+    const srcB=Array.from({length:bH},(_,i)=>{
+      const p=hyakuTilePos(i,bH,W,HB,su);return svgToLayer(svgHB,p.cx,p.cy);});
+    const hTotal=hRaw;
+    const dstAll=Array.from({length:hTotal},(_,i)=>{
+      const p=hyakuTilePos(i,hTotal,W,HA,su);return svgToLayer(svgHAns,p.cx,p.cy);});
+    const allSrc=[...carrySrc,...srcA,...srcB];
+    renderHyakus(svgHA,aH,.25);renderHyakus(svgHB,bH,.25);
+    svgHAns.innerHTML='';layer.innerHTML='';
+    const hGs=allSrc.map((p,i)=>{
+      const g=mk('g',{},layer);
+      const isC=(hasCarryJ&&i===0);
+      drawHyakuScaled(g,p.x,p.y,su,1,isC?'#e74c3c':SC); // 移動するタイル自体は濃い色のまま
+      return g;
+    });
+    // くり上がりタイルが出発した瞬間に、残像（mark-layer）を半透明に切り替える。
+    if(hasCarryJ){
+      const ml=document.getElementById('mark-layer');ml.innerHTML='';
+      // 十の位のくり上がり残像を先に再描画（消えないようにする）。棒と赤枠の両方を描く。
+      if(prevState.markJ&&prevState.markJ.show){
+        const posJ = isAnsSub ? ansTopRight('juu') : aboveHdr('hdr-juu');
+        const JH=10*U+9*U*.15,bxJ=posJ.x-U/2,byJ=posJ.y-JH/2;
+        const gJ=mk('g',{opacity:prevState.markJ.alpha},ml);
+        for(let i=0;i<10;i++){const sh=JH/10;mk('rect',{x:bxJ,y:byJ+i*sh,width:U,height:sh-.3,fill:FC,stroke:SC,'stroke-width':.6,rx:.3},gJ);}
+        mk('rect',{x:bxJ-1,y:byJ-1,width:U+2,height:JH+2,fill:'none',stroke:'#e74c3c','stroke-width':2,rx:1},gJ);
+      }
+      // 次に百の位のくり上がり残像を描く
+      const pos = isAnsSub ? ansTopRight('hyaku') : aboveHdr('hdr-hyaku');
+      const HW=vbW('svg-hyaku-ans'),HH_SVG=vbH('svg-hyaku-ans');
+      const su2=U*Math.min((HW-8)/HYAKU_SIDE,(HH_SVG-8)/HYAKU_SIDE,1);
+      const g=mk('g',{},ml);
+      drawHyakuScaled(g,pos.x,pos.y,su2,.35,'#e74c3c');
+    }
+    tween(620,t=>{
+      hGs.forEach((g,i)=>{
+        const tx=allSrc[i].x+(dstAll[i].x-allSrc[i].x)*t;
+        const ty=allSrc[i].y+(dstAll[i].y-allSrc[i].y)*t;
+        g.setAttribute('transform',`translate(${tx-allSrc[i].x},${ty-allSrc[i].y})`);
+      });
+    },()=>{
+      layer.innerHTML='';
+      renderHyakus(svgHAns,hTotal,1);
+      onDone();
+    });
+    return;
+  }
+
+  // --- carry-h: 百→千くり上がり ---
+  if(animType==='carry-h'){
+    const svgHAns=document.getElementById('svg-hyaku-ans');
+    const W=vbW('svg-hyaku-ans'),HA=vbH('svg-hyaku-ans');
+    // 現行の百タイル配置（斜めにずらし、5枚ごとに列を作る並び方）と同じ座標を使う。
+    // 以前は横一列の仮の座標(stepずらし)を使っていたため、くり上がり時だけ並びが崩れて見えていた。
+    const allPos=Array.from({length:hRaw},(_,i)=>{const p=hyakuTilePos(i,hRaw,W,HA,su);return{x:p.cx,y:p.cy};});
+    const pos10=allPos.slice(0,10);
+    const posR=allPos.slice(10);
+    const src10=pos10.map(p=>svgToLayer(svgHAns,p.x,p.y));
+    const dest=aboveHdr('hdr-sen');
+    const srcCx=src10.reduce((s,p)=>s+p.x,0)/10;
+    const srcCy=src10.reduce((s,p)=>s+p.y,0)/10;
+
+    // 「10枚のかたまり（斜め5枚＋5枚の2列）」だけを六角形の点線で囲む。残り（hAns枚）は通常表示のまま動かさない。
+    // 矩形で囲むと斜めに並ぶ他のタイルに重なってしまうため、1・5・6・10枚目のタイル四隅を結んだ六角形にする。
+    const TW0=10*su+9*su*.15,hw=TW0/2,m=6;
+    const p1=src10[0],p5=src10[4],p6=src10[5],p10=src10[9];
+    const hexPts=[
+      [p1.x-hw-m, p1.y+hw+m],   // ①1枚目の左下
+      [p6.x+hw+m, p6.y+hw+m],   // ②6枚目の右下
+      [p10.x+hw+m,p10.y+hw+m],  // ③10枚目の右下
+      [p10.x+hw+m,p10.y-hw-m],  // ④10枚目の右上
+      [p5.x-hw-m, p5.y-hw-m],   // ⑤5枚目の左上
+      [p1.x-hw-m, p1.y-hw-m],   // ⑥1枚目の左上
+    ];
+    const dash=mk('polygon',{points:hexPts.map(p=>p.join(',')).join(' '),fill:'none',stroke:'#2980b9','stroke-width':2,'stroke-dasharray':'5,4',opacity:0},layer);
+    tween(220,t=>dash.setAttribute('opacity',t),()=>{
+      setTimeout(()=>{
+        // 囲んだ10枚を元の場所から外し、残りだけ通常表示で描き直す
+        svgHAns.innerHTML='';
+        posR.forEach(p=>{const g=mk('g',{},svgHAns);drawHyakuScaled(g,p.x,p.y,su,1,SC);});
+        // phase1: 点線で囲んだ部分（10枚＋六角形の枠）だけを中心に縮小する
+        const gs=src10.map(p=>{const g=mk('g',{},layer);drawHyakuScaled(g,p.x,p.y,su,1,SC);return g;});
+        tween(320,t=>{
+          gs.forEach((g,i)=>{
+            const cx=src10[i].x+(srcCx-src10[i].x)*t, cy=src10[i].y+(srcCy-src10[i].y)*t;
+            const sc=1-.5*t;
+            const dx=cx-src10[i].x, dy=cy-src10[i].y;
+            g.setAttribute('transform',`translate(${dx},${dy}) translate(${src10[i].x},${src10[i].y}) scale(${sc}) translate(${-src10[i].x},${-src10[i].y})`);
+          });
+          const hsc=1-.85*t;
+          dash.setAttribute('transform',`translate(${srcCx},${srcCy}) scale(${hsc}) translate(${-srcCx},${-srcCy})`);
+          dash.setAttribute('opacity',1-t);
+        },()=>{
+          // phase2: せんタイルに変形しつつ真上へ飛ぶ
+          layer.innerHTML='';
+          const senSc=getSenScale();
+          tween(420,t=>{
+            const cx=srcCx+(dest.x-srcCx)*t;
+            const cy=srcCy+(dest.y-srcCy)*t;
+            const sc=senSc*(.15+.85*t);
+            layer.innerHTML='';
+            const g3=mk('g',{},layer);
+            drawSenScaled(g3,cx,cy,sc,1,'#e74c3c');
+          },()=>{
+            layer.innerHTML='';
+            // hAns枚残す（再描画はpaintTiles側でも行われるが、ここでも確定表示しておく）
+            const svgH2=document.getElementById('svg-hyaku-ans');
+            svgH2.innerHTML='';
+            if(hAns>0)renderHyakus(svgH2,hAns,1);
+            // 千タイルをヘッダー真上にしっかり表示で残す（まだ使われていないので半透明にしない）
+            const gS=mk('g',{},layer);
+            drawSenScaled(gS,dest.x,dest.y,senSc,1,'#e74c3c');
+            onDone();
+          });
+        });
+      },480);
+    });
+    return;
+  }
+
+  // --- sen-calc: ヘッダー真上のせんタイルが答え行(せんのくらい)へ降りてくる ---
+  if(animType==='sen-calc'){
+    document.getElementById('row-ans').style.display='table-row';
+    const svgSenAns=document.getElementById('svg-sen-ans');
+    svgSenAns.innerHTML='';
+    const src=aboveHdr('hdr-sen');
+    const senSc=getSenScale();
+    const cx=vbW('svg-sen-ans')/2, cy=120/2;
+    const dest=svgToLayer(svgSenAns,cx,cy);
+    layer.innerHTML='';
+    const g=mk('g',{},layer);
+    drawSenScaled(g,src.x,src.y,senSc,1,SC);
+    tween(450,t=>{
+      const tx=src.x+(dest.x-src.x)*t;
+      const ty=src.y+(dest.y-src.y)*t;
+      g.setAttribute('transform',`translate(${tx-src.x},${ty-src.y})`);
+    },()=>{
+      layer.innerHTML='';
+      renderSens(svgSenAns,1,1,null);
+      onDone();
+    });
+    return;
+  }
+
+  layer.innerHTML='';
+  onDone();
+}
+
+// 千タイルスケール計算
+function getSenScale(){
+  const W=110,H=110,u=U,G=u*.15,W10=10*u+9*G,H10=10*u+9*G,OX=u*.35,OY=u*.35;
+  const needW=W10+9*OX,needH=H10+9*OY;
+  return u*Math.min((W-6)/needW,(H-6)/needH);
+}
+
+// カードモード時の桁の必要幅を計算
+// カードは「縦5枚×横の列」が基本のため、必要な列数はceil(枚数/5)で決まる
+// （0〜10枚なら2列に収まる）。cardPositionsと同じ式を使うことで、
+// 位取り表の列幅とカードの実際の描画幅が常に一致し、はみ出さない。
+function cardNeedWidth(maxCount,place){
+  const cfg=CARD_CFG[place];
+  if(maxCount<=0)return cfg.w+20;
+  const perCol=5;
+  const cols=Math.max(1,Math.ceil(maxCount/perCol));
+  const gapX=10;
+  const needW=cols*cfg.w+(cols-1)*gapX;
+  return Math.round(needW+16);
+}
+
+// ============================================================
+// レイアウト更新（列の表示/非表示・幅の動的拡張・is-empty制御）
+// <col>要素を1つ操作するだけで thead/tbody 両方の対応列が同時に
+// 表示/非表示・幅変更される（tableの仕様）ため、ヘッダーとデータの
+// ズレは構造的に発生しない。
+// ============================================================
+function updateLayout(){
+  const aH=Math.floor(numA/100),aJ=Math.floor((numA%100)/10),aI=numA%10;
+  const bH=Math.floor(numB/100),bJ=Math.floor((numB%100)/10),bI=numB%10;
+  const ans=numA+numB;
+  const has3=(aH>0||bH>0||ans>=100);
+  const has4=(ans>=1000);
+
+  // 百の位列（col要素の表示切替＋ th/td も同じ値で連動させ二重に保証する）
+  const hyakuDisp=has3?'':'none';
+  document.getElementById('colgrp-hyaku').style.display=has3?'table-column':'none';
+  document.querySelectorAll('.th-hyaku, .td-hyaku').forEach(el=>{el.style.display=hyakuDisp;});
+  // 千の位列
+  const senDisp=has4?'':'none';
+  document.getElementById('colgrp-sen').style.display=has4?'table-column':'none';
+  document.querySelectorAll('.th-sen, .td-sen').forEach(el=>{el.style.display=senDisp;});
+
+  const hasCarryI=(aI+bI>=10);
+  const jRaw=aJ+bJ+(hasCarryI?1:0);
+  const hasCarryJ=(jRaw>=10);
+  const hRaw=aH+bH+(hasCarryJ?1:0);
+  const maxJuuCount=Math.max(aJ,bJ,jRaw,1);
+  const maxHyakuCount=Math.max(aH,bH,hRaw,1);
+
+  let juuWidth,hyakuWidth;
+  let hyakuHeights={'svg-hyaku-a':110,'svg-hyaku-b':110,'svg-hyaku-ans':120}; // 既定（カード方式や枚数が少ない場合はこのまま）
+  if(DISPLAY_MODE==='card'){
+    // カード方式：5枚で1ブロック・最大2列という固定レイアウトなので、
+    // cardNeedWidthで実際に必要な幅を逆算する（桁数が増えても同じ式で対応）。
+    juuWidth=Math.max(124,cardNeedWidth(maxJuuCount,'juu'));
+    hyakuWidth=Math.max(124,cardNeedWidth(maxHyakuCount,'hyaku'));
+  } else {
+    // ---- 十の位の幅：この問題で表示しうる最大の棒の本数から逆算（5本ごとの間隔も含む）----
+    const juuNeedW=stickLayout(maxJuuCount).totW+16; // 余白
+    juuWidth=Math.max(124,Math.round(juuNeedW));
+    // ---- 百の位：タイルの配置(hyakuRawPos/hyakuTilePosと同じ式)から必要な幅・高さを逆算し、
+    //      枚数が多いときに6枚目以降の2列目分も含めてすべてのタイルが必ず収まるようにする ----
+    const hyakuFp=n=>hyakuFootprint(n,U);
+    hyakuWidth=Math.max(124,Math.round(hyakuFp(maxHyakuCount).width+8));
+    hyakuHeights={
+      'svg-hyaku-a':  Math.max(110,Math.round(hyakuFp(aH).height+8)),
+      'svg-hyaku-b':  Math.max(110,Math.round(hyakuFp(bH).height+8)),
+      'svg-hyaku-ans':Math.max(120,Math.round(hyakuFp(hRaw).height+8)),
+    };
+  }
+
+  document.querySelector('col.col-juu').style.width=juuWidth+'px';
+  ['svg-juu-a','svg-juu-b','svg-juu-ans'].forEach(id=>{
+    const svg=document.getElementById(id);
+    svg.setAttribute('width',juuWidth);
+    const h=svg.getAttribute('viewBox').split(' ')[3];
+    svg.setAttribute('viewBox',`0 0 ${juuWidth} ${h}`);
+  });
+
+  document.getElementById('colgrp-hyaku').style.width=hyakuWidth+'px';
+  ['svg-hyaku-a','svg-hyaku-b','svg-hyaku-ans'].forEach(id=>{
+    const svg=document.getElementById(id);
+    const h=hyakuHeights[id];
+    svg.setAttribute('width',hyakuWidth);
+    svg.setAttribute('height',h);
+    svg.setAttribute('viewBox',`0 0 ${hyakuWidth} ${h}`);
+  });
+
+  // (is-empty トグルは廃止)
+
+  // 列幅・行高が確定してから、数図の表示倍率を落とさずに使える余白だけを
+  // 右パネルへ割り当てる。倍率はこの問題の全ステップを基準に一度だけ決める。
+  relayoutResponsiveCanvas();
+}
+
+// ============================================================
+// 右カラム（筆算＋説明）の「問題全体で固定」ズーム
+// ============================================================
+// 【コンパクト縦長レイアウトの方針】
+// ・右パネルは flex で余白を吸収させない。中身を表示するのに必要な幅だけ使う。
+// ・問題生成時に全ステップの説明文と筆算外形を測り、問題全体で同じ倍率を使う。
+// ・数図表より右パネルが低い場合だけ、中身そのものを拡大する。
+// ・その拡大に必要な横幅だけ右パネルを広げる。空白を増やすためには広げない。
+// ・右パネル拡大のために画面全体倍率が落ちるところまでは広げない。
+// ・小さい問題では2枚の縦長カードを中央に寄せ、#stage自体は操作部を崩さない1040pxを維持。
+//   最終表示は高さ優先のfitStageで画面の縦をできるだけ使う。
+// ============================================================
+const STEP_CONTENT_W=230;
+const RP_ZOOM_MAX=2.2;
+const BASE_STAGE_W=1040;
+const MAX_STAGE_W=1600;
+const RIGHT_PANEL_BOX_HPAD=36; // step-box の左右padding 18px×2（hissan-boxより大きい側）
+const MAIN_AREA_HPAD=16;       // .main-area の左右padding 8px×2
+const MAIN_AREA_GAP=12;
+let stableRightPanelFactor=1;
+let stableRightPanelHeightFactor=1;
+let stableStepNaturalH=132;
+let stableHissanNaturalW=210;
+let stableHissanNaturalH=230;
+let stableRightPanelW=266;
+let stageDesignWidth=BASE_STAGE_W;
+const TILE_ZOOM_MAX=2.4;
+let stableTilePanelFactor=1;
+let stableTileNaturalW=1;
+let stableTileNaturalH=1;
+
+// 全ステップの説明文を設計幅230pxで実際に流し込み、最も高いステップを測る。
+// 現在ステップの文面は最後に必ず復元する。
+function measureMaxStepNaturalHeight(){
+  const stepInner=document.getElementById('step-scale-inner');
+  const titleEl=document.getElementById('step-title-text');
+  const descEl=document.getElementById('step-desc');
+  if(!stepInner||!titleEl||!descEl)return 132;
+
+  stepInner.style.transform='none';
+  stepInner.style.width=STEP_CONTENT_W+'px';
+  stepInner.style.height='auto';
+  descEl.style.height='auto';
+  descEl.style.overflow='visible';
+
+  const current=steps[stepIdx]||steps[0];
+  let maxH=0;
+  const list=steps.length?steps:[{title:titleEl.innerHTML,desc:descEl.innerHTML}];
+  for(const st of list){
+    titleEl.innerHTML=st.title||'';
+    descEl.innerHTML=st.desc||'';
+    maxH=Math.max(maxH,stepInner.offsetHeight,stepInner.scrollHeight);
+  }
+  if(current){
+    titleEl.innerHTML=current.title||'';
+    descEl.innerHTML=current.desc||'';
+  }
+  return Math.max(100,Math.ceil(maxH));
+}
+
+// drawHissanそのものを一時SVGに対して全ステップ実行し、必要な最大外形を測る。
+function measureHissanNaturalEnvelope(){
+  if(!steps.length)return{w:210,h:230};
+  let maxW=0,maxH=0;
+  for(const st of steps){
+    const probe=document.createElementNS(NS,'svg');
+    drawHissan(probe,st.h);
+    maxW=Math.max(maxW,parseFloat(probe.getAttribute('width'))||210);
+    maxH=Math.max(maxH,parseFloat(probe.getAttribute('height'))||230);
+  }
+  return{w:Math.max(1,maxW),h:Math.max(1,maxH)};
+}
+
+function usefulBasePanelWidth(){
+  return Math.ceil(Math.max(stableHissanNaturalW,STEP_CONTENT_W)+RIGHT_PANEL_BOX_HPAD);
+}
+
+// panelWを指定した場合、その幅の中で全ステップ共通倍率を適用する。
+// panelW未指定時は「中身に必要な最小幅」を使う。
+function applyStableRightPanelScale(panelW){
+  const hissanOuter=document.getElementById('hissan-scale-outer');
+  const hissanSvg=document.getElementById('hissan-svg');
+  const stepOuter=document.getElementById('step-scale-outer');
+  const stepInner=document.getElementById('step-scale-inner');
+  const rightPanel=document.querySelector('.right-panel');
+  const tileArea=document.querySelector('.tile-area');
+  if(!hissanOuter||!hissanSvg||!stepOuter||!stepInner||!rightPanel||!tileArea)return;
+
+  hissanSvg.style.transform='none';
+  stepInner.style.transform='none';
+  hissanOuter.style.height='';
+  stepOuter.style.height='';
+  stepInner.style.height='auto';
+  stepInner.style.width=STEP_CONTENT_W+'px';
+
+  stableStepNaturalH=measureMaxStepNaturalHeight();
+  const env=measureHissanNaturalEnvelope();
+  stableHissanNaturalW=env.w;
+  stableHissanNaturalH=env.h;
+
+  const basePanelW=usefulBasePanelWidth();
+  stableRightPanelW=Math.max(basePanelW,Math.ceil(panelW||basePanelW));
+  rightPanel.style.width=stableRightPanelW+'px';
+
+  // 全ステップで同じ実レイアウト高を先に確保する。ステップ送りでは変更しない。
+  hissanOuter.style.height=stableHissanNaturalH+'px';
+  stepInner.style.height=stableStepNaturalH+'px';
+  stepOuter.style.height=stableStepNaturalH+'px';
+
+  const basePanelH=rightPanel.offsetHeight;
+  const naturalContentH=stableHissanNaturalH+stableStepNaturalH;
+  const fixedChromeH=Math.max(0,basePanelH-naturalContentH);
+  const tileH=tileArea.offsetHeight;
+
+  // 縦方向の有効倍率。右欄を数図より高くして全体を縮める拡大はしない。
+  const targetPanelH=Math.max(basePanelH,tileH);
+  const factorHeightRaw=(targetPanelH-fixedChromeH)/Math.max(1,naturalContentH);
+  stableRightPanelHeightFactor=Math.min(RP_ZOOM_MAX,Math.max(1,factorHeightRaw));
+
+  // 横方向は「実際の中身が収まるか」だけで制約する。
+  const factorWidth=Math.min(
+    hissanOuter.clientWidth/stableHissanNaturalW,
+    stepOuter.clientWidth/STEP_CONTENT_W
+  );
+  let factor=Math.min(stableRightPanelHeightFactor,factorWidth,RP_ZOOM_MAX);
+  factor=Math.max(0.1,factor);
+  stableRightPanelFactor=factor;
+
+  hissanSvg.style.transformOrigin='top center';
+  hissanSvg.style.transform=`scale(${factor})`;
+  hissanOuter.style.height=(stableHissanNaturalH*factor)+'px';
+
+  stepInner.style.transformOrigin='top center';
+  stepInner.style.transform=`scale(${factor})`;
+  stepOuter.style.height=(stableStepNaturalH*factor)+'px';
+}
+
+function resetTilePanelScale(){
+  const tileArea=document.getElementById('tile-area');
+  const tileSlot=document.getElementById('tile-slot');
+  if(!tileArea||!tileSlot)return;
+
+  // 前回の拡大後サイズを測定に混ぜない。
+  // tile-areaは表そのものにぴったり縮むため、ここで一度slotの固定寸法を解除してから
+  // 自然幅・自然高を取り直す。これをしないと、前回のslot幅をtile-areaが吸収して
+  // 「表の横の謎の余白」が自然幅として蓄積される。
+  tileArea.style.transform='none';
+  tileArea.style.width='max-content';
+  tileSlot.style.width='auto';
+  tileSlot.style.height='auto';
+  stableTilePanelFactor=1;
+
+  const table=document.getElementById('tile-table');
+  stableTileNaturalW=Math.max(1,Math.ceil(table?table.offsetWidth:tileArea.offsetWidth));
+  stableTileNaturalH=Math.max(1,Math.ceil(tileArea.offsetHeight));
+  tileSlot.style.width=stableTileNaturalW+'px';
+  tileSlot.style.height=stableTileNaturalH+'px';
+}
+
+function applyTilePanelScale(factor){
+  const tileArea=document.getElementById('tile-area');
+  const tileSlot=document.getElementById('tile-slot');
+  if(!tileArea||!tileSlot)return;
+  stableTilePanelFactor=Math.max(1,Math.min(TILE_ZOOM_MAX,factor||1));
+  tileArea.style.transformOrigin='top left';
+  tileArea.style.transform=`scale(${stableTilePanelFactor})`;
+  tileSlot.style.width=(stableTileNaturalW*stableTilePanelFactor)+'px';
+  tileSlot.style.height=(stableTileNaturalH*stableTilePanelFactor)+'px';
+}
+
+function currentTableWidth(){
+  const tileSlot=document.getElementById('tile-slot');
+  return tileSlot?Math.ceil(tileSlot.offsetWidth):0;
+}
+
+function stageWidthForPanel(panelW){
+  return Math.max(BASE_STAGE_W,currentTableWidth()+MAIN_AREA_GAP+MAIN_AREA_HPAD+panelW);
+}
+
+function relayoutResponsiveCanvas(){
+  const stage=document.getElementById('stage');
+  const rightPanel=document.querySelector('.right-panel');
+  const tileArea=document.getElementById('tile-area');
+  if(!stage||!rightPanel||!tileArea||!steps.length)return;
+
+  // 毎回まず数図のローカル拡大を解除し、問題そのものの自然寸法を基準に計算する。
+  resetTilePanelScale();
+
+  // Pass 1: 右欄を内容に必要な最小幅へ戻し、問題全体で固定する説明・筆算倍率を確定。
+  stage.style.width=BASE_STAGE_W+'px';
+  applyStableRightPanelScale();
+  const basePanelW=usefulBasePanelWidth();
+  const baselineW=Math.min(MAX_STAGE_W,stageWidthForPanel(basePanelW));
+  stageDesignWidth=baselineW;
+  stage.style.width=baselineW+'px';
+  applyStableRightPanelScale(basePanelW);
+
+  // この基準高さで画面縦を使い切る倍率を保ったまま、横に使える設計幅を求める。
+  const baselineH=Math.max(1,stage.scrollHeight);
+  const scaleByHeight=window.innerHeight/baselineH;
+  const noShrinkMaxW=Math.min(MAX_STAGE_W,window.innerWidth/Math.max(.01,scaleByHeight));
+
+  // 右側は従来どおり「中身を実際に拡大できる分だけ」横幅を増やす。
+  const desiredPanelW=Math.ceil(
+    Math.max(stableHissanNaturalW,STEP_CONTENT_W)*stableRightPanelHeightFactor+RIGHT_PANEL_BOX_HPAD
+  );
+  const maxPanelWithoutShrink=Math.max(
+    basePanelW,
+    Math.floor(noShrinkMaxW-stableTileNaturalW-MAIN_AREA_GAP-MAIN_AREA_HPAD)
+  );
+  const targetPanelW=Math.max(basePanelW,Math.min(desiredPanelW,maxPanelWithoutShrink));
+  rightPanel.style.width=targetPanelW+'px';
+  applyStableRightPanelScale(targetPanelW);
+
+  // ここが今回の変更点。
+  // 右パネルの方が高い場合は、その実高さまで数図ブロック全体を縦横同比率で拡大する。
+  // ただし、その拡大で stage 全体の倍率が下がる直前（横幅制約）で止める。
+  const desiredTileFactor=Math.max(1,rightPanel.offsetHeight/stableTileNaturalH);
+  const availableTileW=Math.max(
+    stableTileNaturalW,
+    noShrinkMaxW-targetPanelW-MAIN_AREA_GAP-MAIN_AREA_HPAD
+  );
+  const maxTileFactorByWidth=Math.max(1,availableTileW/stableTileNaturalW);
+  const targetTileFactor=Math.min(TILE_ZOOM_MAX,desiredTileFactor,maxTileFactorByWidth);
+  applyTilePanelScale(targetTileFactor);
+
+  stableRightPanelW=targetPanelW;
+  const targetW=Math.min(MAX_STAGE_W,stageWidthForPanel(targetPanelW));
+  stageDesignWidth=targetW;
+  stage.style.width=targetW+'px';
+  fitStage();
+}
+
+// ============================================================
+// UI更新
+// ============================================================
+
+// 筆算側の1ステップ分を実行する。くり上がり分割アニメがあればそれを再生して
+// 完了後に最終形を描き、なければ即座に最終形を描く。どちらの場合もonDoneを呼ぶ。
+function runHissanSide(step,prevH,onDone){
+  const hissanSvg=document.getElementById('hissan-svg');
+  if(step.hissanSplit){
+    drawHissan(hissanSvg,prevH); // くり上がり前（2桁の生の合計）をまず描く
+    runHissanCarrySplit(hissanSvg,step.hissanSplit,()=>{drawHissan(hissanSvg,step.h);onDone();});
+  } else {
+    drawHissan(hissanSvg,step.h);
+    onDone();
+  }
+}
+
+// 図解側の1ステップ分を実行する。アニメ指定があれば再生して完了後に最終状態を描き、
+// なければ即座に最終状態を描く。どちらの場合もonDoneを呼ぶ。
+function runTileSide(step,prevT,onDone){
+  if(!step.anim){
+    paintTiles(step.t);
+    onDone();
+    return;
+  }
+  paintTiles(prevT);
+  runAnim(step.anim,prevT,step.t,()=>{
+    // carry-i後はjuuAnsを空にする（layerに棒がある）
+    if(step.anim==='carry-i'){
+      const ts=cloneState(step.t);
+      ts.juuAns={count:0,alpha:1,hl:null};
+      paintTiles(ts);
+    } else if(step.anim==='carry-j'){
+      // carry-j後はhyakuAnsを空にする
+      const ts=cloneState(step.t);
+      ts.hyakuAns={count:0,alpha:1,hl:null};
+      paintTiles(ts);
+    } else if(step.anim==='carry-h'){
+      const ts=cloneState(step.t);
+      ts.senAns={count:0,alpha:1,hl:null};
+      paintTiles(ts);
+    } else {
+      paintTiles(step.t);
+    }
+    onDone();
+  });
+}
+
+function updateUI(skipAnim){
+  const step=steps[stepIdx];
+  const total=steps.length;
+  document.getElementById('step-num').textContent=stepIdx+1;
+  document.getElementById('step-title-text').innerHTML=step.title;
+  document.getElementById('step-desc').innerHTML=step.desc;
+  speakStep(step.desc);
+  document.getElementById('step-ind').textContent=`${stepIdx+1} / ${total}`;
+
+  const prevH=stepIdx>0?steps[stepIdx-1].h:step.h;
+  const prevT=stepIdx>0?steps[stepIdx-1].t:step.t;
+
+  if(skipAnim){
+    // 問題切り替え・モード切り替え・「戻る」など：アニメなしで最終状態を即座に描く
+    drawHissan(document.getElementById('hissan-svg'),step.h);
+    paintTiles(step.t);
+    document.getElementById('btn-prev').disabled=(stepIdx===0);
+    document.getElementById('btn-next').disabled=(stepIdx===total-1);
+    return;
+  }
+
+  animBusy=true;
+  document.getElementById('btn-prev').disabled=true;
+  document.getElementById('btn-next').disabled=true;
+  function finish(){
+    animBusy=false;
+    document.getElementById('btn-prev').disabled=(stepIdx===0);
+    document.getElementById('btn-next').disabled=(stepIdx===total-1);
+  }
+
+  if(TIMING_MODE==='tile-first'){
+    // 図解が終わってから一呼吸おいて筆算
+    runTileSide(step,prevT,()=>{
+      setTimeout(()=>{runHissanSide(step,prevH,finish);},SEQ_GAP_MS);
+    });
+  } else if(TIMING_MODE==='hissan-first'){
+    // 筆算が終わってから一呼吸おいて図解
+    runHissanSide(step,prevH,()=>{
+      setTimeout(()=>{runTileSide(step,prevT,finish);},SEQ_GAP_MS);
+    });
+  } else {
+    // sync：両方を同時に開始（従来どおり、間は入れない）
+    let doneCount=0;
+    function onOneDone(){doneCount++;if(doneCount>=2)finish();}
+    runHissanSide(step,prevH,onOneDone);
+    runTileSide(step,prevT,onOneDone);
+  }
+}
+
+function goStep(dir){
+  if(animBusy)return;
+  cancelAnim();
+  document.getElementById('anim-layer').innerHTML='';
+  const newIdx=stepIdx+dir;
+  if(newIdx<0||newIdx>=steps.length)return;
+  stepIdx=newIdx;
+  updateUI(dir<0);
+}
+
+// くり上がり位置（補助計算の位置）の切り替え
+function setCarryPosMode(mode){
+  if(animBusy||mode===CARRY_POS_MODE)return;
+  cancelAnim();
+  CARRY_POS_MODE=mode;
+  try{localStorage.setItem('tashizan_carry_pos',mode);}catch(e){}
+  syncSettingsUI();
+  document.getElementById('anim-layer').innerHTML='';
+  steps=buildSteps();
+  updateLayout();
+  updateUI(true);
+}
+
+// 設定モーダルの開閉
+function openSettingsModal(){
+  syncSettingsUI();
+  const modal=document.getElementById('settings-modal');
+  modal.style.display='flex';
+  requestAnimationFrame(()=>{modal.classList.add('open');});
+}
+
+function closeSettingsModal(){
+  const modal=document.getElementById('settings-modal');
+  modal.classList.remove('open');
+  setTimeout(()=>{modal.style.display='none';},250);
+}
+
+function onModalOverlayClick(e){
+  if(e.target===document.getElementById('settings-modal')){
+    closeSettingsModal();
+  }
+}
+
+// 設定UIの選択状態を現在の変数に同期する
+function syncSettingsUI(){
+  const isTop = (CARRY_POS_MODE === 'top');
+  document.getElementById('carry-pos-top').classList.toggle('active', isTop);
+  document.getElementById('carry-pos-ans').classList.toggle('active', !isTop);
+
+  document.getElementById('mode-btn-tile').classList.toggle('active', DISPLAY_MODE==='tile');
+  document.getElementById('mode-btn-card').classList.toggle('active', DISPLAY_MODE==='card');
+
+  document.getElementById('timing-btn-sync').classList.toggle('active', TIMING_MODE==='sync');
+  document.getElementById('timing-btn-tile-first').classList.toggle('active', TIMING_MODE==='tile-first');
+  document.getElementById('timing-btn-hissan-first').classList.toggle('active', TIMING_MODE==='hissan-first');
+  document.getElementById('seq-gap-row').style.display = (TIMING_MODE==='sync') ? 'none' : 'flex';
+  document.getElementById('seq-gap-input').value = (SEQ_GAP_MS / 1000).toFixed(1);
+}
+
+// タイル方式／カード方式の切り替え。
+// stepsのデータ自体（数値・状態）はモードに依存しないので作り直さなくてよく、
+// レイアウト幅の再計算と、現在のステップの再描画だけ行えばよい。
+function setDisplayMode(mode){
+  if(animBusy||mode===DISPLAY_MODE)return;
+  cancelAnim();
+  DISPLAY_MODE=mode;
+  try{localStorage.setItem('tashizan_display_mode',mode);}catch(e){}
+  syncSettingsUI();
+  document.getElementById('anim-layer').innerHTML='';
+  updateLayout();
+  updateUI(true);
+}
+
+// 表示タイミングの切り替え（同時／図→筆算／筆算→図）。
+// 問題やタイル/カード表示モードとは独立の設定で、問題を切り替えても保持する。
+function setTimingMode(mode){
+  if(animBusy||mode===TIMING_MODE)return;
+  cancelAnim();
+  TIMING_MODE=mode;
+  try{localStorage.setItem('tashizan_timing_mode',mode);}catch(e){}
+  syncSettingsUI();
+}
+
+// 「間」調整ボックスの値（秒）が変更されたときに呼ばれる。0.1秒単位、0〜5秒の範囲にクランプする。
+function setSeqGap(val){
+  let sec=parseFloat(val);
+  if(!Number.isFinite(sec))sec=0.4;
+  sec=Math.min(5,Math.max(0,Math.round(sec*10)/10));
+  document.getElementById('seq-gap-input').value=sec;
+  SEQ_GAP_MS=Math.round(sec*1000);
+  try{localStorage.setItem('tashizan_seq_gap',sec.toString());}catch(e){}
+}
+
+function setProblem(a,b){
+  if(animBusy)return;
+  cancelAnim();
+  numA=a;numB=b;stepIdx=0;
+  document.getElementById('inp-a').value=a;
+  document.getElementById('inp-b').value=b;
+  document.querySelectorAll('.problem-btn').forEach(btn=>{
+    btn.classList.toggle('active',btn.textContent.replace(/\s/g,'')==`${a}＋${b}`);
+  });
+  document.getElementById('anim-layer').innerHTML='';
+  steps=buildSteps();
+  updateLayout();
+  updateUI(true);
+}
+
+function generateFromInput(){
+  const va=parseInt(document.getElementById('inp-a').value);
+  const vb=parseInt(document.getElementById('inp-b').value);
+  const err=document.getElementById('err-msg');
+  if(!Number.isInteger(va)||!Number.isInteger(vb)||va<1||va>999||vb<1||vb>999){
+    err.style.display='block';setTimeout(()=>err.style.display='none',2500);return;
+  }
+  err.style.display='none';
+  document.querySelectorAll('.problem-btn').forEach(btn=>btn.classList.remove('active'));
+  numA=va;numB=vb;stepIdx=0;
+  cancelAnim();
+  document.getElementById('anim-layer').innerHTML='';
+  steps=buildSteps();
+  updateLayout();
+  updateUI(true);
+}
+
+document.getElementById('inp-a').addEventListener('keydown',e=>{if(e.key==='Enter')generateFromInput();});
+document.getElementById('inp-b').addEventListener('keydown',e=>{if(e.key==='Enter')generateFromInput();});
+
+// キーボード操作：テキストボックス外でのEnter／←→キーでステップ送り
+document.addEventListener('keydown',e=>{
+  const tag=(e.target&&e.target.tagName)||'';
+  const inTextField=(tag==='INPUT'||tag==='TEXTAREA');
+  if(e.key==='Escape'){
+    closeSettingsModal();
+    return;
+  }
+  if(e.key==='Enter'){
+    if(inTextField)return; // 入力欄内のEnterは各入力欄のリスナーに任せる
+    e.preventDefault();
+    if(!document.getElementById('btn-next').disabled)goStep(1);
+    return;
+  }
+  if(e.key==='ArrowRight'){
+    if(inTextField)return; // 数値入力欄では矢印キーの本来の動作を優先する
+    e.preventDefault();
+    if(!document.getElementById('btn-next').disabled)goStep(1);
+    return;
+  }
+  if(e.key==='ArrowLeft'){
+    if(inTextField)return;
+    e.preventDefault();
+    if(!document.getElementById('btn-prev').disabled)goStep(-1);
+    return;
+  }
+});
+
+// ===== 画面サイズに合わせて、問題ごとに決めた設計幅のステージを拡大縮小 =====
+// getBoundingClientRect()由来の画面ピクセルをアニメレイヤー座標へ戻すため、
+// 最終的な全体倍率は従来どおり STAGE_SCALE に保持する。
+let STAGE_SCALE=1;
+function fitStage(){
+  const stage=document.getElementById('stage');
+  if(!stage)return;
+  const h=stage.scrollHeight;
+  const w=stage.offsetWidth||stageDesignWidth||BASE_STAGE_W;
+  if(!h||!w)return;
+  const scale=Math.min(window.innerWidth/w,window.innerHeight/h);
+  STAGE_SCALE=scale;
+  stage.style.transform=`scale(${scale})`;
+  stage.style.opacity='1';
+}
+
+// 初期化：stepsを先に作り、全ステップの説明・筆算状態を測ってから倍率を確定する。
+syncSettingsUI();
+steps=buildSteps();
+updateLayout();
+warmupTTS();
+updateUI(true);
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,warmupTTS,{once:true}));
+
+window.addEventListener('resize',relayoutResponsiveCanvas);
+window.addEventListener('orientationchange',relayoutResponsiveCanvas);
+new ResizeObserver(fitStage).observe(document.getElementById('stage'));
+if(document.fonts&&document.fonts.ready){
+  document.fonts.ready.then(()=>{relayoutResponsiveCanvas();});
+}
+
+</script>
+</body>
+</html>
