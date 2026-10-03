@@ -1196,6 +1196,14 @@ td.hasValue .ghostDigit { display: none !important; }
 .explainFrame { flex: 1; width: 100%; border: 0; background: #f5f0e8; }
 .railActionBtn.hint { background: #f59e0b; }
 .railActionBtn.hint:hover { background: #d98706; }
+
+/* ===== ひき算モード ===== */
+/* 赤ペンの線を、引かれる数のマス目の上（筆算の表より手前）にも描く。
+   キャンバス自体はクリックを受けず、描画は #calcGridArea 側で受ける */
+body.subMode #auxOverlayCanvas { z-index: 30; pointer-events: none; }
+body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
+/* くり下がりを書き込むための余白（引かれる数の上） */
+#calcTable tr.carry-row.borrow-row td { height: calc(var(--cell-h) * 0.95); }
 </style>
 </head>
 <body>
@@ -1260,11 +1268,15 @@ td.hasValue .ghostDigit { display: none !important; }
   <!-- Header -->
   <div id="practiceHeader">
     <div class="headerLeft">
-      <span class="headerTitle">たし算の ひっ算 🖊️</span>
+      <span class="headerTitle" id="practiceTitle">たし算の ひっ算 🖊️</span>
     </div>
 
     <!-- 問題の種類選択バー -->
     <div class="typeBar">
+      <select id="probOp" class="typeSelect" onchange="onOpChange()" title="けいさんの しゅるい">
+        <option value="add" selected>たし算 ＋</option>
+        <option value="sub">ひき算 －</option>
+      </select>
       <select id="probDigits" class="typeSelect" onchange="onProblemTypeChange()" title="桁数の選択">
         <option value="2_1">2けた ＋ 1けた</option>
         <option value="2_2" selected>2けた ＋ 2けた</option>
@@ -1489,7 +1501,8 @@ let settings = {
   digitsB: 2,
   carryMode: 'random',
   problemCount: 10,
-  inputMode: 'keyboard'
+  inputMode: 'keyboard',
+  op: 'add'
 };
 
 let currentProblem = null;
@@ -1638,6 +1651,8 @@ function generateProblemByType() {
   else if (digitsVal === '3_2') { dA = 3; dB = 2; }
   else if (digitsVal === '3_3') { dA = 3; dB = 3; }
 
+  if (currentOp() === 'sub') return generateSubProblem(dA, dB, carryVal);
+
   const minA = Math.pow(10, dA - 1), maxA = Math.pow(10, dA) - 1;
   const minB = Math.pow(10, dB - 1), maxB = Math.pow(10, dB) - 1;
 
@@ -1672,7 +1687,102 @@ function generateProblemByType() {
   return { a, b, answer: a + b };
 }
 
+// ===== たし算 / ひき算 の切り替え =====
+function currentOp() {
+  return settings.op === 'sub' ? 'sub' : 'add';
+}
+
+// くり下がりの回数（ひく数の各桁について、ひかれる数の桁が足りない回数）
+function countBorrows(a, b) {
+  let count = 0, borrow = 0;
+  while (a > 0 || b > 0) {
+    if ((a % 10) - borrow < (b % 10)) { count++; borrow = 1; } else { borrow = 0; }
+    a = Math.floor(a / 10);
+    b = Math.floor(b / 10);
+  }
+  return count;
+}
+
+function generateSubProblem(dA, dB, carryVal) {
+  const minA = Math.pow(10, dA - 1), maxA = Math.pow(10, dA) - 1;
+  const minB = Math.pow(10, dB - 1), maxB = Math.pow(10, dB) - 1;
+  let fallback = null;
+  for (let i = 0; i < 800; i++) {
+    const a = rand(minA, maxA), b = rand(minB, maxB);
+    if (b >= a) continue; // ひく数は、ひかれる数より小さく
+    const n = countBorrows(a, b);
+    if (!fallback) fallback = { a, b };
+    const ok = carryVal === 'random'
+      || (carryVal === 'none' && n === 0)
+      || (carryVal === '1' && n === 1)
+      || (carryVal === '2' && n === 2)
+      || (carryVal === 'all' && n > 0 && n === dA - 1);
+    if (ok) return { op: 'sub', a, b, answer: a - b };
+  }
+  const f = fallback || { a: 52, b: 17 };
+  return { op: 'sub', a: f.a, b: f.b, answer: f.a - f.b };
+}
+
+const DIGIT_OPTIONS = {
+  add: [['2_1', '2けた ＋ 1けた'], ['2_2', '2けた ＋ 2けた'], ['3_2', '3けた ＋ 2けた'], ['3_3', '3けた ＋ 3けた'], ['1_1', '1けた ＋ 1けた']],
+  sub: [['2_1', '2けた － 1けた'], ['2_2', '2けた － 2けた'], ['3_2', '3けた － 2けた'], ['3_3', '3けた － 3けた']]
+};
+
+function applyOpUI() {
+  const op = currentOp();
+  const word = op === 'sub' ? 'くり下がり' : 'くり上がり';
+
+  const opSel = document.getElementById('probOp');
+  if (opSel) opSel.value = op;
+
+  const dSel = document.getElementById('probDigits');
+  if (dSel) {
+    const prev = dSel.value;
+    const list = DIGIT_OPTIONS[op];
+    dSel.innerHTML = list.map(([v, txt]) => `<option value="${v}">${txt}</option>`).join('');
+    dSel.value = list.some(([v]) => v === prev) ? prev : '2_2';
+  }
+
+  const cSel = document.getElementById('probCarry');
+  if (cSel) {
+    const prev = cSel.value || 'random';
+    cSel.innerHTML = [
+      ['random', `${word}：おまかせ`], ['none', `${word}：なし (0回)`],
+      ['1', `${word}：1回`], ['2', `${word}：2回`], ['all', `${word}：ぜんぶ`]
+    ].map(([v, txt]) => `<option value="${v}">${txt}</option>`).join('');
+    cSel.value = prev;
+    cSel.title = `${word}の選択`;
+  }
+
+  const title = document.getElementById('practiceTitle');
+  if (title) title.textContent = (op === 'sub' ? 'ひき算' : 'たし算') + 'の ひっ算 🖊️';
+  document.body.classList.toggle('subMode', op === 'sub');
+  syncBorrowOptions();
+}
+
+// ひき算で、ひかれる数が2けたのときは くり下がりが最大1回なので「2回」は選べないようにする
+function syncBorrowOptions() {
+  const cSel = document.getElementById('probCarry');
+  const dSel = document.getElementById('probDigits');
+  if (!cSel || !dSel) return;
+  const dA = parseInt(dSel.value.split('_')[0], 10);
+  const impossible = currentOp() === 'sub' && dA <= 2;
+  const opt2 = [...cSel.options].find(o => o.value === '2');
+  if (opt2) opt2.disabled = impossible;
+  if (impossible && cSel.value === '2') cSel.value = 'random';
+}
+
+function onOpChange() {
+  const sel = document.getElementById('probOp');
+  settings.op = (sel && sel.value === 'sub') ? 'sub' : 'add';
+  saveSettings();
+  if (isExplanationOpen()) closeExplanation();
+  applyOpUI();
+  nextProblemByType();
+}
+
 function onProblemTypeChange() {
+  syncBorrowOptions();
   nextProblemByType();
 }
 
@@ -1719,6 +1829,8 @@ function updateHeader() {
 // ===== Build grid =====
 function buildGrid(problem) {
   const { a, b, answer } = problem;
+  const isSub = problem.op === 'sub';
+  document.body.classList.toggle('subMode', isSub);
 
   // 右詰めで各桁を取得するヘルパー (0=一の位, 1=十の位, 2=百の位...)
   function getDigit(num, colFromRight) {
@@ -1738,7 +1850,7 @@ function buildGrid(problem) {
 
   // --- 行0: くり上がり行（足される数 A の真上！） ---
   const rowCarry = tbl.insertRow();
-  rowCarry.className = 'carry-row';
+  rowCarry.className = isSub ? 'carry-row borrow-row' : 'carry-row';
 
   const signCarry = rowCarry.insertCell();
   signCarry.className = 'sign-cell';
@@ -1750,7 +1862,8 @@ function buildGrid(problem) {
     td.className = 'carry-cell-container';
 
     // 一の位以外の桁に繰り上がりボックスを配置（十の位、百の位など）
-    if (colFromRight > 0) {
+    // ひき算のときはボックスを置かず、赤ペンで自由に書ける余白にする
+    if (colFromRight > 0 && !isSub) {
       const carryBox = document.createElement('div');
       carryBox.className = 'carryBox';
       carryBox.dataset.pos = pos;
@@ -1812,7 +1925,7 @@ function buildGrid(problem) {
 
   const signB = rowB.insertCell();
   signB.className = 'sign-cell';
-  signB.textContent = '＋';
+  signB.textContent = isSub ? '－' : '＋';
 
   for (let c = 0; c < totalDigits; c++) {
     const colFromRight = totalDigits - 1 - c;
@@ -2046,7 +2159,7 @@ function checkAnswer() {
 }
 
 // ===== かいせつウィンドウ（tashizan_hissan.html を問題の数字つきで表示） =====
-const EXPLAIN_URL = 'tashizan_hissan.html';
+const EXPLAIN_URLS = { add: 'tashizan_hissan.html', sub: 'hikizan_hissan.html' };
 
 function isExplanationOpen() {
   const m = document.getElementById('explainModal');
@@ -2056,11 +2169,12 @@ function isExplanationOpen() {
 function openExplanation() {
   if (!currentProblem || isExplanationOpen()) return;
   const { a, b } = currentProblem;
+  const op = currentProblem.op === 'sub' ? 'sub' : 'add';
   const modal = document.getElementById('explainModal');
   const frame = document.getElementById('explainFrame');
-  document.getElementById('explainTitle').textContent = `📖 かいせつ　${a} ＋ ${b}`;
+  document.getElementById('explainTitle').textContent = `📖 かいせつ　${a} ${op === 'sub' ? '－' : '＋'} ${b}`;
   frame.onload = () => { try { frame.contentWindow.focus(); } catch (e) {} };
-  frame.src = `${EXPLAIN_URL}?a=${a}&b=${b}&embed=1`;
+  frame.src = `${EXPLAIN_URLS[op]}?a=${a}&b=${b}&embed=1`;
   modal.classList.add('open');
   modal.setAttribute('aria-hidden', 'false');
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -2097,6 +2211,7 @@ function getUserValue(td) {
 
 // ===== Error analysis =====
 function analyzeErrors(errors) {
+  if (currentProblem && currentProblem.op === 'sub') return analyzeSubErrors(errors);
   const { a, b, answer } = currentProblem;
   const types = [];
 
@@ -2142,6 +2257,41 @@ function analyzeErrors(errors) {
   return types;
 }
 
+// ひき算の間違いタイプ
+function analyzeSubErrors(errors) {
+  const { a, b } = currentProblem;
+  const posIndex = { ones: 0, tens: 1, hundreds: 2, thousands: 3 };
+  const wrongTypes = { ones: 'sub_ones_wrong', tens: 'sub_tens_wrong', hundreds: 'sub_hundreds_wrong' };
+  const types = [];
+
+  errors.forEach(({ pos, userVal }) => {
+    const k = posIndex[pos];
+    if (k === undefined) { types.push({ type: 'sub_general_wrong', pos }); return; }
+
+    // この桁に「下の桁から1かりた」か（くり下がりを受けるか）を求める
+    let borrowIn = 0;
+    for (let i = 0; i < k; i++) {
+      const ad0 = Math.floor(a / Math.pow(10, i)) % 10;
+      const bd0 = Math.floor(b / Math.pow(10, i)) % 10;
+      borrowIn = (ad0 - borrowIn < bd0) ? 1 : 0;
+    }
+    const ad = Math.floor(a / Math.pow(10, k)) % 10;
+    const bd = Math.floor(b / Math.pow(10, k)) % 10;
+    const raw = ad - borrowIn - bd; // 負なら、この桁でもくり下げが必要
+
+    if (raw < 0 && userVal === -raw) {
+      types.push({ type: 'sub_small_big', pos });            // 小さい数から大きい数をひいた
+    } else if (borrowIn === 1 && userVal === (((ad - bd) % 10) + 10) % 10) {
+      types.push({ type: 'sub_borrow_forgot', pos });        // かしたぶん（1）をへらし忘れた
+    } else if (bd > 0 && userVal === (ad + bd) % 10) {
+      types.push({ type: 'sub_added', pos });               // たし算してしまった
+    } else {
+      types.push({ type: wrongTypes[pos] || 'sub_general_wrong', pos });
+    }
+  });
+  return types;
+}
+
 const ERROR_HINTS = {
   carry_forgot:      { title: '⚠️ くり上がりをわすれた？', desc: '一の位が10以上になったとき、十の位に1をたしてね！' },
   carry_tens_forgot: { title: '⚠️ くり上がりをわすれた？', desc: '十の位が10以上になったとき、百の位に1をたしてね！' },
@@ -2149,7 +2299,14 @@ const ERROR_HINTS = {
   ones_no_write:     { title: '⚠️ くり上がりを書こう！', desc: '10以上になったら、十の位に1をくり上げよう' },
   tens_wrong:        { title: '❌ 十の位のたし算をかくにんしよう', desc: '十の位どうしをたすと（くり上がりもたして）いくつかな？' },
   hundreds_wrong:    { title: '❌ 百の位のたし算をかくにんしよう', desc: '百の位どうしをたすと（くり上がりもたして）いくつかな？' },
-  general_wrong:     { title: '❌ もう一度かくにんしよう', desc: 'ゆっくりもう一度といてみてね。' }
+  general_wrong:     { title: '❌ もう一度かくにんしよう', desc: 'ゆっくりもう一度といてみてね。' },
+  sub_small_big:     { title: '⚠️ 小さい数から大きい数はひけないよ', desc: 'ひけないときは、となりの位から1くり下げて、10をたしてからひこう！' },
+  sub_borrow_forgot: { title: '⚠️ くり下げたあと、1へらすのをわすれた？', desc: 'となりの位に1かしたので、その位のひかれる数を1へらしてからひこう！' },
+  sub_added:         { title: '❌ たし算になっていないかな？', desc: 'ひき算だよ。ひかれる数から、ひく数をひこう！' },
+  sub_ones_wrong:    { title: '❌ 一の位のひき算をかくにんしよう', desc: '一の位どうしをひくといくつかな？ ひけないときは十の位からくり下げよう。' },
+  sub_tens_wrong:    { title: '❌ 十の位のひき算をかくにんしよう', desc: '十の位どうしをひくといくつかな？（くり下げたぶんも わすれずに）' },
+  sub_hundreds_wrong:{ title: '❌ 百の位のひき算をかくにんしよう', desc: '百の位どうしをひくといくつかな？（くり下げたぶんも わすれずに）' },
+  sub_general_wrong: { title: '❌ もう一度かくにんしよう', desc: 'ゆっくりもう一度といてみてね。' }
 };
 
 function showErrorHint(types) {
@@ -2776,6 +2933,10 @@ function initAuxOverlayCanvas() {
     ctx.lineJoin = 'round';
   }
   resize();
+
+  // 二重登録しない（練習ページを開き直すたびに呼ばれるため）
+  if (canvas._auxReady) return;
+  canvas._auxReady = true;
   new ResizeObserver(resize).observe(parent);
 
   function getPos(e) {
@@ -2787,10 +2948,23 @@ function initAuxOverlayCanvas() {
     };
   }
 
-  canvas.addEventListener('pointerdown', e => {
+  // 描きはじめてよい場所か
+  //  ・ひき算：筆算の表全体（引かれる数のマス目の上も含む）に赤ペンで書ける。
+  //            ただし答えのマス・入力欄・ボタンの上からは書き始めない
+  //  ・たし算：これまでどおり（表の外側の余白に書く）
+  function canStartDrawing(e) {
+    if (document.body.classList.contains('subMode')) {
+      return !(e.target.closest && e.target.closest('.ans-cell, .carryBox, input, button, .numpadBtn'));
+    }
+    return e.target === canvas;
+  }
+
+  parent.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    if (!canStartDrawing(e)) return;
     e.preventDefault();
     auxDrawing = true;
-    try { canvas.setPointerCapture(e.pointerId); } catch(x){}
+    try { parent.setPointerCapture(e.pointerId); } catch(x){}
     const { x, y } = getPos(e);
     auxLastX = x; auxLastY = y;
     const ctx = canvas.getContext('2d');
@@ -2798,15 +2972,15 @@ function initAuxOverlayCanvas() {
     ctx.moveTo(x, y);
   }, { passive: false });
 
-  canvas.addEventListener('pointermove', e => {
+  parent.addEventListener('pointermove', e => {
     if (!auxDrawing) return;
     e.preventDefault();
     const { x, y } = getPos(e);
     const ctx = canvas.getContext('2d');
     if (auxTool === 'pen') {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = '#e53935'; // 赤ペンで見やすく描画
-      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#e53935'; // 赤ペン
+      ctx.lineWidth = document.body.classList.contains('subMode') ? 3.5 : 2.5;
     } else {
       ctx.globalCompositeOperation = 'destination-out';
       ctx.lineWidth = 26;
@@ -2818,8 +2992,9 @@ function initAuxOverlayCanvas() {
     auxLastX = x; auxLastY = y;
   }, { passive: false });
 
-  canvas.addEventListener('pointerup', () => { auxDrawing = false; });
-  canvas.addEventListener('pointercancel', () => { auxDrawing = false; });
+  const endDraw = () => { auxDrawing = false; };
+  parent.addEventListener('pointerup', endDraw);
+  parent.addEventListener('pointercancel', endDraw);
 }
 
 function setAuxTool(tool, btn) {
@@ -3131,6 +3306,7 @@ document.addEventListener('keydown', e => {
 // ===== Init =====
 function init() {
   loadSettings();
+  applyOpUI();
   loadModel();
 
   // Aux overlay canvas resize on practice page open
