@@ -6,6 +6,8 @@
 
 GitHub Pages等のHTTP(S)配信で `index.html` を開きます。モデルやTensorFlow.jsを読み込めるネットワーク環境が必要です。追加学習は [`finetune_mnist.ipynb`](finetune_mnist.ipynb) の説明を参照してください。
 
+[`warizan_renshu_hint.html`](warizan_renshu_hint.html) は、ヒント付きのわり算・筆算教材です。「入力方法」で数字ボタンと手書きを切り替えます。手書きでは1けたずつ書き、読み取られた候補から書いた数字を選びます。商・あまりと筆算の途中計算に対応し、認識モデルは手書きを選んだときだけ読み込みます。
+
 ## データ・素材・クレジット
 
 - NotebookはKerasの `tf.keras.datasets.mnist.load_data()` によるMNIST読み込みを記載しています。公式情報: [MNIST database](https://yann.lecun.org/exdb/mnist/index.html)。
