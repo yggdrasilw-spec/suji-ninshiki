@@ -1,0 +1,3332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>たし算の ひっ算 🖊️</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<style>
+/* ===== CSS Variables ===== */
+:root {
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --ink: #243041;
+  --muted: #6b7280;
+  --primary: #2b7cff;
+  --primary-weak: #e7f0ff;
+  --accent: #ff7043;
+  --green: #43a047;
+  --red: #e53935;
+  --yellow: #ffc107;
+  --carry-bg: #fffde7;
+  --ans-bg: #f0f4ff;
+  --aux-bg: #fffbe6;
+  --blue: #1e88e5;
+  --purple: #8e24aa;
+  --line: #8892a6;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===== Page system ===== */
+.page { display: none; }
+.page.active { display: block; }
+
+/* ===== TOP PAGE ===== */
+#topPage {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+#topPage h1 {
+  font-size: 32px;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 24px;
+  color: var(--primary);
+  text-shadow: 0 2px 8px rgba(43,124,255,.15);
+}
+
+.settingsCard {
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 24px rgba(33,52,74,.08);
+  margin-bottom: 16px;
+  border: 1px solid #e3eaf4;
+}
+
+.settingsCard h3 {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  color: var(--ink);
+  border-bottom: 2px solid var(--primary-weak);
+  padding-bottom: 8px;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.settingsRow label {
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  min-width: 130px;
+}
+
+.settingsRow select {
+  font-size: 16px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1.5px solid #cfd8e3;
+  background: white;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  flex: 1;
+  min-width: 120px;
+  max-width: 200px;
+}
+
+.modeButtons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modeBtn {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: 2px solid #d0d8e8;
+  background: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+.modeBtn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  box-shadow: 0 4px 14px rgba(43,124,255,.3);
+}
+
+.bigStartBtn {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 20px auto 12px;
+  padding: 18px 24px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #2b7cff, #1e55cc);
+  color: white;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(43,124,255,.35);
+  transition: all .15s;
+  font-family: 'Noto Sans JP', sans-serif;
+  letter-spacing: .04em;
+}
+
+.bigStartBtn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(43,124,255,.42); }
+.bigStartBtn:active { transform: translateY(0); }
+
+.raidBtn {
+  display: block;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ff7043, #e53935);
+  color: white;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255,112,67,.3);
+  transition: all .15s;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+.raidBtn:hover { transform: translateY(-2px); }
+
+/* ===== PRACTICE PAGE - 16:9 fixed layout (No left rail, expanded center) ===== */
+#practicePage {
+  /* 筆算マスの大きさ：画面の高さ・幅に合わせて自動で最大化（4桁＋符号でも収まる） */
+  --cell-h: clamp(56px, min(18vh, calc((100vw - 230px) / 5.4)), 170px);
+  --cell-w: calc(var(--cell-h) * 1.15);
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 190px;
+  grid-template-rows: 52px 1fr;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* Header bar */
+#practiceHeader {
+  grid-column: 1 / 3;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: white;
+  border-bottom: 2px solid #dbe4f0;
+  padding: 0 12px;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0,0,0,.04);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--primary);
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+/* 問題の種類選択バー */
+.typeBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f4f8fe;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid #d0e0fc;
+}
+
+.typeSelect {
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1.5px solid #b8d2fe;
+  border-radius: 8px;
+  background: white;
+  color: #1e3a8a;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  outline: none;
+}
+.typeSelect:focus {
+  border-color: var(--primary);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.modeToggleGroup {
+  display: flex;
+  background: #eef2f7;
+  padding: 2px;
+  border-radius: 10px;
+  gap: 2px;
+}
+
+.headerModeBtn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .12s;
+  color: #555;
+}
+
+.headerModeBtn.active {
+  background: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,.12);
+  color: var(--primary);
+  font-weight: 900;
+}
+
+.headerRaidBtn {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff7043, #e53935);
+  color: white;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  white-space: nowrap;
+}
+
+.headerSettingsBtn {
+  border: 1.5px solid #d0d8e8;
+  background: white;
+  border-radius: 10px;
+  padding: 4px 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.settingsModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(3px);
+}
+.settingsModalBox {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  width: min(92vw, 480px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  border: 1px solid #e3eaf4;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), #00d4aa);
+  border-radius: 4px;
+  transition: width .4s ease;
+}
+
+/* Left rail */
+#leftRail {
+  grid-column: 1;
+  grid-row: 2;
+  background: white;
+  border-right: 2px solid #dbe4f0;
+  overflow-y: auto;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .15s;
+  border: 1.5px solid transparent;
+}
+
+.stepItem:hover { background: var(--primary-weak); }
+
+.stepItem.active-step {
+  background: var(--primary-weak);
+  border-color: var(--primary);
+}
+
+.stepItem.done-step {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+}
+
+.stepNum {
+  width: 22px;
+  height: 22px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stepItem.done-step .stepNum { background: var(--green); }
+
+.stepText {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #334155;
+}
+
+.stepCheck {
+  font-size: 14px;
+  margin-left: auto;
+}
+
+.leftSectionTitle {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-top: 6px;
+}
+
+/* Center area */
+#centerArea {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 10px;
+  position: relative;
+}
+
+/* Calc grid area */
+#calcGridArea {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #dce4f0;
+  box-shadow: 0 4px 16px rgba(33,52,74,.05);
+}
+
+/* 筆算周辺に常時描画できる補助計算キャンバス（認識なし・常時ON） */
+#auxOverlayCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto; /* 常時描画可能！ */
+  z-index: 5;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+#verticalArea {
+  position: relative;
+  display: inline-block;
+  z-index: 10;
+  pointer-events: none; /* グリッド外は背後のキャンバスへ透過 */
+}
+
+/* Calc table */
+#calcTable {
+  border-collapse: collapse;
+  position: relative;
+  z-index: 10;
+  margin: 0 auto;
+  pointer-events: none; /* マス以外は背後のキャンバスへ透過 */
+}
+
+/* 入力マスのみポインターイベントを受け取る */
+#calcTable .ans-cell,
+#calcTable .carryBox,
+#calcTable .carry-input,
+#calcTable .mainInput,
+#calcTable .handField {
+  pointer-events: auto;
+}
+
+#calcTable td {
+  width: var(--cell-w);
+  height: var(--cell-h);
+  border: 2px solid #888;
+  position: relative;
+  background: white;
+  vertical-align: middle;
+  text-align: right;
+  padding-right: calc(var(--cell-h) * 0.2);
+  box-sizing: border-box;
+}
+
+/* 繰り上がり行：足される数の上！ */
+#calcTable tr.carry-row td {
+  height: calc(var(--cell-h) * 0.6);
+  border: none !important;
+  background: transparent !important;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0 !important;
+}
+
+.carryBox {
+  width: calc(var(--cell-h) * 0.46);
+  height: calc(var(--cell-h) * 0.46);
+  margin: 0 auto;
+  border: 1.5px dashed #94a3b8;
+  background: #fffde7;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  position: relative;
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.carryBox.hasValue {
+  border-style: solid;
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+
+.carryBox .carry-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  text-align: center;
+  font-size: calc(var(--cell-h) * 0.3);
+  font-weight: 900;
+  color: #b45309;
+  font-family: 'Noto Sans JP', sans-serif;
+  padding: 0;
+}
+
+/* 手書きモードのときは繰り上がりマスを非表示！足される数の上のスペースはそのまま手書きメモ可能 */
+body.handwritingMode .carryBox {
+  display: none !important;
+}
+
+.num-cell {
+  font-size: calc(var(--cell-h) * 0.7);
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.sign-cell {
+  border: none !important;
+  background: transparent !important;
+  font-size: calc(var(--cell-h) * 0.6);
+  font-weight: 900;
+  color: var(--accent);
+  text-align: center;
+  padding: 0 !important;
+  width: calc(var(--cell-h) * 0.7) !important;
+}
+
+/* 空白マス（先頭の桁がない部分） */
+#calcTable td.empty-pos {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* 答え行：上部に太い黒い筆算横線 */
+#calcTable tr.ans-row td {
+  border-top: 5px solid #222 !important;
+  background: var(--ans-bg);
+}
+
+#calcTable tr.ans-row td.sign-cell {
+  border-top: 5px solid #222 !important;
+  border-bottom: none !important;
+}
+
+.ans-cell {
+  background: var(--ans-bg) !important;
+}
+
+.ans-cell.correct { background: #c8f7c5 !important; }
+.ans-cell.wrong   { background: #ffd6d6 !important; }
+.ans-cell.highlight { background: #ffe082 !important; }
+.ans-cell.target  { background: #b3e5fc !important; }
+
+.carry-cell.correct { background: #c8f7c5 !important; }
+.carry-cell.wrong   { background: #ffd6d6 !important; }
+.carry-cell.target  { background: #b3e5fc !important; }
+
+.mainInput {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: calc(var(--cell-h) * 0.68);
+  text-align: right;
+  padding-right: calc(var(--cell-h) * 0.18);
+  box-sizing: border-box;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 900;
+  color: var(--primary);
+  position: relative;
+  z-index: 2;
+  caret-color: var(--primary);
+}
+
+.carry-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: calc(var(--cell-h) * 0.3);
+  font-weight: 900;
+  text-align: center;
+  font-family: 'Noto Sans JP', sans-serif;
+  color: #e53935;
+  position: relative;
+  z-index: 2;
+}
+
+.ghostDigit {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--cell-h) * 0.5);
+  font-weight: 800;
+  color: rgba(107,114,128,.18);
+  pointer-events: none;
+  z-index: 1;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+body.superHintOn .ghostDigit { display: flex; }
+td.hasValue .ghostDigit { display: none !important; }
+
+/* Handwriting mode cell */
+.handField {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.handCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  background: transparent;
+  z-index: 1;
+}
+
+.handValue {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--cell-h) * 0.62);
+  font-weight: 800;
+  color: rgba(43,124,255,.65);
+  pointer-events: none;
+  z-index: 2;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+.carry-cell .handValue,
+.carryBox .handValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.ans-cell .handValue {
+  font-size: calc(var(--cell-h) * 0.62);
+  font-weight: 900;
+  color: #1e40af;
+}
+.ans-cell.correct .handValue { color: #166534; }
+.ans-cell.wrong .handValue { color: #991b1b; }
+
+.handField.active .handCanvas { box-shadow: inset 0 0 0 2px rgba(43,124,255,.55); }
+.handField.correct .handCanvas { box-shadow: inset 0 0 0 3px rgba(67,160,71,.95); }
+.handField.wrong .handCanvas   { box-shadow: inset 0 0 0 3px rgba(211,47,47,.95); }
+.handField.target .handCanvas  { box-shadow: inset 0 0 0 3px rgba(30,136,229,.95); }
+
+/* Right rail */
+#rightRail {
+  grid-column: 2;
+  grid-row: 2;
+  background: white;
+  border-left: 2px solid #dbe4f0;
+  overflow-y: auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auxToolsRow {
+  display: flex;
+  gap: 6px;
+}
+
+.auxToolBtn {
+  flex: 1;
+  padding: 7px 6px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #475569;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all .12s;
+  text-align: center;
+}
+
+.auxToolBtn.active {
+  background: #2b7cff;
+  border-color: #2b7cff;
+  color: white;
+  box-shadow: 0 2px 6px rgba(43,124,255,.25);
+}
+
+.railSection {
+  border: 1px solid #e3eaf4;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.railSectionTitle {
+  background: #f3f7ff;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary);
+  border-bottom: 1px solid #e3eaf4;
+  letter-spacing: .03em;
+}
+
+.railSectionBody { padding: 8px; }
+
+/* Hint toggles */
+.hintToggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.toggleBtn {
+  font-size: 11px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 700;
+  transition: all .12s;
+  line-height: 1.2;
+}
+
+.toggleBtn.on { color: white; }
+.toggleBtn.off {
+  background: #e0e6ef;
+  color: #6b7280;
+  border-color: #c8d4e3;
+  opacity: .85;
+}
+
+.toggleBtn.on[data-toggle="arrow"]  { background: var(--accent); border-color: #e06030; }
+.toggleBtn.on[data-toggle="text"]   { background: var(--purple); border-color: #6d1b8a; }
+.toggleBtn.on[data-toggle="ghost"]  { background: #546e7a;       border-color: #374955; }
+.toggleBtn.on[data-toggle="super"]  { background: #00897b;       border-color: #006a60; }
+
+/* Hint text box */
+.hintBox {
+  background: #fafcff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 60px;
+  border: 1px solid #e3eaf4;
+}
+
+.hintTitle {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.hintDesc {
+  color: #334155;
+  font-size: 12px;
+}
+
+/* Numpad */
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.numpadBtn {
+  padding: 8px 4px;
+  border: 1.5px solid #d0d8e8;
+  border-radius: 10px;
+  background: white;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  color: var(--ink);
+  transition: all .10s;
+}
+
+.numpadBtn:active { transform: scale(.94); background: var(--primary-weak); }
+.numpadBtn.del { background: #fff3e0; color: #e65100; border-color: #ffcc80; font-size: 16px; }
+.numpadBtn.ok  { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; font-size: 14px; }
+
+/* Action buttons in right rail */
+.railActionBtn {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  margin-bottom: 5px;
+  transition: all .12s;
+}
+
+.railActionBtn:hover { background: #1e55cc; }
+.railActionBtn.secondary { background: #e8edf4; color: var(--ink); }
+.railActionBtn.secondary:hover { background: #d5dce8; }
+.railActionBtn.danger { background: var(--accent); }
+.railActionBtn.next { background: var(--green); }
+.railActionBtn.next:hover { background: #2e7d32; }
+
+/* Correct animation */
+@keyframes correctBounce {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.18); }
+  60%  { transform: scale(.95); }
+  80%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.correctAnim { animation: correctBounce .45s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+@keyframes wrongShake {
+  0%,100% { transform: translateX(0); }
+  20%     { transform: translateX(-6px); }
+  40%     { transform: translateX(6px); }
+  60%     { transform: translateX(-4px); }
+  80%     { transform: translateX(4px); }
+}
+
+.wrongAnim { animation: wrongShake .35s ease forwards; }
+
+/* Feedback overlay */
+#feedbackOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99;
+}
+
+.feedbackCircle {
+  font-size: 120px;
+  opacity: 0;
+  transition: opacity .1s;
+}
+
+.feedbackCircle.show { opacity: 1; }
+
+/* Model status */
+.modelBadge {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+.modelBadge.ok   { background: #e8f5e9; color: #2e7d32; }
+.modelBadge.warn { background: #fff8e1; color: #e65100; }
+.modelBadge.err  { background: #ffebee; color: #c62828; }
+
+/* ===== RESULT PAGE ===== */
+#resultPage {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 30px 16px;
+}
+
+#resultPage h2 {
+  font-size: 32px;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--primary);
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.statBox {
+  background: white;
+  border: 1px solid #e3eaf4;
+  border-radius: 16px;
+  padding: 16px 12px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(33,52,74,.07);
+}
+
+.statBox .label {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.statBox .value {
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--primary);
+}
+
+.errorAnalysis {
+  background: white;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 20px;
+  border: 1px solid #e3eaf4;
+}
+
+.errorAnalysis h3 {
+  font-size: 16px;
+  margin-bottom: 12px;
+  font-weight: 800;
+}
+
+.errorItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff5f5;
+  border: 1px solid #ffcdd2;
+  margin-bottom: 8px;
+}
+
+.errorIcon { font-size: 18px; }
+.errorText { font-size: 13px; line-height: 1.5; color: #333; }
+
+.resultActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.resultBtn {
+  padding: 14px 28px;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Noto Sans JP', sans-serif;
+  transition: all .15s;
+}
+
+.resultBtn.primary {
+  background: var(--primary);
+  color: white;
+  box-shadow: 0 4px 14px rgba(43,124,255,.3);
+}
+
+.resultBtn.secondary {
+  background: #e8edf4;
+  color: var(--ink);
+}
+
+/* ===== RAID PAGE ===== */
+#raidPage {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 40px;
+}
+
+#raidPage h2 {
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--accent);
+}
+
+.raidCard {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(33,52,74,.08);
+  margin-bottom: 16px;
+  border: 1px solid #e3eaf4;
+}
+
+#bossArea {
+  text-align: center;
+  padding: 20px;
+}
+
+#bossMonster {
+  font-size: 90px;
+  display: block;
+  animation: bossBob 2s ease-in-out infinite;
+}
+
+@keyframes bossBob {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+
+#bossHpBar {
+  width: 80%;
+  max-width: 400px;
+  height: 28px;
+  background: #ffcdd2;
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 12px auto 8px;
+  border: 2px solid #ef9a9a;
+}
+
+#bossHpFill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff4444, #ff8800);
+  border-radius: 12px;
+  transition: width .5s ease;
+}
+
+#bossHpText {
+  font-size: 16px;
+  font-weight: 800;
+  color: #c62828;
+}
+
+.raidGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.raidInput {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #d0d8e8;
+  border-radius: 12px;
+  font-size: 16px;
+  font-family: 'Noto Sans JP', sans-serif;
+  margin-bottom: 10px;
+}
+
+.raidInput:focus { border-color: var(--primary); outline: none; }
+
+.leaderboard {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.lbRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.lbRow:nth-child(1) { background: #fff8e1; }
+.lbRank { font-weight: 900; min-width: 24px; color: var(--primary); }
+.lbName { flex: 1; font-weight: 700; }
+.lbDmg  { font-weight: 900; color: var(--accent); }
+
+/* Raid play area */
+#raidPlayArea {
+  display: none;
+  text-align: center;
+}
+
+#raidProblemDisplay {
+  font-size: 28px;
+  font-weight: 900;
+  margin: 16px 0;
+  letter-spacing: .04em;
+}
+
+#raidTimerBar {
+  width: 100%;
+  height: 12px;
+  background: #e3eaf4;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+#raidTimerFill {
+  height: 100%;
+  background: linear-gradient(90deg, #2b7cff, #00d4aa);
+  border-radius: 6px;
+  transition: width .1s linear;
+}
+
+.raidAnswerInput {
+  width: 140px;
+  padding: 12px 14px;
+  border: 2.5px solid var(--primary);
+  border-radius: 14px;
+  font-size: 28px;
+  text-align: center;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 900;
+  color: var(--primary);
+  margin: 0 auto 12px;
+  display: block;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f0f4fb; }
+::-webkit-scrollbar-thumb { background: #c0cfe0; border-radius: 3px; }
+
+/* ===== Responsive ===== */
+@media (max-height: 600px) {
+  #auxCanvasArea { flex: 0 0 25%; }
+}
+
+@media (max-width: 900px) {
+  #practicePage {
+    grid-template-columns: 1fr 150px;
+  }
+}
+
+@media (max-width: 600px) {
+  #practicePage {
+    grid-template-columns: 1fr 130px;
+  }
+  #leftRail { display: none; }
+}
+
+/* Empty-cell border for num-cell with no digit (padded) */
+.num-cell.empty-pos {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+/* Highlight classes used by SVG hint system */
+.pos-highlight-ones   { outline: 3px solid var(--accent) !important; outline-offset: 1px; z-index: 10; }
+.pos-highlight-tens   { outline: 3px solid var(--blue)   !important; outline-offset: 1px; z-index: 10; }
+.pos-highlight-hundreds { outline: 3px solid var(--purple) !important; outline-offset: 1px; z-index: 10; }
+
+/* ===== かいせつウィンドウ（tashizan_hissan.html を表示） ===== */
+.explainModal {
+  position: fixed; inset: 0; z-index: 20000;
+  background: rgba(15,23,42,.55);
+  display: none; align-items: center; justify-content: center;
+  padding: 2vh 2vw;
+}
+.explainModal.open { display: flex; }
+.explainWin {
+  display: flex; flex-direction: column;
+  width: min(96vw, 1200px); height: 94vh;
+  background: #fff; border-radius: 14px; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+}
+.explainBar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; background: linear-gradient(135deg,#4a9eff,#2d7dd2); color: #fff;
+  flex: none;
+}
+.explainTitle { font-size: 16px; font-weight: 900; letter-spacing: 1px; }
+.explainClose {
+  border: none; border-radius: 999px; padding: 7px 18px;
+  font-size: 14px; font-weight: 900; font-family: inherit;
+  background: #fff; color: #1e55cc; cursor: pointer;
+}
+.explainClose:hover { background: #e8f0ff; }
+.explainFrame { flex: 1; width: 100%; border: 0; background: #f5f0e8; }
+.railActionBtn.hint { background: #f59e0b; }
+.railActionBtn.hint:hover { background: #d98706; }
+
+/* ===== ひき算モード ===== */
+/* 赤ペンの線を、引かれる数のマス目の上（筆算の表より手前）にも描く。
+   キャンバス自体はクリックを受けず、描画は #calcGridArea 側で受ける */
+body.subMode #auxOverlayCanvas { z-index: 30; pointer-events: none; }
+body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
+/* くり下がりを書き込むための余白（引かれる数の上） */
+#calcTable tr.carry-row.borrow-row td { height: calc(var(--cell-h) * 0.95); }
+</style>
+</head>
+<body>
+
+<!-- ===== TOP PAGE ===== -->
+<div id="topPage" class="page active">
+  <h1>たし算の ひっ算 🖊️</h1>
+
+  <div class="settingsCard">
+    <h3>📝 もんだいのせってい</h3>
+    <div class="settingsRow">
+      <label>たされる数の桁数</label>
+      <select id="digitsA">
+        <option value="1">1けた（1〜9）</option>
+        <option value="2" selected>2けた（10〜99）</option>
+        <option value="3">3けた（100〜999）</option>
+      </select>
+    </div>
+    <div class="settingsRow">
+      <label>たす数の桁数</label>
+      <select id="digitsB">
+        <option value="1">1けた（1〜9）</option>
+        <option value="2" selected>2けた（10〜99）</option>
+        <option value="3">3けた（100〜999）</option>
+      </select>
+    </div>
+    <div class="settingsRow">
+      <label>くり上がり</label>
+      <select id="carryMode">
+        <option value="random">ランダム</option>
+        <option value="with">あり</option>
+        <option value="without">なし</option>
+      </select>
+    </div>
+    <div class="settingsRow">
+      <label>もんだいすう</label>
+      <select id="problemCount">
+        <option value="5">5もん</option>
+        <option value="10" selected>10もん</option>
+        <option value="20">20もん</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="settingsCard">
+    <h3>✍️ こたえかた</h3>
+    <div class="modeButtons">
+      <button class="modeBtn active" data-mode="keyboard" onclick="selectMode(this)">⌨️🔢 キーボード・電卓</button>
+      <button class="modeBtn" data-mode="handwriting" onclick="selectMode(this)">✍️ 手書き</button>
+    </div>
+    <div id="modelStatus" class="modelBadge warn" style="margin-top:10px;display:inline-block">
+      🔄 モデル読み込み中...
+    </div>
+  </div>
+
+  <button class="bigStartBtn" onclick="startPractice()">れんしゅうかいし！ ▶</button>
+  <button class="raidBtn" onclick="showPage('raidPage')">👾 レイドボスチャレンジ</button>
+</div>
+
+<!-- ===== PRACTICE PAGE ===== -->
+<div id="practicePage" class="page">
+  <!-- Header -->
+  <div id="practiceHeader">
+    <div class="headerLeft">
+      <span class="headerTitle" id="practiceTitle">たし算の ひっ算 🖊️</span>
+    </div>
+
+    <!-- 問題の種類選択バー -->
+    <div class="typeBar">
+      <select id="probOp" class="typeSelect" onchange="onOpChange()" title="けいさんの しゅるい">
+        <option value="add" selected>たし算 ＋</option>
+        <option value="sub">ひき算 －</option>
+      </select>
+      <select id="probDigits" class="typeSelect" onchange="onProblemTypeChange()" title="桁数の選択">
+        <option value="2_1">2けた ＋ 1けた</option>
+        <option value="2_2" selected>2けた ＋ 2けた</option>
+        <option value="3_2">3けた ＋ 2けた</option>
+        <option value="3_3">3けた ＋ 3けた</option>
+        <option value="1_1">1けた ＋ 1けた</option>
+      </select>
+      <select id="probCarry" class="typeSelect" onchange="onProblemTypeChange()" title="繰り上がりの選択">
+        <option value="random" selected>くり上がり：おまかせ</option>
+        <option value="none">くり上がり：なし (0回)</option>
+        <option value="1">くり上がり：1回</option>
+        <option value="2">くり上がり：2回</option>
+        <option value="all">くり上がり：ぜんぶ</option>
+      </select>
+    </div>
+
+    <!-- モード切替・レイド・設定 -->
+    <div class="headerRight">
+      <div class="modeToggleGroup">
+        <button class="headerModeBtn active" data-mode="keyboard" onclick="switchInputMode('keyboard')" title="キーボードでも電卓ボタンでも入力できます">⌨️🔢 キーボード・電卓</button>
+        <button class="headerModeBtn" data-mode="handwriting" onclick="switchInputMode('handwriting')" title="手書き認識入力">✍️ 手書き</button>
+      </div>
+      <button class="headerRaidBtn" onclick="showPage('raidPage')">👾 レイドボス</button>
+    </div>
+  </div>
+
+  <!-- Center area (wide calculation grid) -->
+  <div id="centerArea">
+    <!-- Calculation grid area -->
+    <div id="calcGridArea">
+      <!-- 筆算周辺に常時描画できる補助計算キャンバス（認識なし・常時ON） -->
+      <canvas id="auxOverlayCanvas"></canvas>
+
+      <div id="verticalArea">
+        <div id="feedbackOverlay">
+          <div class="feedbackCircle" id="feedbackCircle"></div>
+        </div>
+        <table id="calcTable">
+          <!-- Built by JS -->
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right rail -->
+  <div id="rightRail">
+    <!-- 筆算周辺の補助計算メモ -->
+    <div class="railSection" id="auxMemoSection">
+      <div class="railSectionTitle">✏️ 補助計算メモ</div>
+      <div class="railSectionBody">
+        <div class="auxToolsRow">
+          <button id="auxPenBtn" class="auxToolBtn active" onclick="setAuxTool('pen', this)">✏️ ペン</button>
+          <button id="auxEraserBtn" class="auxToolBtn" onclick="setAuxTool('eraser', this)">🧹 消しゴム</button>
+        </div>
+        <button class="railActionBtn danger" style="padding:6px;font-size:12px;margin-top:6px" onclick="clearAuxOverlay()">🗑️ メモ全消去</button>
+      </div>
+    </div>
+
+    <!-- Numpad (キーボード・電卓モードのとき表示。キーボード入力と併用できる) -->
+    <div class="railSection" id="numpadSection" style="display:none">
+      <div class="railSectionTitle">🔢 でんたく</div>
+      <div class="railSectionBody">
+        <div class="numpad">
+          <button class="numpadBtn" onclick="numpadInput(7)">7</button>
+          <button class="numpadBtn" onclick="numpadInput(8)">8</button>
+          <button class="numpadBtn" onclick="numpadInput(9)">9</button>
+          <button class="numpadBtn" onclick="numpadInput(4)">4</button>
+          <button class="numpadBtn" onclick="numpadInput(5)">5</button>
+          <button class="numpadBtn" onclick="numpadInput(6)">6</button>
+          <button class="numpadBtn" onclick="numpadInput(1)">1</button>
+          <button class="numpadBtn" onclick="numpadInput(2)">2</button>
+          <button class="numpadBtn" onclick="numpadInput(3)">3</button>
+          <button class="numpadBtn del" onclick="numpadDelete()">⌫</button>
+          <button class="numpadBtn" onclick="numpadInput(0)">0</button>
+          <button class="numpadBtn ok" onclick="checkAnswer()">✓<br><span style="font-size:10px">かくにん</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="railSection">
+      <div class="railSectionTitle">🎮 アクション</div>
+      <div class="railSectionBody" style="display:flex;flex-direction:column;gap:6px">
+        <button class="railActionBtn" onclick="checkAnswer()">✓ こたえをかくにん</button>
+        <button class="railActionBtn hint" onclick="openExplanation()">💡 ヒント（かいせつ）</button>
+        <button class="railActionBtn next" onclick="nextProblemByType()">つぎの問題 🎲</button>
+        <button class="railActionBtn danger" onclick="clearAllInputs()">🗑️ マスクリア</button>
+      </div>
+    </div>
+
+    <!-- Mini stats -->
+    <div class="railSection" style="margin-top:auto">
+      <div class="railSectionTitle">📊 せいせき</div>
+      <div class="railSectionBody" style="font-size:12px;display:flex;justify-content:space-between;font-weight:800;color:#334155">
+        <span>せいかい: <b id="scoreDisplay" style="color:var(--primary)">0</b></span>
+        <span>もんだい: <b id="problemNumDisplay">1</b></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== RESULT PAGE ===== -->
+<div id="resultPage" class="page">
+  <h2>🎉 けっか！</h2>
+  <div class="statGrid">
+    <div class="statBox">
+      <div class="label">せいかいすう</div>
+      <div class="value" id="statCorrect">0</div>
+    </div>
+    <div class="statBox">
+      <div class="label">もんだいすう</div>
+      <div class="value" id="statTotal">0</div>
+    </div>
+    <div class="statBox">
+      <div class="label">せいかいりつ</div>
+      <div class="value" id="statRate">0%</div>
+    </div>
+    <div class="statBox">
+      <div class="label">かかった時間</div>
+      <div class="value" id="statTime">0秒</div>
+    </div>
+  </div>
+
+  <div class="errorAnalysis" id="errorAnalysisDiv" style="display:none">
+    <h3>📊 まちがいのぶんせき</h3>
+    <div id="errorAnalysisContent"></div>
+  </div>
+
+  <div class="resultActions">
+    <button class="resultBtn primary" onclick="startPractice()">もう一度！ 🔄</button>
+    <button class="resultBtn secondary" onclick="showPage('topPage')">設定にもどる ⚙️</button>
+  </div>
+</div>
+
+<!-- ===== RAID PAGE ===== -->
+<div id="raidPage" class="page">
+  <h2>👾 レイドボスチャレンジ</h2>
+
+  <div id="raidSetupArea">
+    <div class="raidCard">
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:12px">🔥 ボス設定</h3>
+      <div id="bossArea">
+        <span id="bossMonster">👾</span>
+        <div id="bossHpBar"><div id="bossHpFill" style="width:100%"></div></div>
+        <div id="bossHpText">HP: — / —</div>
+      </div>
+    </div>
+
+    <div class="raidCard">
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:12px">📋 ルームせってい</h3>
+      <input class="raidInput" id="raidPlayerName" placeholder="プレイヤー名を入力" value="さくら">
+      <input class="raidInput" id="raidRoomId" placeholder="ルームID（例: room01）" value="room01">
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <select class="raidInput" id="raidTimeLimit" style="flex:1">
+          <option value="10">10秒/問</option>
+          <option value="15" selected>15秒/問</option>
+          <option value="20">20秒/問</option>
+          <option value="30">30秒/問</option>
+        </select>
+        <select class="raidInput" id="raidBossHp" style="flex:1">
+          <option value="500">HP: 500</option>
+          <option value="1000" selected>HP: 1000</option>
+          <option value="2000">HP: 2000</option>
+        </select>
+      </div>
+      <button class="bigStartBtn" style="max-width:none;font-size:16px;padding:14px" onclick="joinRaid()">🚪 ルームに入る</button>
+    </div>
+
+    <div class="raidCard" id="leaderboardCard" style="display:none">
+      <h3 style="font-size:16px;font-weight:800;margin-bottom:10px">🏆 ランキング</h3>
+      <div class="leaderboard" id="leaderboardDiv"></div>
+    </div>
+  </div>
+
+  <!-- Raid play area -->
+  <div id="raidPlayArea" class="raidCard">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span id="raidStatusText" style="font-weight:800;font-size:14px;color:var(--accent)">接続中...</span>
+      <button class="resultBtn secondary" style="padding:6px 12px;font-size:13px" onclick="leaveRaid()">退出</button>
+    </div>
+    <div id="raidTimerBar"><div id="raidTimerFill" style="width:100%"></div></div>
+    <div id="raidProblemDisplay">—</div>
+    <input class="raidAnswerInput" id="raidAnswerInput" type="number" placeholder="こたえ">
+    <button class="railActionBtn" style="max-width:200px;margin:0 auto" onclick="submitRaidAnswer()">こたえる！</button>
+    <div id="raidResult" style="margin-top:10px;font-size:16px;font-weight:800;min-height:22px;text-align:center"></div>
+  </div>
+
+  <div style="text-align:center;margin-top:16px">
+    <button class="resultBtn secondary" onclick="showPage('topPage')">← もどる</button>
+  </div>
+</div>
+
+<!-- ===== かいせつウィンドウ ===== -->
+<div id="explainModal" class="explainModal" aria-hidden="true">
+  <div class="explainWin" role="dialog" aria-label="かいせつ">
+    <div class="explainBar">
+      <span class="explainTitle" id="explainTitle">📖 かいせつ</span>
+      <button class="explainClose" onclick="closeExplanation()">✕ とじる</button>
+    </div>
+    <iframe id="explainFrame" class="explainFrame" title="かいせつ" src="about:blank"></iframe>
+  </div>
+</div>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script>
+'use strict';
+
+// ===== Firebase config (user fills in) =====
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+
+// ===== State =====
+let settings = {
+  digitsA: 2,
+  digitsB: 2,
+  carryMode: 'random',
+  problemCount: 10,
+  inputMode: 'keyboard',
+  op: 'add'
+};
+
+let currentProblem = null;
+let problemQueue    = [];
+let problemIndex    = 0;
+let score           = 0;
+let startTime       = 0;
+let problemHistory  = [];
+let focusedCell     = null;
+let currentStep     = 'ones';
+let stepsCompleted  = {};
+
+let hintsEnabled = { arrow: true, text: true, ghost: false, super: false };
+
+// TF.js model
+let model = null;
+
+// Audio
+let audioCtx = null;
+
+// Aux canvas variables are declared with aux overlay implementation below
+
+// Firebase / Raid
+let raidDB         = null;
+let raidRoomRef    = null;
+let raidRoomId     = null;
+let raidPlayerName = '';
+let raidTimerInt   = null;
+let raidTimeLeft   = 15;
+let raidProblem    = null;
+
+// ===== Page navigation =====
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'topPage') cleanupRaid();
+}
+
+// ===== Mode selection (top page) =====
+function selectMode(btn) {
+  document.querySelectorAll('.modeBtn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  settings.inputMode = btn.dataset.mode;
+  saveSettings();
+}
+
+// ===== Settings persistence =====
+function saveSettings() {
+  try { localStorage.setItem('tashizan2_settings', JSON.stringify(settings)); } catch(e){}
+}
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('tashizan2_settings') || 'null');
+    if (s) {
+      Object.assign(settings, s);
+      if (settings.inputMode === 'numpad') settings.inputMode = 'keyboard'; // 電卓はキーボードモードに統合
+      // Sync UI
+      if (document.getElementById('digitsA')) {
+        document.getElementById('digitsA').value     = settings.digitsA;
+        document.getElementById('digitsB').value     = settings.digitsB;
+        document.getElementById('carryMode').value   = settings.carryMode;
+        document.getElementById('problemCount').value= settings.problemCount;
+        document.querySelectorAll('.modeBtn').forEach(b => {
+          b.classList.toggle('active', b.dataset.mode === settings.inputMode);
+        });
+      }
+    }
+  } catch(e){}
+}
+
+// ===== Problem generation =====
+function generateProblem(dA, dB, carryMode) {
+  const minA = Math.pow(10, dA - 1), maxA = Math.pow(10, dA) - 1;
+  const minB = Math.pow(10, dB - 1), maxB = Math.pow(10, dB) - 1;
+  let a, b, attempts = 0;
+  do {
+    a = rand(minA, maxA);
+    b = rand(minB, maxB);
+    const hasCarry = checkHasCarry(a, b);
+    if (carryMode === 'random') break;
+    if (carryMode === 'with'    && hasCarry)  break;
+    if (carryMode === 'without' && !hasCarry) break;
+    attempts++;
+  } while (attempts < 200);
+  return { a, b, answer: a + b };
+}
+
+function rand(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function checkHasCarry(a, b) {
+  let carry = 0;
+  while (a > 0 || b > 0 || carry > 0) {
+    const da = a % 10, db = b % 10;
+    const sum = da + db + carry;
+    if (sum >= 10) return true;
+    carry = Math.floor(sum / 10);
+    a = Math.floor(a / 10);
+    b = Math.floor(b / 10);
+  }
+  return false;
+}
+
+function getProblemDigits(n, places) {
+  // Returns array of digits [hundreds, tens, ones] padded to 'places'
+  const digits = [];
+  let tmp = n;
+  for (let i = 0; i < places; i++) {
+    digits.unshift(tmp % 10);
+    tmp = Math.floor(tmp / 10);
+  }
+  return digits;
+}
+
+// ===== 繰り上がり回数カウント =====
+function countCarries(a, b) {
+  let count = 0, carry = 0;
+  let da = a, db = b;
+  while (da > 0 || db > 0 || carry > 0) {
+    const sum = (da % 10) + (db % 10) + carry;
+    if (sum >= 10) {
+      count++;
+      carry = 1;
+    } else {
+      carry = 0;
+    }
+    da = Math.floor(da / 10);
+    db = Math.floor(db / 10);
+  }
+  return count;
+}
+
+// ===== 問題の種類（桁数・繰り上がり回数）に応じた問題生成 =====
+function generateProblemByType() {
+  const digitsEl = document.getElementById('probDigits');
+  const carryEl  = document.getElementById('probCarry');
+  const digitsVal = digitsEl ? digitsEl.value : '2_2';
+  const carryVal  = carryEl  ? carryEl.value  : 'random';
+
+  let dA = 2, dB = 2;
+  if (digitsVal === '1_1') { dA = 1; dB = 1; }
+  else if (digitsVal === '2_1') { dA = 2; dB = 1; }
+  else if (digitsVal === '2_2') { dA = 2; dB = 2; }
+  else if (digitsVal === '3_2') { dA = 3; dB = 2; }
+  else if (digitsVal === '3_3') { dA = 3; dB = 3; }
+
+  if (currentOp() === 'sub') return generateSubProblem(dA, dB, carryVal);
+
+  const minA = Math.pow(10, dA - 1), maxA = Math.pow(10, dA) - 1;
+  const minB = Math.pow(10, dB - 1), maxB = Math.pow(10, dB) - 1;
+
+  let a = 35, b = 12, attempts = 0;
+  while (attempts < 500) {
+    attempts++;
+    const candA = rand(minA, maxA);
+    const candB = rand(minB, maxB);
+    const carries = countCarries(candA, candB);
+
+    if (carryVal === 'random') {
+      a = candA; b = candB;
+      break;
+    } else if (carryVal === 'none' && carries === 0) {
+      a = candA; b = candB;
+      break;
+    } else if (carryVal === '1' && carries === 1) {
+      a = candA; b = candB;
+      break;
+    } else if (carryVal === '2' && carries === 2) {
+      a = candA; b = candB;
+      break;
+    } else if (carryVal === 'all') {
+      const maxPossible = Math.min(dA, dB);
+      if (carries >= maxPossible && carries > 0) {
+        a = candA; b = candB;
+        break;
+      }
+    }
+  }
+
+  return { a, b, answer: a + b };
+}
+
+// ===== たし算 / ひき算 の切り替え =====
+function currentOp() {
+  return settings.op === 'sub' ? 'sub' : 'add';
+}
+
+// くり下がりの回数（ひく数の各桁について、ひかれる数の桁が足りない回数）
+function countBorrows(a, b) {
+  let count = 0, borrow = 0;
+  while (a > 0 || b > 0) {
+    if ((a % 10) - borrow < (b % 10)) { count++; borrow = 1; } else { borrow = 0; }
+    a = Math.floor(a / 10);
+    b = Math.floor(b / 10);
+  }
+  return count;
+}
+
+function generateSubProblem(dA, dB, carryVal) {
+  const minA = Math.pow(10, dA - 1), maxA = Math.pow(10, dA) - 1;
+  const minB = Math.pow(10, dB - 1), maxB = Math.pow(10, dB) - 1;
+  let fallback = null;
+  for (let i = 0; i < 800; i++) {
+    const a = rand(minA, maxA), b = rand(minB, maxB);
+    if (b >= a) continue; // ひく数は、ひかれる数より小さく
+    const n = countBorrows(a, b);
+    if (!fallback) fallback = { a, b };
+    const ok = carryVal === 'random'
+      || (carryVal === 'none' && n === 0)
+      || (carryVal === '1' && n === 1)
+      || (carryVal === '2' && n === 2)
+      || (carryVal === 'all' && n > 0 && n === dA - 1);
+    if (ok) return { op: 'sub', a, b, answer: a - b };
+  }
+  const f = fallback || { a: 52, b: 17 };
+  return { op: 'sub', a: f.a, b: f.b, answer: f.a - f.b };
+}
+
+const DIGIT_OPTIONS = {
+  add: [['2_1', '2けた ＋ 1けた'], ['2_2', '2けた ＋ 2けた'], ['3_2', '3けた ＋ 2けた'], ['3_3', '3けた ＋ 3けた'], ['1_1', '1けた ＋ 1けた']],
+  sub: [['2_1', '2けた － 1けた'], ['2_2', '2けた － 2けた'], ['3_2', '3けた － 2けた'], ['3_3', '3けた － 3けた']]
+};
+
+function applyOpUI() {
+  const op = currentOp();
+  const word = op === 'sub' ? 'くり下がり' : 'くり上がり';
+
+  const opSel = document.getElementById('probOp');
+  if (opSel) opSel.value = op;
+
+  const dSel = document.getElementById('probDigits');
+  if (dSel) {
+    const prev = dSel.value;
+    const list = DIGIT_OPTIONS[op];
+    dSel.innerHTML = list.map(([v, txt]) => `<option value="${v}">${txt}</option>`).join('');
+    dSel.value = list.some(([v]) => v === prev) ? prev : '2_2';
+  }
+
+  const cSel = document.getElementById('probCarry');
+  if (cSel) {
+    const prev = cSel.value || 'random';
+    cSel.innerHTML = [
+      ['random', `${word}：おまかせ`], ['none', `${word}：なし (0回)`],
+      ['1', `${word}：1回`], ['2', `${word}：2回`], ['all', `${word}：ぜんぶ`]
+    ].map(([v, txt]) => `<option value="${v}">${txt}</option>`).join('');
+    cSel.value = prev;
+    cSel.title = `${word}の選択`;
+  }
+
+  const title = document.getElementById('practiceTitle');
+  if (title) title.textContent = (op === 'sub' ? 'ひき算' : 'たし算') + 'の ひっ算 🖊️';
+  document.body.classList.toggle('subMode', op === 'sub');
+  syncBorrowOptions();
+}
+
+// ひき算で、ひかれる数が2けたのときは くり下がりが最大1回なので「2回」は選べないようにする
+function syncBorrowOptions() {
+  const cSel = document.getElementById('probCarry');
+  const dSel = document.getElementById('probDigits');
+  if (!cSel || !dSel) return;
+  const dA = parseInt(dSel.value.split('_')[0], 10);
+  const impossible = currentOp() === 'sub' && dA <= 2;
+  const opt2 = [...cSel.options].find(o => o.value === '2');
+  if (opt2) opt2.disabled = impossible;
+  if (impossible && cSel.value === '2') cSel.value = 'random';
+}
+
+function onOpChange() {
+  const sel = document.getElementById('probOp');
+  settings.op = (sel && sel.value === 'sub') ? 'sub' : 'add';
+  saveSettings();
+  if (isExplanationOpen()) closeExplanation();
+  applyOpUI();
+  nextProblemByType();
+}
+
+function onProblemTypeChange() {
+  syncBorrowOptions();
+  nextProblemByType();
+}
+
+function nextProblemByType() {
+  currentProblem = generateProblemByType();
+  problemIndex++;
+  focusedCell = null;
+  clearAuxOverlay(); // 補助計算メモは次の問題で自動的に全消去
+  clearAllInputs();
+  buildGrid(currentProblem);
+  updateHeader();
+}
+
+function nextProblem() {
+  nextProblemByType();
+}
+
+function startPractice() {
+  showPage('practicePage');
+  applyInputModeUI();
+  nextProblemByType();
+}
+
+// ===== Input mode switcher in header =====
+function switchInputMode(mode) {
+  settings.inputMode = mode;
+  saveSettings();
+  document.querySelectorAll('.headerModeBtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  applyInputModeUI();
+  if (currentProblem) {
+    buildGrid(currentProblem);
+  }
+}
+
+function updateHeader() {
+  const scoreDisp = document.getElementById('scoreDisplay');
+  if (scoreDisp) scoreDisp.textContent = score;
+  const probNum = document.getElementById('problemNumDisplay');
+  if (probNum) probNum.textContent = problemIndex;
+}
+
+// ===== Build grid =====
+function buildGrid(problem) {
+  const { a, b, answer } = problem;
+  const isSub = problem.op === 'sub';
+  document.body.classList.toggle('subMode', isSub);
+
+  // 右詰めで各桁を取得するヘルパー (0=一の位, 1=十の位, 2=百の位...)
+  function getDigit(num, colFromRight) {
+    const s = String(num);
+    const idx = s.length - 1 - colFromRight;
+    if (idx < 0) return null;
+    return parseInt(s[idx], 10);
+  }
+
+  // 筆算全体の桁数
+  const totalDigits = Math.max(String(a).length, String(b).length, String(answer).length);
+
+  const tbl = document.getElementById('calcTable');
+  tbl.innerHTML = '';
+
+  const posNames = ['ones', 'tens', 'hundreds', 'thousands', 'ten-thousands'];
+
+  // --- 行0: くり上がり行（足される数 A の真上！） ---
+  const rowCarry = tbl.insertRow();
+  rowCarry.className = isSub ? 'carry-row borrow-row' : 'carry-row';
+
+  const signCarry = rowCarry.insertCell();
+  signCarry.className = 'sign-cell';
+
+  for (let c = 0; c < totalDigits; c++) {
+    const colFromRight = totalDigits - 1 - c;
+    const pos = posNames[colFromRight] || `col-${colFromRight}`;
+    const td = rowCarry.insertCell();
+    td.className = 'carry-cell-container';
+
+    // 一の位以外の桁に繰り上がりボックスを配置（十の位、百の位など）
+    // ひき算のときはボックスを置かず、赤ペンで自由に書ける余白にする
+    if (colFromRight > 0 && !isSub) {
+      const carryBox = document.createElement('div');
+      carryBox.className = 'carryBox';
+      carryBox.dataset.pos = pos;
+      carryBox.dataset.cellType = 'carry';
+
+      if (settings.inputMode === 'keyboard') {
+        const cInp = document.createElement('input');
+        cInp.type = 'text';
+        cInp.maxLength = 1;
+        cInp.className = 'carry-input';
+        cInp.dataset.pos = pos;
+        cInp.dataset.cellType = 'carry';
+        cInp.inputMode = 'none'; // 画面キーボードは出さない（物理キーボードと電卓ボタンの両方で入力可）
+        cInp.addEventListener('focus', () => { focusedCell = cInp; });
+        cInp.addEventListener('input', e => {
+          const v = e.target.value.replace(/[^0-9]/g, '');
+          e.target.value = v ? v[v.length - 1] : '';
+          carryBox.classList.toggle('hasValue', !!e.target.value);
+        });
+        cInp.addEventListener('keydown', e => {
+          if (e.key === 'Enter') checkAnswer();
+        });
+        carryBox.appendChild(cInp);
+      }
+      // 手書きモードのときは CSS (body.handwritingMode .carryBox { display: none !important; }) で非表示になり、
+      // 余白（高さ38px）がそのまま保たれるため足される数の上に直接手書きペンで書ける！
+      td.appendChild(carryBox);
+    }
+  }
+
+  // --- 行1: たされる数 A ---
+  const rowA = tbl.insertRow();
+  rowA.className = 'num-row';
+
+  const signA = rowA.insertCell();
+  signA.className = 'sign-cell';
+
+  for (let c = 0; c < totalDigits; c++) {
+    const colFromRight = totalDigits - 1 - c;
+    const pos = posNames[colFromRight] || `col-${colFromRight}`;
+    const td = rowA.insertCell();
+    td.className = 'num-cell';
+    td.dataset.pos = pos;
+    td.dataset.colFromRight = colFromRight;
+
+    const dig = getDigit(a, colFromRight);
+    if (dig !== null) {
+      td.textContent = String(dig); // 0も確実に0として表示
+      td.classList.remove('empty-pos');
+    } else {
+      td.textContent = '';
+      td.classList.add('empty-pos');
+    }
+  }
+
+  // --- 行2: たす数 B ---
+  const rowB = tbl.insertRow();
+  rowB.className = 'num-row';
+
+  const signB = rowB.insertCell();
+  signB.className = 'sign-cell';
+  signB.textContent = isSub ? '－' : '＋';
+
+  for (let c = 0; c < totalDigits; c++) {
+    const colFromRight = totalDigits - 1 - c;
+    const pos = posNames[colFromRight] || `col-${colFromRight}`;
+    const td = rowB.insertCell();
+    td.className = 'num-cell';
+    td.dataset.pos = pos;
+    td.dataset.colFromRight = colFromRight;
+
+    const dig = getDigit(b, colFromRight);
+    if (dig !== null) {
+      td.textContent = String(dig); // 0も確実に0として表示
+      td.classList.remove('empty-pos');
+    } else {
+      td.textContent = '';
+      td.classList.add('empty-pos');
+    }
+  }
+
+  // --- 行3: 答えの行（上部に太い黒の筆算横線 border-top） ---
+  const ansRow = tbl.insertRow();
+  ansRow.className = 'ans-row';
+
+  const signAns = ansRow.insertCell();
+  signAns.className = 'sign-cell';
+
+  for (let c = 0; c < totalDigits; c++) {
+    const colFromRight = totalDigits - 1 - c;
+    const pos = posNames[colFromRight] || `col-${colFromRight}`;
+    const td = ansRow.insertCell();
+    td.className = 'ans-cell';
+    td.dataset.pos = pos;
+    td.dataset.colFromRight = colFromRight;
+
+    const correctDig = getDigit(answer, colFromRight);
+    td.dataset.correctDigit = (correctDig !== null) ? String(correctDig) : '';
+
+    if (settings.inputMode === 'keyboard') {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.maxLength = 1;
+      inp.className = 'mainInput';
+      inp.dataset.cellType = 'answer';
+      inp.dataset.pos = pos;
+      inp.inputMode = 'none'; // 画面キーボードは出さない（物理キーボードと電卓ボタンの両方で入力可）
+      inp.setAttribute('autocomplete', 'off');
+      inp.addEventListener('focus', () => {
+        focusedCell = inp;
+      });
+      inp.addEventListener('input', e => {
+        const v = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = v ? v[v.length - 1] : '';
+        td.classList.toggle('hasValue', !!e.target.value);
+        if (e.target.value) autoAdvance(inp);
+      });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') checkAnswer();
+        if (e.key === 'Backspace' && !e.target.value) autoRetreat(inp);
+      });
+      td.appendChild(inp);
+    } else {
+      // Handwriting
+      initHandCell(td, `ans-${pos}`, false);
+    }
+  }
+
+  // 初期フォーカス（一の位の答えマスへ）
+  setTimeout(() => {
+    const onesCell = document.querySelector('.ans-cell[data-pos="ones"]');
+    if (onesCell) {
+      if (settings.inputMode === 'keyboard') {
+        const inp = onesCell.querySelector('.mainInput');
+        if (inp) { focusedCell = inp; inp.focus(); }
+      }
+    }
+  }, 80);
+}
+
+// ===== Auto-advance (keyboard) =====
+// ===== Auto-advance (keyboard) - 一の位から十の位・百の位へ（右から左へ移動） =====
+function autoAdvance(inp) {
+  const cells = [...document.querySelectorAll('.ans-cell')];
+  const inputs = cells.map(c => c.querySelector('.mainInput')).filter(Boolean);
+  const idx = inputs.indexOf(inp);
+  // DOM順は百の位(0), 十の位(1), 一の位(2)なので、一の位からは左(idx - 1)に進む
+  if (idx > 0) {
+    setTimeout(() => inputs[idx - 1].focus(), 50);
+  } else {
+    // 最上位の桁まで入力完了
+    setTimeout(() => inp.blur(), 50);
+  }
+}
+
+function autoRetreat(inp) {
+  const cells = [...document.querySelectorAll('.ans-cell')];
+  const inputs = cells.map(c => c.querySelector('.mainInput')).filter(Boolean);
+  const idx = inputs.indexOf(inp);
+  // Backspace時は右の桁(idx + 1)に戻る
+  if (idx < inputs.length - 1) inputs[idx + 1].focus();
+}
+
+// ===== Numpad（電卓ボタン）：キーボードと同じ入力マスに入力する =====
+function numpadInput(digit) {
+  if (!focusedCell || focusedCell.tagName !== 'INPUT' || !focusedCell.isConnected) return;
+  focusedCell.value = String(digit);
+  const box = focusedCell.closest('.carryBox') || focusedCell.closest('td');
+  if (box) box.classList.add('hasValue');
+  if (focusedCell.classList.contains('mainInput')) {
+    autoAdvance(focusedCell);
+  } else {
+    focusedCell.focus();
+  }
+}
+
+function numpadDelete() {
+  if (!focusedCell || focusedCell.tagName !== 'INPUT' || !focusedCell.isConnected) return;
+  let target = focusedCell;
+  // 空のマスで消すときは、右のマスに戻ってそこを消す（キーボードのBackspaceと同じ感覚）
+  if (!target.value && target.classList.contains('mainInput')) {
+    const inputs = [...document.querySelectorAll('.mainInput')];
+    const idx = inputs.indexOf(target);
+    if (idx >= 0 && idx < inputs.length - 1) target = inputs[idx + 1];
+  }
+  target.value = '';
+  const box = target.closest('.carryBox') || target.closest('td');
+  if (box) box.classList.remove('hasValue');
+  target.focus();
+}
+
+// ===== Clear inputs =====
+function clearAllInputs() {
+  document.querySelectorAll('.ans-cell').forEach(td => {
+    td.classList.remove('correct','wrong','highlight','target','hasValue','correctAnim','wrongAnim');
+    td.style.outline = '';
+    const inp = td.querySelector('.mainInput');
+    if (inp) inp.value = '';
+    const sp = td.querySelector('.numpadDisplay');
+    if (sp) sp.textContent = '';
+    delete td.dataset.value;
+    if (td._handState) {
+      clearField(td._handState);
+    } else {
+      const hv = td.querySelector('.handValue');
+      if (hv) { hv.textContent = ''; hv.style.display = 'none'; }
+      const canvases = td.querySelectorAll('canvas');
+      canvases.forEach(c => { const ctx = c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); });
+    }
+  });
+  document.querySelectorAll('.carryBox, .carry-cell').forEach(box => {
+    box.classList.remove('correct','wrong','target','hasValue');
+    box.style.outline = '';
+    const inp = box.querySelector('.carry-input');
+    if (inp) inp.value = '';
+    const sp = box.querySelector('.numpadDisplay');
+    if (sp) sp.textContent = '';
+    delete box.dataset.value;
+  });
+}
+
+// ===== Column highlight =====
+function highlightColumn(pos) {
+  // Visual highlight of the column being worked on
+}
+
+// ===== Check answer =====
+function checkAnswer() {
+  const ansCells = [...document.querySelectorAll('.ans-cell')];
+  const digAns = getProblemDigits(currentProblem.answer, ansCells.length);
+
+  let allFilled = true;
+  let allCorrect = true;
+  const userDigits = {};
+  const errors = [];
+
+  ansCells.forEach((td, i) => {
+    let userVal = getUserValue(td);
+    const pos = td.dataset.pos;
+    const correctStr = td.dataset.correctDigit;
+    if (correctStr === '' || correctStr === undefined) return;
+    const correctDigit = parseInt(correctStr, 10);
+
+    if (userVal === '' || userVal === null || userVal === undefined) {
+      allFilled = false;
+      return;
+    }
+
+    userVal = parseInt(userVal);
+    userDigits[pos] = userVal;
+
+    if (userVal === correctDigit) {
+      td.classList.add('correct');
+      td.classList.remove('wrong');
+    } else {
+      td.classList.add('wrong');
+      td.classList.remove('correct');
+      allCorrect = false;
+      errors.push({ pos, userVal, correctDigit });
+    }
+  });
+
+  if (!allFilled) {
+    showFeedback('⚠️', false);
+    updateHintBox('⚠️ まだ入力されていないマスがあるよ！', 'すべてのこたえを入力してね。');
+    return;
+  }
+
+  if (allCorrect) {
+    score++;
+    updateHeader();
+    playCorrect();
+    showFeedback('⭕', true);
+    ansCells.forEach(td => td.classList.add('correctAnim'));
+    problemHistory.push({ problem: currentProblem, correct: true, errors: [] });
+    setTimeout(() => nextProblem(), 1600);
+  } else {
+    playWrong();
+    showFeedback('❌', false);
+    ansCells.forEach(td => td.classList.add('wrongAnim'));
+    setTimeout(() => {
+      ansCells.forEach(td => td.classList.remove('wrongAnim'));
+    }, 400);
+    const errTypes = analyzeErrors(errors);
+    showErrorHint(errTypes);
+    problemHistory.push({ problem: currentProblem, correct: false, errors: errTypes });
+    // 間違えたら、少し待ってから かいせつウィンドウを開く
+    const wrongProblem = currentProblem;
+    setTimeout(() => {
+      if (currentProblem === wrongProblem) openExplanation();
+    }, 900);
+  }
+}
+
+// ===== かいせつウィンドウ（tashizan_hissan.html を問題の数字つきで表示） =====
+const EXPLAIN_URLS = { add: 'tashizan_hissan.html', sub: 'hikizan_hissan.html' };
+
+function isExplanationOpen() {
+  const m = document.getElementById('explainModal');
+  return !!(m && m.classList.contains('open'));
+}
+
+function openExplanation() {
+  if (!currentProblem || isExplanationOpen()) return;
+  const { a, b } = currentProblem;
+  const op = currentProblem.op === 'sub' ? 'sub' : 'add';
+  const modal = document.getElementById('explainModal');
+  const frame = document.getElementById('explainFrame');
+  document.getElementById('explainTitle').textContent = `📖 かいせつ　${a} ${op === 'sub' ? '－' : '＋'} ${b}`;
+  frame.onload = () => { try { frame.contentWindow.focus(); } catch (e) {} };
+  frame.src = `${EXPLAIN_URLS[op]}?a=${a}&b=${b}&embed=1`;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+
+// 解説ウィンドウ（iframe）内でEscが押されたときの通知を受けて閉じる
+window.addEventListener('message', e => {
+  const frame = document.getElementById('explainFrame');
+  if (frame && e.source === frame.contentWindow && e.data && e.data.type === 'closeExplanation') {
+    closeExplanation();
+  }
+});
+
+function closeExplanation() {
+  const modal = document.getElementById('explainModal');
+  const frame = document.getElementById('explainFrame');
+  try { frame.contentWindow.speechSynthesis.cancel(); } catch (e) {}
+  frame.onload = null;
+  frame.src = 'about:blank';
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function getUserValue(td) {
+  if (settings.inputMode === 'keyboard') {
+    const inp = td.querySelector('.mainInput');
+    return inp ? inp.value.trim() : '';
+  } else if (settings.inputMode === 'numpad') {
+    return td.dataset.value !== undefined ? td.dataset.value : '';
+  } else {
+    return td.dataset.value !== undefined ? td.dataset.value : '';
+  }
+}
+
+// ===== Error analysis =====
+function analyzeErrors(errors) {
+  if (currentProblem && currentProblem.op === 'sub') return analyzeSubErrors(errors);
+  const { a, b, answer } = currentProblem;
+  const types = [];
+
+  errors.forEach(({ pos, userVal, correctDigit }) => {
+    if (pos === 'ones') {
+      const onesA = a % 10, onesB = b % 10;
+      const rawSum = onesA + onesB;
+      const noCarryResult = rawSum % 10;
+      if (rawSum >= 10 && userVal === rawSum) {
+        types.push({ type: 'ones_no_write', pos });
+      } else if (rawSum >= 10 && userVal === (onesA + onesB) % 10 - 0) {
+        // Actually correct mod 10 but with carry needed
+        types.push({ type: 'ones_wrong', pos });
+      } else {
+        types.push({ type: 'ones_wrong', pos });
+      }
+    } else if (pos === 'tens') {
+      const tensA = Math.floor(a/10) % 10;
+      const tensB = Math.floor(b/10) % 10;
+      const onesSum = (a % 10) + (b % 10);
+      const carry1 = onesSum >= 10 ? 1 : 0;
+      const noCarryResult = (tensA + tensB) % 10;
+      if (carry1 > 0 && userVal === noCarryResult) {
+        types.push({ type: 'carry_forgot', pos });
+      } else {
+        types.push({ type: 'tens_wrong', pos });
+      }
+    } else if (pos === 'hundreds') {
+      const hunA = Math.floor(a/100) % 10;
+      const hunB = Math.floor(b/100) % 10;
+      const tensSum = (Math.floor(a/10)%10) + (Math.floor(b/10)%10) + ((a%10+b%10)>=10?1:0);
+      const carry2 = tensSum >= 10 ? 1 : 0;
+      const noCarryResult = (hunA + hunB) % 10;
+      if (carry2 > 0 && userVal === noCarryResult) {
+        types.push({ type: 'carry_tens_forgot', pos });
+      } else {
+        types.push({ type: 'hundreds_wrong', pos });
+      }
+    } else {
+      types.push({ type: 'general_wrong', pos });
+    }
+  });
+  return types;
+}
+
+// ひき算の間違いタイプ
+function analyzeSubErrors(errors) {
+  const { a, b } = currentProblem;
+  const posIndex = { ones: 0, tens: 1, hundreds: 2, thousands: 3 };
+  const wrongTypes = { ones: 'sub_ones_wrong', tens: 'sub_tens_wrong', hundreds: 'sub_hundreds_wrong' };
+  const types = [];
+
+  errors.forEach(({ pos, userVal }) => {
+    const k = posIndex[pos];
+    if (k === undefined) { types.push({ type: 'sub_general_wrong', pos }); return; }
+
+    // この桁に「下の桁から1かりた」か（くり下がりを受けるか）を求める
+    let borrowIn = 0;
+    for (let i = 0; i < k; i++) {
+      const ad0 = Math.floor(a / Math.pow(10, i)) % 10;
+      const bd0 = Math.floor(b / Math.pow(10, i)) % 10;
+      borrowIn = (ad0 - borrowIn < bd0) ? 1 : 0;
+    }
+    const ad = Math.floor(a / Math.pow(10, k)) % 10;
+    const bd = Math.floor(b / Math.pow(10, k)) % 10;
+    const raw = ad - borrowIn - bd; // 負なら、この桁でもくり下げが必要
+
+    if (raw < 0 && userVal === -raw) {
+      types.push({ type: 'sub_small_big', pos });            // 小さい数から大きい数をひいた
+    } else if (borrowIn === 1 && userVal === (((ad - bd) % 10) + 10) % 10) {
+      types.push({ type: 'sub_borrow_forgot', pos });        // かしたぶん（1）をへらし忘れた
+    } else if (bd > 0 && userVal === (ad + bd) % 10) {
+      types.push({ type: 'sub_added', pos });               // たし算してしまった
+    } else {
+      types.push({ type: wrongTypes[pos] || 'sub_general_wrong', pos });
+    }
+  });
+  return types;
+}
+
+const ERROR_HINTS = {
+  carry_forgot:      { title: '⚠️ くり上がりをわすれた？', desc: '一の位が10以上になったとき、十の位に1をたしてね！' },
+  carry_tens_forgot: { title: '⚠️ くり上がりをわすれた？', desc: '十の位が10以上になったとき、百の位に1をたしてね！' },
+  ones_wrong:        { title: '❌ 一の位のたし算をかくにんしよう', desc: '一の位どうしをたすと いくつになるかな？' },
+  ones_no_write:     { title: '⚠️ くり上がりを書こう！', desc: '10以上になったら、十の位に1をくり上げよう' },
+  tens_wrong:        { title: '❌ 十の位のたし算をかくにんしよう', desc: '十の位どうしをたすと（くり上がりもたして）いくつかな？' },
+  hundreds_wrong:    { title: '❌ 百の位のたし算をかくにんしよう', desc: '百の位どうしをたすと（くり上がりもたして）いくつかな？' },
+  general_wrong:     { title: '❌ もう一度かくにんしよう', desc: 'ゆっくりもう一度といてみてね。' },
+  sub_small_big:     { title: '⚠️ 小さい数から大きい数はひけないよ', desc: 'ひけないときは、となりの位から1くり下げて、10をたしてからひこう！' },
+  sub_borrow_forgot: { title: '⚠️ くり下げたあと、1へらすのをわすれた？', desc: 'となりの位に1かしたので、その位のひかれる数を1へらしてからひこう！' },
+  sub_added:         { title: '❌ たし算になっていないかな？', desc: 'ひき算だよ。ひかれる数から、ひく数をひこう！' },
+  sub_ones_wrong:    { title: '❌ 一の位のひき算をかくにんしよう', desc: '一の位どうしをひくといくつかな？ ひけないときは十の位からくり下げよう。' },
+  sub_tens_wrong:    { title: '❌ 十の位のひき算をかくにんしよう', desc: '十の位どうしをひくといくつかな？（くり下げたぶんも わすれずに）' },
+  sub_hundreds_wrong:{ title: '❌ 百の位のひき算をかくにんしよう', desc: '百の位どうしをひくといくつかな？（くり下げたぶんも わすれずに）' },
+  sub_general_wrong: { title: '❌ もう一度かくにんしよう', desc: 'ゆっくりもう一度といてみてね。' }
+};
+
+function showErrorHint(types) {
+  if (types.length === 0) return;
+  const { type } = types[0];
+  const h = ERROR_HINTS[type] || ERROR_HINTS.general_wrong;
+  updateHintBox(h.title, h.desc);
+}
+
+// ===== Result page =====
+function showResult() {
+  showPage('resultPage');
+  const total   = settings.problemCount;
+  const elapsed = Math.round((Date.now() - startTime) / 1000);
+  const rate    = total > 0 ? Math.round((score / total) * 100) : 0;
+
+  document.getElementById('statCorrect').textContent = score;
+  document.getElementById('statTotal').textContent   = total;
+  document.getElementById('statRate').textContent    = rate + '%';
+  document.getElementById('statTime').textContent    = elapsed + '秒';
+
+  // Error analysis
+  const allErrors = problemHistory.flatMap(h => h.errors);
+  const errDiv = document.getElementById('errorAnalysisDiv');
+  const errContent = document.getElementById('errorAnalysisContent');
+  errContent.innerHTML = '';
+
+  const errCounts = {};
+  allErrors.forEach(e => { errCounts[e.type] = (errCounts[e.type] || 0) + 1; });
+
+  if (Object.keys(errCounts).length > 0) {
+    errDiv.style.display = 'block';
+    Object.entries(errCounts).forEach(([type, count]) => {
+      const h = ERROR_HINTS[type] || { title: type, desc: '' };
+      const div = document.createElement('div');
+      div.className = 'errorItem';
+      div.innerHTML = `<span class="errorIcon">⚠️</span>
+        <div class="errorText"><strong>${h.title}</strong> × ${count}回<br>${h.desc}</div>`;
+      errContent.appendChild(div);
+    });
+  } else {
+    errDiv.style.display = 'none';
+  }
+
+  // Save to localStorage
+  try {
+    const history = JSON.parse(localStorage.getItem('tashizan2_history') || '[]');
+    history.push({ date: new Date().toISOString(), score, total, rate, elapsed });
+    if (history.length > 50) history.shift();
+    localStorage.setItem('tashizan2_history', JSON.stringify(history));
+  } catch(e){}
+}
+
+// ===== Hint System =====
+const STEP_DEFS = [
+  {
+    id: 'ones',
+    title: '① 一の位をたそう',
+    desc: (p) => {
+      const a1 = p.a % 10, b1 = p.b % 10;
+      return `${a1} ＋ ${b1} ＝ ？（一の位どうしをたすよ）`;
+    }
+  },
+  {
+    id: 'carry',
+    title: '② くり上がりを書こう',
+    desc: (p) => {
+      const s = p.a % 10 + p.b % 10;
+      return s >= 10
+        ? `${p.a%10} ＋ ${p.b%10} ＝ ${s}！ 10より大きいので、くり上がりがあるよ。十の位に「1」を書こう！`
+        : `${p.a%10} ＋ ${p.b%10} ＝ ${s}。10より小さいので、くり上がりはないよ。`;
+    }
+  },
+  {
+    id: 'tens',
+    title: '③ 十の位をたそう',
+    desc: (p) => {
+      const a2 = Math.floor(p.a/10)%10, b2 = Math.floor(p.b/10)%10;
+      const carry1 = (p.a%10+p.b%10>=10) ? 1 : 0;
+      let s = `${a2} ＋ ${b2}`;
+      if (carry1) s += ` ＋ くり上がり ${carry1}`;
+      return s + '＝ ？（十の位をたすよ）';
+    }
+  },
+  {
+    id: 'hundreds',
+    title: '④ 百の位をたそう',
+    desc: (p) => {
+      if (String(p.answer).length < 3 && String(p.a).length < 3 && String(p.b).length < 3) {
+        return '（このもんだいは百の位はないよ）';
+      }
+      const a3 = Math.floor(p.a/100)%10, b3 = Math.floor(p.b/100)%10;
+      const tensSum = Math.floor(p.a/10)%10 + Math.floor(p.b/10)%10 + ((p.a%10+p.b%10)>=10?1:0);
+      const carry2 = tensSum >= 10 ? 1 : 0;
+      let s = `${a3} ＋ ${b3}`;
+      if (carry2) s += ` ＋ くり上がり ${carry2}`;
+      return s + '＝ ？（百の位をたすよ）';
+    }
+  }
+];
+
+function showStepHint(stepId) {
+  const def = STEP_DEFS.find(s => s.id === stepId);
+  if (!def || !currentProblem) return;
+  updateHintBox(def.title, def.desc(currentProblem));
+  currentStep = stepId;
+  updateStepUI();
+  clearArrowSvg();
+  if (hintsEnabled.arrow) drawHintArrow(stepId);
+}
+
+function goToStep(stepId) {
+  showStepHint(stepId);
+}
+
+function setActiveStep(st) {
+  currentStep = st;
+  updateStepUI();
+}
+
+function updateStepUI() {
+  const steps = ['ones','carry','tens','hundreds'];
+  steps.forEach(s => {
+    const el = document.getElementById(`step-${s}`);
+    if (!el) return;
+    el.classList.remove('active-step','done-step');
+    if (s === currentStep) el.classList.add('active-step');
+    else if (stepsCompleted[s]) el.classList.add('done-step');
+    const check = document.getElementById(`check-${s}`);
+    if (check) check.textContent = stepsCompleted[s] ? '✓' : '';
+  });
+}
+
+function updateHintBox(title, desc) {
+  const ht = document.getElementById('hintTitle');
+  const hd = document.getElementById('hintDesc');
+  if (ht) ht.textContent = title;
+  if (hd) hd.textContent = desc;
+}
+
+// ===== Hint toggles =====
+function toggleHint(key, btn) {
+  hintsEnabled[key] = !hintsEnabled[key];
+  btn.classList.toggle('on', hintsEnabled[key]);
+  btn.classList.toggle('off', !hintsEnabled[key]);
+
+  if (key === 'ghost') {
+    document.body.classList.toggle('superHintOn',
+      hintsEnabled.ghost || hintsEnabled.super);
+  }
+  if (key === 'super') {
+    document.body.classList.toggle('superHintOn',
+      hintsEnabled.ghost || hintsEnabled.super);
+  }
+  if (key === 'text') {
+    document.getElementById('hintSection').style.display =
+      hintsEnabled.text ? '' : 'none';
+  }
+  if (key === 'arrow') {
+    clearArrowSvg();
+    if (hintsEnabled.arrow) drawHintArrow(currentStep);
+  }
+}
+
+// ===== SVG Arrow hints =====
+const NS = 'http://www.w3.org/2000/svg';
+
+function clearArrowSvg() {
+  const svg = document.getElementById('arrowSvg');
+  if (svg) svg.innerHTML = '';
+  // Remove column highlights
+  document.querySelectorAll('.pos-highlight-ones,.pos-highlight-tens,.pos-highlight-hundreds,.pos-highlight-thousands').forEach(el => {
+    el.classList.remove('pos-highlight-ones','pos-highlight-tens','pos-highlight-hundreds','pos-highlight-thousands');
+  });
+}
+
+function drawHintArrow(stepId) {
+  if (!hintsEnabled.arrow) return;
+  const svg = document.getElementById('arrowSvg');
+  if (!svg) return;
+
+  const tbl = document.getElementById('calcTable');
+  if (!tbl) return;
+
+  const tblRect = tbl.getBoundingClientRect();
+  const svgRect = svg.closest('#verticalArea').getBoundingClientRect();
+
+  // Find cells to highlight based on step
+  let posName = null;
+  let color   = '#ff7043';
+
+  if (stepId === 'ones')     { posName = 'ones';     color = '#ff7043'; }
+  else if (stepId === 'carry') { posName = 'tens';   color = '#ffc107'; }
+  else if (stepId === 'tens')  { posName = 'tens';   color = '#1e88e5'; }
+  else if (stepId === 'hundreds') { posName = 'hundreds'; color = '#8e24aa'; }
+
+  if (!posName) return;
+
+  // Get all cells in that column
+  const cells = document.querySelectorAll(
+    `[data-pos="${posName}"]`
+  );
+  if (!cells.length) return;
+
+  cells.forEach(cell => {
+    const r = cell.getBoundingClientRect();
+    const x = r.left - svgRect.left;
+    const y = r.top  - svgRect.top;
+    const w = r.width, h = r.height;
+
+    const rect = document.createElementNS(NS, 'rect');
+    rect.setAttribute('x', x - 3);
+    rect.setAttribute('y', y - 3);
+    rect.setAttribute('width',  w + 6);
+    rect.setAttribute('height', h + 6);
+    rect.setAttribute('fill',   'none');
+    rect.setAttribute('stroke', color);
+    rect.setAttribute('stroke-width', '3');
+    rect.setAttribute('rx', '8');
+    rect.setAttribute('opacity', '0.85');
+    svg.appendChild(rect);
+  });
+
+  // Draw downward arrow from top to bottom of the column
+  const firstCell = cells[0].getBoundingClientRect();
+  const lastCell  = cells[cells.length - 1].getBoundingClientRect();
+  const cx = firstCell.left + firstCell.width / 2 - svgRect.left;
+  const y1 = firstCell.top  - svgRect.top - 12;
+  const y2 = lastCell.bottom - svgRect.top + 12;
+
+  if (stepId !== 'carry') {
+    const line = document.createElementNS(NS, 'line');
+    line.setAttribute('x1', cx); line.setAttribute('y1', y1);
+    line.setAttribute('x2', cx); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', '3');
+    line.setAttribute('stroke-dasharray', '6,4');
+    line.setAttribute('opacity', '.7');
+    svg.appendChild(line);
+
+    // Arrowhead
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points', `${cx},${y2+8} ${cx-7},${y2} ${cx+7},${y2}`);
+    poly.setAttribute('fill', color);
+    poly.setAttribute('opacity', '.85');
+    svg.appendChild(poly);
+  }
+}
+
+// ===== Input mode UI =====
+function applyInputModeUI() {
+  const mode = settings.inputMode;
+  document.body.classList.remove('keyboardMode','numpadMode','handwritingMode');
+  document.body.classList.add(mode + 'Mode');
+
+  // 電卓ボタンはキーボードモードで常に表示（手書きのときだけ非表示）
+  const numpadSec = document.getElementById('numpadSection');
+  if (numpadSec) {
+    numpadSec.style.display = (mode === 'keyboard') ? '' : 'none';
+  }
+  document.querySelectorAll('.headerModeBtn, .modeBtn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+}
+
+// ===== TensorFlow.js MNIST GraphModel =====
+let handwritingModel = null;
+let handwritingModelPromise = null;
+
+async function loadModel() {
+  return ensureHandwritingModel();
+}
+
+async function ensureHandwritingModel() {
+  if (handwritingModel) return handwritingModel;
+  if (handwritingModelPromise) return handwritingModelPromise;
+
+  const badge = document.getElementById('modelStatus');
+  handwritingModelPromise = (async () => {
+    try {
+      if (typeof tf === "undefined") {
+        throw new Error("TensorFlow.js が読み込めませんでした。");
+      }
+      handwritingModel = await tf.loadGraphModel("./model/model.json");
+      console.log("✅ 手書きモデル読み込み成功");
+      if (badge) {
+        badge.textContent = "✅ モデル読み込み完了（手書きOK）";
+        badge.className = "modelBadge ok";
+      }
+      return handwritingModel;
+    } catch (e) {
+      console.warn("モデル読み込み失敗:", e);
+      handwritingModel = null;
+      if (badge) {
+        badge.textContent = "⚠️ モデルなし（手書き不可）";
+        badge.className = "modelBadge warn";
+      }
+      throw e;
+    } finally {
+      handwritingModelPromise = null;
+    }
+  })();
+  return handwritingModelPromise;
+}
+
+// ===== MNIST Preprocessing (Center of Mass & Aspect Ratio) =====
+function preprocessCanvas(canvas) {
+  const ctx = canvas.getContext("2d");
+  const cw = canvas.width;
+  const ch = canvas.height;
+  if (!cw || !ch) return tf.zeros([1, 28, 28, 1]);
+
+  const imgData = ctx.getImageData(0, 0, cw, ch);
+  const data = imgData.data;
+
+  // バウンディングボックス検出（黒背景の白文字）
+  let minX = cw, minY = ch, maxX = -1, maxY = -1;
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
+      const idx = (y * cw + x) * 4;
+      const lum = data[idx];
+      if (lum > 40) { // ストローク判定
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (maxX === -1) {
+    return tf.zeros([1, 28, 28, 1]);
+  }
+
+  // 余白パディング
+  const pad = Math.max(3, Math.round(Math.min(cw, ch) * 0.06));
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(cw - 1, maxX + pad);
+  maxY = Math.min(ch - 1, maxY + pad);
+  const bw = maxX - minX + 1;
+  const bh = maxY - minY + 1;
+
+  // 20x20 以内にアスペクト比維持でフィット
+  const cropCanvas = document.createElement("canvas");
+  cropCanvas.width = bw;
+  cropCanvas.height = bh;
+  cropCanvas.getContext("2d").drawImage(canvas, minX, minY, bw, bh, 0, 0, bw, bh);
+
+  const maxDim = Math.max(bw, bh);
+  const scale = 20 / maxDim;
+  const fitW = Math.max(1, Math.round(bw * scale));
+  const fitH = Math.max(1, Math.round(bh * scale));
+
+  const fitCanvas = document.createElement("canvas");
+  fitCanvas.width = fitW;
+  fitCanvas.height = fitH;
+  const fctx = fitCanvas.getContext("2d");
+  fctx.imageSmoothingEnabled = true;
+  fctx.drawImage(cropCanvas, 0, 0, fitW, fitH);
+
+  // 重心計算
+  const fitData = fctx.getImageData(0, 0, fitW, fitH).data;
+  let totalMass = 0, sumX = 0, sumY = 0;
+  for (let y = 0; y < fitH; y++) {
+    for (let x = 0; x < fitW; x++) {
+      const lum = fitData[(y * fitW + x) * 4];
+      const val = lum / 255.0;
+      if (val > 0.05) {
+        totalMass += val;
+        sumX += x * val;
+        sumY += y * val;
+      }
+    }
+  }
+
+  let shiftX = Math.floor((28 - fitW) / 2);
+  let shiftY = Math.floor((28 - fitH) / 2);
+  if (totalMass > 0) {
+    shiftX = Math.round(13.5 - (sumX / totalMass));
+    shiftY = Math.round(13.5 - (sumY / totalMass));
+  }
+
+  // 28x28 配列（黒背景0.0, 白文字1.0）へ重心センタリング配置
+  const img28 = new Float32Array(28 * 28);
+  for (let y = 0; y < fitH; y++) {
+    for (let x = 0; x < fitW; x++) {
+      const val = fitData[(y * fitW + x) * 4] / 255.0;
+      const tx = shiftX + x;
+      const ty = shiftY + y;
+      if (tx >= 0 && tx < 28 && ty >= 0 && ty < 28) {
+        img28[ty * 28 + tx] = val;
+      }
+    }
+  }
+
+  return tf.tensor4d(img28, [1, 28, 28, 1]);
+}
+
+// ===== Init Single Handwriting Cell =====
+function initHandCell(container, cellId, isMini = false) {
+  container.style.position = 'relative';
+
+  const field = document.createElement('div');
+  field.className = 'handField';
+  field.style.cssText = 'position:absolute;inset:0;touch-action:none;';
+
+  const visibleCanvas = document.createElement('canvas');
+  visibleCanvas.className = 'handCanvas';
+
+  const recCanvas = document.createElement('canvas'); // 認識用（非表示・黒背景に白文字）
+
+  const valueDiv = document.createElement('div');
+  valueDiv.className = 'handValue';
+  if (isMini) valueDiv.style.fontSize = '14px';
+
+  field.appendChild(visibleCanvas);
+  field.appendChild(valueDiv);
+
+  const ghost = container.querySelector('.ghostDigit');
+  if (ghost) field.appendChild(ghost);
+
+  container.appendChild(field);
+
+  const st = {
+    cell: container,
+    field,
+    visibleCanvas,
+    recCanvas,
+    valueDiv,
+    isMini,
+    drawing: false,
+    timer: null,
+    lastX: 0,
+    lastY: 0
+  };
+  container._handState = st;
+
+  function setupCanvasSize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = container.offsetWidth || (isMini ? 26 : 76);
+    const h = container.offsetHeight || (isMini ? 26 : 68);
+
+    [visibleCanvas, recCanvas].forEach(c => {
+      c.width = Math.round(w * dpr);
+      c.height = Math.round(h * dpr);
+      c.style.width = '100%';
+      c.style.height = '100%';
+    });
+
+    const vctx = visibleCanvas.getContext('2d');
+    vctx.scale(dpr, dpr);
+    vctx.strokeStyle = '#1e293b';
+    vctx.lineWidth = isMini ? 2.5 : 5;
+    vctx.lineCap = 'round';
+    vctx.lineJoin = 'round';
+
+    const rctx = recCanvas.getContext('2d');
+    rctx.fillStyle = '#000000';
+    rctx.fillRect(0, 0, recCanvas.width, recCanvas.height);
+    rctx.scale(dpr, dpr);
+    rctx.strokeStyle = '#ffffff';
+    rctx.lineWidth = isMini ? 2.5 : 5;
+    rctx.lineCap = 'round';
+    rctx.lineJoin = 'round';
+  }
+
+  requestAnimationFrame(setupCanvasSize);
+
+  function getPos(e) {
+    const rect = visibleCanvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return {
+      x: src.clientX - rect.left,
+      y: src.clientY - rect.top
+    };
+  }
+
+  visibleCanvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    st.drawing = true;
+    field.classList.add('active');
+    focusedCell = container;
+
+    // 前の数値をクリアして新しく書き始め
+    if (container.dataset.value !== undefined) {
+      delete container.dataset.value;
+      container.classList.remove('hasValue');
+      valueDiv.textContent = '';
+      valueDiv.style.display = 'none';
+      const vctx = visibleCanvas.getContext('2d');
+      vctx.clearRect(0, 0, visibleCanvas.width, visibleCanvas.height);
+      const rctx = recCanvas.getContext('2d');
+      rctx.fillRect(0, 0, recCanvas.width, recCanvas.height);
+    }
+
+    try { visibleCanvas.setPointerCapture(e.pointerId); } catch(x){}
+    const { x, y } = getPos(e);
+    st.lastX = x; st.lastY = y;
+
+    const vctx = visibleCanvas.getContext('2d');
+    vctx.beginPath();
+    vctx.moveTo(x, y);
+
+    const rctx = recCanvas.getContext('2d');
+    rctx.beginPath();
+    rctx.moveTo(x, y);
+
+    clearTimeout(st.timer);
+  }, { passive: false });
+
+  visibleCanvas.addEventListener('pointermove', e => {
+    if (!st.drawing) return;
+    e.preventDefault();
+    const { x, y } = getPos(e);
+
+    const vctx = visibleCanvas.getContext('2d');
+    vctx.lineTo(x, y);
+    vctx.stroke();
+    vctx.beginPath();
+    vctx.moveTo(x, y);
+
+    const rctx = recCanvas.getContext('2d');
+    rctx.lineTo(x, y);
+    rctx.stroke();
+    rctx.beginPath();
+    rctx.moveTo(x, y);
+
+    st.lastX = x; st.lastY = y;
+  }, { passive: false });
+
+  function stopDraw(e) {
+    if (!st.drawing) return;
+    st.drawing = false;
+    field.classList.remove('active');
+
+    clearTimeout(st.timer);
+    st.timer = setTimeout(async () => {
+      await recognizeCell(st);
+    }, 700);
+  }
+
+  visibleCanvas.addEventListener('pointerup', stopDraw);
+  visibleCanvas.addEventListener('pointercancel', stopDraw);
+
+  // ダブルタップ/クリックで消去
+  field.addEventListener('dblclick', () => {
+    clearField(st);
+  });
+}
+
+async function recognizeCell(st) {
+  if (!handwritingModel) {
+    try { await ensureHandwritingModel(); } catch(e){ return; }
+  }
+  if (!handwritingModel) return;
+
+  const tensor = preprocessCanvas(st.recCanvas);
+  try {
+    const output = handwritingModel.predict ? handwritingModel.predict(tensor) : handwritingModel.execute(tensor);
+    const data = await output.data();
+    tensor.dispose();
+    output.dispose && output.dispose();
+
+    let maxVal = data[0];
+    let maxDigit = 0;
+    for (let i = 1; i < 10; i++) {
+      if (data[i] > maxVal) {
+        maxVal = data[i];
+        maxDigit = i;
+      }
+    }
+
+    st.cell.dataset.value = String(maxDigit);
+    st.cell.classList.add('hasValue');
+    st.valueDiv.textContent = String(maxDigit);
+    st.valueDiv.style.display = 'flex';
+
+    // ストローク線を消去してうっすら文字だけにする
+    const vctx = st.visibleCanvas.getContext('2d');
+    vctx.clearRect(0, 0, st.visibleCanvas.width, st.visibleCanvas.height);
+    const rctx = st.recCanvas.getContext('2d');
+    rctx.fillRect(0, 0, st.recCanvas.width, st.recCanvas.height);
+  } catch (e) {
+    console.warn("数字認識エラー:", e);
+    tensor.dispose();
+  }
+}
+
+function clearField(st) {
+  delete st.cell.dataset.value;
+  st.cell.classList.remove('hasValue');
+  st.valueDiv.textContent = '';
+  st.valueDiv.style.display = 'none';
+  const vctx = st.visibleCanvas.getContext('2d');
+  vctx.clearRect(0, 0, st.visibleCanvas.width, st.visibleCanvas.height);
+  const rctx = st.recCanvas.getContext('2d');
+  rctx.fillRect(0, 0, st.recCanvas.width, st.recCanvas.height);
+}
+
+// ===== 筆算周辺の補助計算透明オーバーレイキャンバス（常時描画・認識なし） =====
+let auxTool = 'pen';
+let auxDrawing = false;
+let auxLastX = 0, auxLastY = 0;
+
+function initAuxOverlayCanvas() {
+  const canvas = document.getElementById('auxOverlayCanvas');
+  if (!canvas) return;
+
+  const parent = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    const w = parent.clientWidth;
+    const h = parent.clientHeight;
+    if (w <= 0 || h <= 0) return;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  }
+  resize();
+
+  // 二重登録しない（練習ページを開き直すたびに呼ばれるため）
+  if (canvas._auxReady) return;
+  canvas._auxReady = true;
+  new ResizeObserver(resize).observe(parent);
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return {
+      x: src.clientX - rect.left,
+      y: src.clientY - rect.top
+    };
+  }
+
+  // 描きはじめてよい場所か
+  //  ・ひき算：筆算の表全体（引かれる数のマス目の上も含む）に赤ペンで書ける。
+  //            ただし答えのマス・入力欄・ボタンの上からは書き始めない
+  //  ・たし算：これまでどおり（表の外側の余白に書く）
+  function canStartDrawing(e) {
+    if (document.body.classList.contains('subMode')) {
+      return !(e.target.closest && e.target.closest('.ans-cell, .carryBox, input, button, .numpadBtn'));
+    }
+    return e.target === canvas;
+  }
+
+  parent.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    if (!canStartDrawing(e)) return;
+    e.preventDefault();
+    auxDrawing = true;
+    try { parent.setPointerCapture(e.pointerId); } catch(x){}
+    const { x, y } = getPos(e);
+    auxLastX = x; auxLastY = y;
+    const ctx = canvas.getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  }, { passive: false });
+
+  parent.addEventListener('pointermove', e => {
+    if (!auxDrawing) return;
+    e.preventDefault();
+    const { x, y } = getPos(e);
+    const ctx = canvas.getContext('2d');
+    if (auxTool === 'pen') {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = '#e53935'; // 赤ペン
+      ctx.lineWidth = document.body.classList.contains('subMode') ? 3.5 : 2.5;
+    } else {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.lineWidth = 26;
+    }
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    auxLastX = x; auxLastY = y;
+  }, { passive: false });
+
+  const endDraw = () => { auxDrawing = false; };
+  parent.addEventListener('pointerup', endDraw);
+  parent.addEventListener('pointercancel', endDraw);
+}
+
+function setAuxTool(tool, btn) {
+  auxTool = tool;
+  document.querySelectorAll('.auxToolBtn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function clearAuxOverlay() {
+  const canvas = document.getElementById('auxOverlayCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// ===== Sound =====
+function playCorrect() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.value = 523; // C5
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.5);
+    // Second note
+    setTimeout(() => {
+      if (!audioCtx) return;
+      const o2 = audioCtx.createOscillator();
+      const g2 = audioCtx.createGain();
+      o2.connect(g2); g2.connect(audioCtx.destination);
+      o2.frequency.value = 659; // E5
+      g2.gain.setValueAtTime(0.25, audioCtx.currentTime);
+      g2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+      o2.start(); o2.stop(audioCtx.currentTime + 0.4);
+    }, 160);
+  } catch(e){}
+}
+
+function playWrong() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc  = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sawtooth';
+    osc.frequency.value = 180;
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+  } catch(e){}
+}
+
+// ===== Feedback overlay =====
+function showFeedback(symbol, correct) {
+  const circle = document.getElementById('feedbackCircle');
+  circle.textContent = symbol;
+  circle.style.color = correct ? '#43a047' : '#e53935';
+  circle.classList.add('show');
+  setTimeout(() => circle.classList.remove('show'), 1000);
+}
+
+// ===== Firebase / Raid =====
+function initFirebase() {
+  if (!FIREBASE_CONFIG.apiKey) return false;
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    raidDB = firebase.database();
+    return true;
+  } catch(e) {
+    console.warn('Firebase init failed:', e);
+    return false;
+  }
+}
+
+function joinRaid() {
+  raidPlayerName = document.getElementById('raidPlayerName').value.trim() || 'プレイヤー';
+  raidRoomId     = document.getElementById('raidRoomId').value.trim()     || 'room01';
+  const timeLimit = parseInt(document.getElementById('raidTimeLimit').value);
+  const bossHp    = parseInt(document.getElementById('raidBossHp').value);
+
+  if (!initFirebase()) {
+    // Demo mode without Firebase
+    startRaidDemoMode(bossHp, timeLimit);
+    return;
+  }
+
+  raidRoomRef = raidDB.ref(`rooms/${raidRoomId}`);
+  const playerId = 'p_' + Date.now();
+
+  // Initialize boss if not exists
+  raidRoomRef.child('boss').transaction(boss => {
+    if (!boss) return { name: '大ボス', hp: bossHp, maxHp: bossHp, defeated: false };
+    return boss;
+  });
+
+  // Register player
+  raidRoomRef.child(`players/${playerId}`).set({ name: raidPlayerName, damage: 0 });
+  raidRoomRef.child(`players/${playerId}`).onDisconnect().remove();
+
+  // Listen to boss HP
+  raidRoomRef.child('boss').on('value', snap => {
+    const boss = snap.val();
+    if (boss) updateBossDisplay(boss);
+  });
+
+  // Listen to leaderboard
+  raidRoomRef.child('players').on('value', snap => {
+    updateLeaderboard(snap.val());
+  });
+
+  // Show play area
+  document.getElementById('raidSetupArea').style.display  = 'none';
+  document.getElementById('raidPlayArea').style.display   = '';
+  document.getElementById('leaderboardCard').style.display = '';
+  document.getElementById('raidStatusText').textContent   = `✅ ルーム: ${raidRoomId} に接続中`;
+
+  startRaidProblem(timeLimit, playerId, bossHp);
+}
+
+function startRaidDemoMode(bossHp, timeLimit) {
+  // Single-player demo mode
+  const demoState = { hp: bossHp, maxHp: bossHp };
+  document.getElementById('raidSetupArea').style.display = 'none';
+  document.getElementById('raidPlayArea').style.display  = '';
+  document.getElementById('raidStatusText').textContent  = '🎮 デモモード（Firebase未設定）';
+
+  updateBossDisplay(demoState);
+  startRaidProblemLocal(timeLimit, demoState);
+}
+
+function startRaidProblemLocal(timeLimit, bossState) {
+  raidProblem = generateProblem(
+    parseInt(document.getElementById('digitsA').value),
+    parseInt(document.getElementById('digitsB').value),
+    document.getElementById('carryMode').value
+  );
+
+  const { a, b } = raidProblem;
+  document.getElementById('raidProblemDisplay').textContent =
+    `${a} ＋ ${b} ＝ ？`;
+  document.getElementById('raidAnswerInput').value = '';
+  document.getElementById('raidResult').textContent = '';
+  document.getElementById('raidAnswerInput').focus();
+
+  // Timer
+  raidTimeLeft = timeLimit;
+  clearInterval(raidTimerInt);
+  document.getElementById('raidTimerFill').style.width = '100%';
+  raidTimerInt = setInterval(() => {
+    raidTimeLeft--;
+    const pct = Math.max(0, (raidTimeLeft / timeLimit) * 100);
+    document.getElementById('raidTimerFill').style.width = pct + '%';
+    if (raidTimeLeft <= 0) {
+      clearInterval(raidTimerInt);
+      document.getElementById('raidResult').textContent = `⏱ じかんぎれ！ こたえ: ${raidProblem.answer}`;
+      setTimeout(() => startRaidProblemLocal(timeLimit, bossState), 2000);
+    }
+  }, 1000);
+
+  // Store submit reference for local demo
+  window._raidSubmitLocal = (ans) => {
+    clearInterval(raidTimerInt);
+    if (parseInt(ans) === raidProblem.answer) {
+      const dmg = 10 + Math.round(raidTimeLeft / timeLimit * 20);
+      bossState.hp = Math.max(0, bossState.hp - dmg);
+      updateBossDisplay(bossState);
+      document.getElementById('raidResult').textContent = `⚡ ${dmg}ダメージ！ せいかい！`;
+      playCorrect();
+    } else {
+      document.getElementById('raidResult').textContent =
+        `❌ ちがう！ こたえは ${raidProblem.answer}`;
+      playWrong();
+    }
+    if (bossState.hp <= 0) {
+      document.getElementById('raidResult').textContent += '  🎉 ボスをたおした！';
+      setTimeout(() => { bossState.hp = bossState.maxHp; updateBossDisplay(bossState); }, 3000);
+    }
+    setTimeout(() => startRaidProblemLocal(timeLimit, bossState), 2000);
+  };
+}
+
+function startRaidProblem(timeLimit, playerId, bossHp) {
+  raidProblem = generateProblem(
+    parseInt(document.getElementById('digitsA').value),
+    parseInt(document.getElementById('digitsB').value),
+    document.getElementById('carryMode').value
+  );
+
+  const { a, b } = raidProblem;
+  document.getElementById('raidProblemDisplay').textContent = `${a} ＋ ${b} ＝ ？`;
+  document.getElementById('raidAnswerInput').value = '';
+  document.getElementById('raidResult').textContent = '';
+  document.getElementById('raidAnswerInput').focus();
+
+  raidTimeLeft = timeLimit;
+  clearInterval(raidTimerInt);
+  document.getElementById('raidTimerFill').style.width = '100%';
+  raidTimerInt = setInterval(() => {
+    raidTimeLeft--;
+    const pct = Math.max(0, (raidTimeLeft / timeLimit) * 100);
+    document.getElementById('raidTimerFill').style.width = pct + '%';
+    if (raidTimeLeft <= 0) {
+      clearInterval(raidTimerInt);
+      document.getElementById('raidResult').textContent =
+        `⏱ じかんぎれ！ こたえ: ${raidProblem.answer}`;
+      setTimeout(() => startRaidProblem(timeLimit, playerId, bossHp), 2500);
+    }
+  }, 1000);
+
+  window._raidSubmitFn = (ans) => {
+    clearInterval(raidTimerInt);
+    if (parseInt(ans) === raidProblem.answer) {
+      const dmg = 10 + Math.round(raidTimeLeft / timeLimit * 20);
+      dealDamage(dmg, playerId);
+      document.getElementById('raidResult').textContent = `⚡ ${dmg}ダメージ！ せいかい！`;
+      playCorrect();
+    } else {
+      document.getElementById('raidResult').textContent =
+        `❌ ちがう！ こたえは ${raidProblem.answer}`;
+      playWrong();
+    }
+    setTimeout(() => startRaidProblem(timeLimit, playerId, bossHp), 2000);
+  };
+}
+
+function submitRaidAnswer() {
+  const ans = document.getElementById('raidAnswerInput').value;
+  if (!ans) return;
+  if (window._raidSubmitLocal) { window._raidSubmitLocal(ans); return; }
+  if (window._raidSubmitFn)   { window._raidSubmitFn(ans);    return; }
+}
+
+// Enter key for raid
+document.getElementById('raidAnswerInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitRaidAnswer();
+});
+
+function dealDamage(amount, playerId) {
+  if (!raidDB || !raidRoomId) return;
+  // Decrement boss HP
+  raidRoomRef.child('boss/hp').transaction(hp => Math.max(0, (hp || 0) - amount));
+  // Add to player damage
+  raidRoomRef.child(`players/${playerId}/damage`).transaction(d => (d || 0) + amount);
+}
+
+function updateBossDisplay(boss) {
+  if (!boss) return;
+  const pct = boss.maxHp > 0 ? (boss.hp / boss.maxHp) * 100 : 100;
+  document.getElementById('bossHpFill').style.width = pct + '%';
+  document.getElementById('bossHpText').textContent  = `HP: ${boss.hp || 0} / ${boss.maxHp || 0}`;
+}
+
+function updateLeaderboard(players) {
+  if (!players) return;
+  const lb = document.getElementById('leaderboardDiv');
+  if (!lb) return;
+  lb.innerHTML = '';
+  const sorted = Object.values(players).sort((a, b) => (b.damage||0) - (a.damage||0));
+  sorted.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'lbRow';
+    row.innerHTML = `<span class="lbRank">${i+1}</span>
+      <span class="lbName">${escHtml(p.name||'—')}</span>
+      <span class="lbDmg">${p.damage||0}ダメ</span>`;
+    lb.appendChild(row);
+  });
+}
+
+function leaveRaid() {
+  cleanupRaid();
+  document.getElementById('raidPlayArea').style.display  = 'none';
+  document.getElementById('raidSetupArea').style.display = '';
+}
+
+function cleanupRaid() {
+  clearInterval(raidTimerInt);
+  window._raidSubmitLocal = null;
+  window._raidSubmitFn    = null;
+  if (raidRoomRef) { raidRoomRef.off(); raidRoomRef = null; }
+}
+
+function escHtml(str) {
+  return str.replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// ===== Keyboard shortcut: Enter on practice page =====
+document.addEventListener('keydown', e => {
+  if (isExplanationOpen()) {
+    if (e.key === 'Escape') closeExplanation();
+    return;
+  }
+  const pp = document.getElementById('practicePage');
+  if (!pp || !pp.classList.contains('active')) return;
+  if (e.key === 'Enter') {
+    // If focus is not in an input, check answer
+    if (document.activeElement.tagName !== 'INPUT') {
+      checkAnswer();
+    }
+  }
+});
+
+// ===== Init =====
+function init() {
+  loadSettings();
+  applyOpUI();
+  loadModel();
+
+  // Aux overlay canvas resize on practice page open
+  const observer = new MutationObserver(() => {
+    if (document.getElementById('practicePage').classList.contains('active')) {
+      setTimeout(initAuxOverlayCanvas, 100);
+    }
+  });
+  observer.observe(document.getElementById('practicePage'), { attributes: true, attributeFilter: ['class'] });
+
+  // ===== Direct Launch: Open 16:9 Practice Page on Load! =====
+  showPage('practicePage');
+  applyInputModeUI();
+  setTimeout(() => {
+    initAuxOverlayCanvas();
+    nextProblemByType();
+  }, 50);
+}
+
+init();
+</script>
+</body>
+</html>
