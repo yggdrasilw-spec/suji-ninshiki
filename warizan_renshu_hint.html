@@ -1206,19 +1206,31 @@
   .division-mode { font-size:.9rem; font-weight:700; display:flex; align-items:center; gap:8px; }
   .division-mode select { font:inherit; padding:5px 8px; border:2px solid var(--paper-line); border-radius:10px; background:white; }
   #divisionHandwriting { width:100%; max-width:300px; text-align:center; }
-  #divisionHandwriting canvas { display:block; width:180px; height:180px; margin:5px auto; background:white; border:3px solid var(--accent); border-radius:12px; touch-action:none; }
-  #divisionHandwriting [data-target] { font-size:.85rem; font-weight:700; }
-  #divisionHandwriting [data-status] { min-height:32px; font-size:.78rem; margin:4px 0; }
-  #divisionHandwriting button { font:inherit; font-weight:700; border:2px solid var(--paper-line); border-radius:9px; padding:5px 8px; background:white; color:var(--ink); cursor:pointer; }
-  #divisionHandwriting button:disabled { opacity:.4; cursor:default; }
-  #divisionHandwriting [data-candidates] { display:flex; justify-content:center; gap:9px; min-height:46px; }
-  #divisionHandwriting [data-candidates] button { font-size:1.5rem; min-width:48px; }
-  #divisionHandwriting .first-candidate { border-color:var(--accent); background:var(--accent-soft); }
   .input-panel #hintControls { flex-wrap:wrap; gap:6px; width:100%; }
   .input-panel #hintControls button { flex:0 0 auto; white-space:nowrap; font-size:.8rem; padding:7px 10px; }
   .input-panel .answer-display { font-size:.9rem; text-align:center; }
   #divisionShareSettings { position:absolute; right:14px; top:52px; }
   #divisionShareSettings .lesson-share-launcher { margin:0; padding:4px 8px; font-size:.8rem; }
+  .division-hand-cell { position:relative; animation:none !important; transform:none !important; }
+  .division-hand-cell .main-num { visibility:hidden; }
+  .division-cell-canvas { position:absolute; inset:3px; width:calc(100% - 6px); height:calc(100% - 6px); touch-action:none; border-radius:3px; cursor:crosshair; z-index:6; }
+  .division-cell-expand { position:absolute; right:-3px; bottom:-3px; width:20px; height:20px; padding:0; border:1px solid #f97316; border-radius:5px; background:#fff7ed; color:#9a3412; font-size:17px; line-height:18px; z-index:7; cursor:pointer; }
+  .hand-selected, .zoom-location { outline:4px solid #e0600b !important; outline-offset:2px; background:#ffedd5 !important; }
+  .division-cell-popover, .division-zoom { color:var(--ink); font-family:inherit; background:white; border:2px solid #f97316; border-radius:14px; padding:12px; box-shadow:0 8px 28px #0003; }
+  .division-cell-popover { position:fixed; z-index:1300; width:260px; text-align:center; }
+  .division-cell-popover p, .division-zoom p { margin:4px 0 8px; font-size:14px; }
+  .division-cell-popover button, .division-zoom button { font:inherit; border:1px solid #d8cfa9; border-radius:8px; padding:6px 9px; margin:3px; background:#fff; cursor:pointer; }
+  .cell-candidates { display:flex; justify-content:center; gap:8px; }
+  .cell-candidates button { min-width:48px; font-size:24px; font-weight:bold; }
+  .cell-candidates .first-candidate { border-color:#f97316; background:#ffedd5; }
+  .division-zoom { width:min(440px,94vw); max-height:94dvh; overflow:auto; text-align:center; }
+  .division-zoom::backdrop { background:#26334c80; }
+  .zoom-heading { display:flex; align-items:center; justify-content:space-between; }
+  .division-zoom-canvas { width:min(280px,70vw); height:min(280px,70vw); display:block; margin:12px auto; border:3px solid #f97316; border-radius:12px; touch-action:none; }
+  .division-mini-grid { display:grid; width:max-content; margin:10px auto; grid-template-columns:repeat(var(--mini-cols),24px) !important; --cell-size:24px !important; pointer-events:none; }
+  .division-mini-grid .grid-cell { width:24px; height:24px; animation:none !important; transform:none !important; }
+  .division-mini-grid .main-num { visibility:visible; font-size:18px; }
+  @media(max-height:520px){ .division-zoom [data-context] { display:none; } .division-zoom-canvas { width:160px; height:160px; margin:4px auto; } }
 </style>
 <!-- 先生支援モジュール（TeacherBridge） -->
 <script src="js/student-profile.js"></script>
@@ -1544,11 +1556,7 @@
           <label class="division-mode">入力方法 <select id="divisionInputMode"><option value="keypad">数字ボタン</option><option value="handwriting">手書き</option></select></label>
           <div id="keypad"></div>
           <div id="divisionHandwriting" hidden>
-            <div data-target></div>
-            <canvas width="280" height="280" aria-label="数字を1けた書く欄"></canvas>
-            <div><button type="button" data-clear>書きなおす</button> <button type="button" data-recognize>読みとる</button> <button type="button" data-delete>1けたけす</button></div>
-            <p data-status role="status" aria-live="polite"></p>
-            <div data-candidates></div>
+            空欄に直接書こう。⤢でマスを拡大できるよ。
           </div>
           <button id="nextProblemBtn">つぎの もんだい →</button>
           <button id="submitBtn">こたえる</button>
@@ -3613,7 +3621,6 @@
   }
 
   function renderAnswerDisplay(){
-    if(handwriting) handwriting.sync();
     answerDisplay.innerHTML = "";
     var p = state.problem;
     if(!p) return;
@@ -3638,6 +3645,7 @@
         keypad.style.pointerEvents = canType ? "auto" : "none";
       }
       updateEquationSlots();
+      if(handwriting) handwriting.sync();
       return;
     } else if(keypad){
       keypad.style.opacity = "1";
@@ -3698,6 +3706,7 @@
       answerDisplay.appendChild(rChip);
     }
     updateEquationSlots();
+    if(handwriting) handwriting.sync();
   }
 
   // ------------------------------------------------------------------
@@ -8542,6 +8551,9 @@ boxW = 24; boxH = 24; gap = 3; fontSize = 9.5; rx = 4;
           container.appendChild(slash);
           cellDiv.appendChild(container);
           gridEl.appendChild(cellDiv);
+          if(handwriting && handwriting.getMode() === 'handwriting' && targetLookup && targetLookup[r + ',' + c] !== undefined && !hissanFlowItemCompleted(currentHissanFlowItem())){
+            handwriting.mountGridCell(cellDiv, targetLookup[r + ',' + c], '「' + hissanPhaseLabel(currentHissanStep()) + '」の左から' + (targetLookup[r + ',' + c] + 1) + 'けた目');
+          }
         }
       }
     },
@@ -9150,8 +9162,15 @@ boxW = 24; boxH = 24; gap = 3; fontSize = 9.5; rx = 4;
 
   var handwriting = window.createDivisionHandwriting({
     loadScript: loadExternalScript,
-    digit: pressDigit,
-    removeDigit: clearDigit,
+    render: function(){ if(state.problem) renderAll(false); },
+    groupDigits: function(digits){
+      state.hissanBuffer = '';
+      digits.split('').forEach(function(d){ pressHissanDigit(Number(d)); });
+    },
+    normalDigit: function(field, index, digit){
+      state.activeField = field;
+      pressDigit(digit);
+    },
     target: function(){
       var p = state.problem;
       if(!document.getElementById('problemScreen').classList.contains('show')) return {problem:p, key:'home', enabled:false, label:'もんだいをえらんでね'};
@@ -9160,13 +9179,13 @@ boxW = 24; boxH = 24; gap = 3; fontSize = 9.5; rx = 4;
         var item = currentHissanFlowItem();
         var enabled = !!(item && item.cells && item.cells.length && !hissanFlowItemCompleted(item));
         var position = state.isWrongState ? 0 : state.hissanBuffer.length;
-        return {problem:p, key:state.hissanFlowPos + ':' + state.hissanBuffer + ':' + state.isWrongState,
+        return {problem:p, kind:'grid', count:enabled ? item.cells.length : 0, key:state.hissanFlowPos + ':' + state.isWrongState,
           enabled:enabled, label:enabled ? '「' + hissanPhaseLabel(currentHissanStep()) + '」の' + (position+1) + 'けた目を書こう' : '見直したら「つぎの工程」へ'};
       }
       var field = state.isWrongState ? 'q' : state.activeField;
       var digits = field === 'q' ? state.inputDigits : state.inputRemainder;
       var limit = field === 'q' ? (p.targetQuotientDigits || 1) : 1;
-      return {problem:p, key:state.activeField + ':' + state.inputDigits + ':' + state.inputRemainder + ':' + state.isWrongState,
+      return {problem:p, kind:'normal', wrong:state.isWrongState, quotientDigits:p.targetQuotientDigits || 1, hasRemainder:p.hasRemainder, inputDigits:state.isWrongState ? '' : state.inputDigits, inputRemainder:state.isWrongState ? '' : state.inputRemainder, key:state.activeField + ':' + state.inputDigits + ':' + state.inputRemainder + ':' + state.isWrongState,
         enabled:state.isWrongState || digits.length < limit, label:(p.hasRemainder ? (field === 'q' ? 'しょう' : 'あまり') : 'こたえ') + 'を1けたずつ書こう'};
     }
   });
