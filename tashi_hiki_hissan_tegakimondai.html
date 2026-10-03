@@ -1184,63 +1184,74 @@ body.subMode #auxOverlayCanvas { z-index: 30; pointer-events: none; }
 body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
 /* くり下がりを書き込むための余白（引かれる数の上） */
 #calcTable tr.carry-row.borrow-row td { height: var(--cell-h); }
+
+/* Shared navigation remains visible on every main screen. */
+.appNav { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.appNav button { border:1px solid #cbd5e1; border-radius:9px; padding:7px 10px; background:#fff; color:#334155; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.appNav button[aria-current="page"] { background:var(--primary); color:#fff; border-color:var(--primary); }
+.appNav button:hover { border-color:var(--primary); }
+.settingsTypes { display:grid; grid-template-columns:minmax(140px,1fr) 2fr; padding:12px; }
+.settingsTypes select { width:100%; font-size:16px; }
+.navigationHelp { color:var(--muted); font-size:14px; line-height:1.6; }
+#practiceHeader { flex-wrap:wrap; }
+#practicePage { grid-template-rows:auto minmax(0,1fr); --cell-h:clamp(40px,min(18vh,calc((100vw - 210px) / 5.4)),170px); }
+#practiceHeader { min-height:52px; padding:6px 12px; box-sizing:border-box; }
+@media(max-width:900px) { .headerTitle { font-size:14px; } .headerRight { flex-wrap:wrap; justify-content:flex-end; } }
+@media(max-width:600px) { .headerRight { width:100%; justify-content:space-between; } .settingsTypes { grid-template-columns:1fr; } .appNav button { padding:6px 8px; } }
+
 </style>
 </head>
 <body>
 
 <!-- ===== TOP PAGE ===== -->
 <div id="topPage" class="page active">
-  <h1>たし算の ひっ算 🖊️</h1>
-
-  <div class="settingsCard">
-    <h3>📝 もんだいのせってい</h3>
-    <div class="settingsRow">
-      <label>たされる数の桁数</label>
-      <select id="digitsA">
-        <option value="1">1けた（1〜9）</option>
-        <option value="2" selected>2けた（10〜99）</option>
-        <option value="3">3けた（100〜999）</option>
+  <nav class="appNav" aria-label="画面の移動">
+<button type="button" onclick="showPage('practicePage')" >🖊️ 筆算</button>
+<button type="button" onclick="showPage('topPage')" aria-current="page">⚙️ 設定</button>
+<button type="button" onclick="LessonShare.open()">🔗 URL配布</button>
+<button type="button" onclick="showPage('raidPage')" >👾 レイド</button>
+</nav>
+  <h1>⚙️ 筆算の設定</h1>
+  <div class="settingsCard"><h3>📝 出題する問題</h3>
+    <div class="typeBar settingsTypes">
+      <label for="probOp">計算の種類</label><select id="probOp" class="typeSelect" onchange="onOpChange()" title="けいさんの しゅるい">
+        <option value="add" selected>たし算 ＋</option>
+        <option value="sub">ひき算 －</option>
+      </select>
+      <label for="probDigits">桁数</label><select id="probDigits" class="typeSelect" onchange="onProblemTypeChange()" title="桁数の選択">
+        <option value="2_1">2けた ＋ 1けた</option>
+        <option value="2_2" selected>2けた ＋ 2けた</option>
+        <option value="3_2">3けた ＋ 2けた</option>
+        <option value="3_3">3けた ＋ 3けた</option>
+        <option value="1_1">1けた ＋ 1けた</option>
+      </select>
+      <label for="probCarry">くり上がり・くり下がり</label><select id="probCarry" class="typeSelect" onchange="onProblemTypeChange()" title="繰り上がりの選択">
+        <option value="random" selected>くり上がり：おまかせ</option>
+        <option value="none">くり上がり：なし (0回)</option>
+        <option value="1">くり上がり：1回</option>
+        <option value="2">くり上がり：2回</option>
+        <option value="all">くり上がり：ぜんぶ</option>
       </select>
     </div>
-    <div class="settingsRow">
-      <label>たす数の桁数</label>
-      <select id="digitsB">
-        <option value="1">1けた（1〜9）</option>
-        <option value="2" selected>2けた（10〜99）</option>
-        <option value="3">3けた（100〜999）</option>
-      </select>
-    </div>
-    <div class="settingsRow">
-      <label>くり上がり</label>
-      <select id="carryMode">
-        <option value="random">ランダム</option>
-        <option value="with">あり</option>
-        <option value="without">なし</option>
-      </select>
-    </div>
-    <div class="settingsRow">
-      <label>もんだいすう</label>
-      <select id="problemCount">
-        <option value="5">5もん</option>
-        <option value="10" selected>10もん</option>
-        <option value="20">20もん</option>
-      </select>
-    </div>
+  <p class="navigationHelp">変更した設定は次の問題から使います。「筆算にもどる」で今の問題を続けられます。</p>
   </div>
 
   <div class="settingsCard">
     <h3>✍️ こたえかた</h3>
     <div class="modeButtons">
-      <button class="modeBtn active" data-mode="keyboard" onclick="selectMode(this)">⌨️🔢 キーボード・電卓</button>
-      <button class="modeBtn" data-mode="handwriting" onclick="selectMode(this)">✍️ 手書き</button>
+      <button class="modeBtn active" data-mode="keyboard" onclick="switchInputMode('keyboard')">⌨️🔢 キーボード・電卓</button>
+      <button class="modeBtn" data-mode="handwriting" onclick="switchInputMode('handwriting')">✍️ 手書き</button>
     </div>
     <div id="modelStatus" class="modelBadge warn" style="margin-top:10px;display:inline-block">
       🔄 モデル読み込み中...
     </div>
   </div>
 
-  <button class="bigStartBtn" onclick="startPractice()">れんしゅうかいし！ ▶</button>
-  <button class="raidBtn" onclick="showPage('raidPage')">👾 レイドボスチャレンジ</button>
+  <div class="resultActions">
+    <button class="resultBtn primary" onclick="startPractice()">この設定で次の問題 ▶</button>
+    <button class="resultBtn secondary" onclick="showPage('practicePage')">筆算にもどる</button>
+  </div>
+  <div class="settingsCard" style="margin-top:20px"><h3>🔗 先生用のURL配布</h3><p>複数の出題条件や先生・レイドコードを指定して、児童に配るURLを作れます。</p><div id="distributionActions"></div></div>
 </div>
 
 <!-- ===== PRACTICE PAGE ===== -->
@@ -1251,36 +1262,18 @@ body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
       <span class="headerTitle" id="practiceTitle">たし算の ひっ算 🖊️</span>
     </div>
 
-    <!-- 問題の種類選択バー -->
-    <div class="typeBar">
-      <select id="probOp" class="typeSelect" onchange="onOpChange()" title="けいさんの しゅるい">
-        <option value="add" selected>たし算 ＋</option>
-        <option value="sub">ひき算 －</option>
-      </select>
-      <select id="probDigits" class="typeSelect" onchange="onProblemTypeChange()" title="桁数の選択">
-        <option value="2_1">2けた ＋ 1けた</option>
-        <option value="2_2" selected>2けた ＋ 2けた</option>
-        <option value="3_2">3けた ＋ 2けた</option>
-        <option value="3_3">3けた ＋ 3けた</option>
-        <option value="1_1">1けた ＋ 1けた</option>
-      </select>
-      <select id="probCarry" class="typeSelect" onchange="onProblemTypeChange()" title="繰り上がりの選択">
-        <option value="random" selected>くり上がり：おまかせ</option>
-        <option value="none">くり上がり：なし (0回)</option>
-        <option value="1">くり上がり：1回</option>
-        <option value="2">くり上がり：2回</option>
-        <option value="all">くり上がり：ぜんぶ</option>
-      </select>
-    </div>
-
     <!-- モード切替・レイド・設定 -->
     <div class="headerRight">
       <div class="modeToggleGroup">
         <button class="headerModeBtn active" data-mode="keyboard" onclick="switchInputMode('keyboard')" title="キーボードでも電卓ボタンでも入力できます">⌨️🔢 キーボード・電卓</button>
         <button class="headerModeBtn" data-mode="handwriting" onclick="switchInputMode('handwriting')" title="手書き認識入力">✍️ 手書き</button>
       </div>
-      <button class="headerRaidBtn" onclick="showPage('raidPage')">👾 レイドボス</button>
-      <button class="headerSettingsBtn" type="button" onclick="LessonShare.open()" aria-label="設定・配布URLを開く">🔗 URL配布</button>
+      <nav class="appNav" aria-label="画面の移動">
+<button type="button" onclick="showPage('practicePage')" aria-current="page">🖊️ 筆算</button>
+<button type="button" onclick="showPage('topPage')" >⚙️ 設定</button>
+<button type="button" onclick="LessonShare.open()">🔗 URL配布</button>
+<button type="button" onclick="showPage('raidPage')" >👾 レイド</button>
+</nav>
     </div>
   </div>
 
@@ -1361,6 +1354,12 @@ body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
 
 <!-- ===== RESULT PAGE ===== -->
 <div id="resultPage" class="page">
+  <nav class="appNav" aria-label="画面の移動">
+<button type="button" onclick="showPage('practicePage')" >🖊️ 筆算</button>
+<button type="button" onclick="showPage('topPage')" >⚙️ 設定</button>
+<button type="button" onclick="LessonShare.open()">🔗 URL配布</button>
+<button type="button" onclick="showPage('raidPage')" >👾 レイド</button>
+</nav>
   <h2>🎉 けっか！</h2>
   <div class="statGrid">
     <div class="statBox">
@@ -1394,6 +1393,12 @@ body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
 
 <!-- ===== RAID PAGE ===== -->
 <div id="raidPage" class="page">
+  <nav class="appNav" aria-label="画面の移動">
+<button type="button" onclick="showPage('practicePage')" >🖊️ 筆算</button>
+<button type="button" onclick="showPage('topPage')" >⚙️ 設定</button>
+<button type="button" onclick="LessonShare.open()">🔗 URL配布</button>
+<button type="button" onclick="showPage('raidPage')" aria-current="page">👾 レイド</button>
+</nav>
   <h2>👾 クラスのレイドボス</h2>
   <p>先生のレイドコードで参加します。筆算に正解すると、クラス共通のボスに10ダメージを送ります。</p>
   <div id="raidConnectionArea"></div>
@@ -1452,14 +1457,10 @@ let audioCtx = null;
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-}
-
-// ===== Mode selection (top page) =====
-function selectMode(btn) {
-  document.querySelectorAll('.modeBtn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  settings.inputMode = btn.dataset.mode;
-  saveSettings();
+  if (id === 'practicePage' && currentProblem) {
+    document.body.classList.toggle('subMode', currentProblem.op === 'sub');
+    updateHeader();
+  }
 }
 
 // ===== Settings persistence =====
@@ -1473,16 +1474,9 @@ function loadSettings() {
     if (s) {
       Object.assign(settings, s);
       if (settings.inputMode === 'numpad') settings.inputMode = 'keyboard'; // 電卓はキーボードモードに統合
-      // Sync UI
-      if (document.getElementById('digitsA')) {
-        document.getElementById('digitsA').value     = settings.digitsA;
-        document.getElementById('digitsB').value     = settings.digitsB;
-        document.getElementById('carryMode').value   = settings.carryMode;
-        document.getElementById('problemCount').value= settings.problemCount;
-        document.querySelectorAll('.modeBtn').forEach(b => {
-          b.classList.toggle('active', b.dataset.mode === settings.inputMode);
-        });
-      }
+      document.querySelectorAll('.modeBtn,.headerModeBtn').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === settings.inputMode);
+      });
     }
   } catch(e){}
 }
@@ -1692,12 +1686,10 @@ function onOpChange() {
   saveSettings();
   if (isExplanationOpen()) closeExplanation();
   applyOpUI();
-  nextProblemByType();
 }
 
 function onProblemTypeChange() {
   syncBorrowOptions();
-  nextProblemByType();
 }
 
 function nextProblemByType() {
@@ -1722,9 +1714,10 @@ function startPractice() {
 
 // ===== Input mode switcher in header =====
 function switchInputMode(mode) {
+  if (settings.inputMode === mode) return;
   settings.inputMode = mode;
   saveSettings();
-  document.querySelectorAll('.headerModeBtn').forEach(b => {
+  document.querySelectorAll('.modeBtn,.headerModeBtn').forEach(b => {
     b.classList.toggle('active', b.dataset.mode === mode);
   });
   applyInputModeUI();
@@ -1734,6 +1727,8 @@ function switchInputMode(mode) {
 }
 
 function updateHeader() {
+  if (currentProblem) document.getElementById('practiceTitle').textContent =
+    (currentProblem.op === 'sub' ? 'ひき算' : 'たし算') + 'の ひっ算 🖊️';
   const scoreDisp = document.getElementById('scoreDisplay');
   if (scoreDisp) scoreDisp.textContent = score;
   const probNum = document.getElementById('problemNumDisplay');
@@ -3051,7 +3046,7 @@ generateProblemByType=function(){
  if(Object.keys(selectedTypes).length){var choices=combinations(selectedTypes);if(choices.length){var choice=choices[Math.floor(Math.random()*choices.length)];settings.op=choice[0];applyOpUI();document.getElementById('probDigits').value=choice[1];document.getElementById('probCarry').value=choice[2];}}
  return originalGenerate();
 };
-LessonShare.init({id:'tashi-hiki-hissan',name:'足し算・引き算の筆算',mount:'#topPage',raid:true,fields:[
+LessonShare.init({id:'tashi-hiki-hissan',name:'足し算・引き算の筆算',mount:'#distributionActions',raid:true,fields:[
  F('ops','出題する計算（複数選択可）',[['add','足し算'],['sub','引き算']],function(){return selectedTypes.ops||[currentOp()];},function(v){selectedTypes.ops=v;},true),
  F('digits','出題する桁数（複数選択可）',digitOptions,function(){return selectedTypes.digits||[document.getElementById('probDigits').value];},function(v){selectedTypes.digits=v;},true),
  F('carries','くり上がり・くり下がり（複数選択可）',carryOptions,function(){return selectedTypes.carries||[document.getElementById('probCarry').value];},function(v){selectedTypes.carries=v;},true),
