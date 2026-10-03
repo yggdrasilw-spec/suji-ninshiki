@@ -432,8 +432,8 @@ body {
   inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: auto; /* 常時描画可能！ */
-  z-index: 5;
+  pointer-events: none; /* 描画操作は親のグリッド領域で受ける */
+  z-index: 30; /* マス目の上にも補助計算を表示する */
   cursor: crosshair;
   touch-action: none;
 }
@@ -477,6 +477,8 @@ body {
 
 /* 繰り上がり行：足される数の上！ */
 #calcTable tr.carry-row td {
+  pointer-events: auto;
+  touch-action: none;
   height: var(--cell-h);
   text-align: center;
   vertical-align: middle;
@@ -1177,11 +1179,9 @@ td.hasValue .ghostDigit { display: none !important; }
 .railActionBtn.hint { background: #f59e0b; }
 .railActionBtn.hint:hover { background: #d98706; }
 
+/* 補助計算は親の領域で操作し、入力欄はそのまま操作できる。 */
+#calcGridArea { cursor: crosshair; touch-action: none; }
 /* ===== ひき算モード ===== */
-/* 赤ペンの線を、引かれる数のマス目の上（筆算の表より手前）にも描く。
-   キャンバス自体はクリックを受けず、描画は #calcGridArea 側で受ける */
-body.subMode #auxOverlayCanvas { z-index: 30; pointer-events: none; }
-body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
 /* くり下がりを書き込むための余白（引かれる数の上） */
 #calcTable tr.carry-row.borrow-row td { height: var(--cell-h); }
 
@@ -1797,7 +1797,7 @@ function buildGrid(problem) {
         carryBox.appendChild(cInp);
       }
       // 手書きモードのときは CSS (body.handwritingMode .carryBox { display: none !important; }) で非表示になり、
-      // 余白（高さ38px）がそのまま保たれるため足される数の上に直接手書きペンで書ける！
+      // 上段のグリッドはそのまま保たれ、補助計算のペンで直接書ける。
       td.appendChild(carryBox);
     }
   }
@@ -2875,12 +2875,16 @@ function initAuxOverlayCanvas() {
   // 描きはじめてよい場所か
   //  ・ひき算：筆算の表全体（引かれる数のマス目の上も含む）に赤ペンで書ける。
   //            ただし答えのマス・入力欄・ボタンの上からは書き始めない
-  //  ・たし算：これまでどおり（表の外側の余白に書く）
+  //  ・たし算：たされる数の上のグリッドと、表の外側の余白に書ける。
   function canStartDrawing(e) {
+    if (e.target.closest && e.target.closest('.ans-cell, .carryBox, input, button, .numpadBtn')) return false;
     if (document.body.classList.contains('subMode')) {
-      return !(e.target.closest && e.target.closest('.ans-cell, .carryBox, input, button, .numpadBtn'));
+      return true;
     }
-    return e.target === canvas;
+    if (e.target.closest && e.target.closest('.carry-row')) return true;
+    const tableRect = document.getElementById('calcTable').getBoundingClientRect();
+    return e.clientX < tableRect.left || e.clientX > tableRect.right ||
+      e.clientY < tableRect.top || e.clientY > tableRect.bottom;
   }
 
   parent.addEventListener('pointerdown', e => {
