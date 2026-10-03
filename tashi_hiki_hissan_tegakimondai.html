@@ -1749,10 +1749,11 @@ function buildGrid(problem) {
     return parseInt(s[idx], 10);
   }
 
-  // 答えは繰り上がりで桁が増える場合があるため、表示桁数は答えも含める。
-  // 記号は左端のマスに置き、答えの全桁を続けて書けるようにする。
+  // tashizan_hissan.html と同じく、記号は被演算数の最大桁の1つ左。
+  // 繰り上がりで増えた答えの桁は、記号の下の同じ列に書く。
   const operandDigits = Math.max(String(a).length, String(b).length);
   const totalDigits = Math.max(operandDigits, String(answer).length);
+  const gridColumns = Math.max(operandDigits + 1, totalDigits);
 
   const tbl = document.getElementById('calcTable');
   tbl.innerHTML = '';
@@ -1770,7 +1771,7 @@ function buildGrid(problem) {
 
     // 一の位以外の桁に繰り上がりボックスを配置（十の位、百の位など）
     // ひき算のときはボックスを置かず、赤ペンで自由に書ける余白にする
-    if (colFromRight > 0 && !isSub) {
+    if (colFromRight > 0 && colFromRight < totalDigits && !isSub) {
       const carryBox = document.createElement('div');
       carryBox.className = 'carryBox';
       carryBox.dataset.pos = pos;
@@ -1800,19 +1801,14 @@ function buildGrid(problem) {
       td.appendChild(carryBox);
     }
   }
-  const signCarry = rowCarry.insertCell();
-  signCarry.className = 'sign-cell';
-  for (let c = 0; c < totalDigits; c++) addCarryCell(totalDigits - 1 - c);
+  for (let c = 0; c < gridColumns; c++) addCarryCell(gridColumns - 1 - c);
 
   // --- 行1: たされる数 A ---
   const rowA = tbl.insertRow();
   rowA.className = 'num-row';
 
-  const signA = rowA.insertCell();
-  signA.className = 'sign-cell';
-
-  for (let c = 0; c < totalDigits; c++) {
-    const colFromRight = totalDigits - 1 - c;
+  for (let c = 0; c < gridColumns; c++) {
+    const colFromRight = gridColumns - 1 - c;
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = rowA.insertCell();
     td.className = 'num-cell';
@@ -1833,12 +1829,14 @@ function buildGrid(problem) {
   const rowB = tbl.insertRow();
   rowB.className = 'num-row';
 
-  const signB = rowB.insertCell();
-  signB.className = 'sign-cell';
-  signB.textContent = isSub ? '－' : '＋';
-
-  for (let c = 0; c < totalDigits; c++) {
-    const colFromRight = totalDigits - 1 - c;
+  for (let c = 0; c < gridColumns; c++) {
+    const colFromRight = gridColumns - 1 - c;
+    if (colFromRight === operandDigits) {
+      const signB = rowB.insertCell();
+      signB.className = 'sign-cell';
+      signB.textContent = isSub ? '－' : '＋';
+      continue;
+    }
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = rowB.insertCell();
     td.className = 'num-cell';
@@ -1898,9 +1896,11 @@ function buildGrid(problem) {
       initHandCell(td, `ans-${pos}`, false);
     }
   }
-  const signAns = ansRow.insertCell();
-  signAns.className = 'sign-cell';
-  for (let c = 0; c < totalDigits; c++) addAnswerCell(totalDigits - 1 - c);
+  for (let c = 0; c < gridColumns; c++) {
+    const colFromRight = gridColumns - 1 - c;
+    if (colFromRight < totalDigits) addAnswerCell(colFromRight);
+    else ansRow.insertCell().className = 'sign-cell';
+  }
 
   // 初期フォーカス（一の位の答えマスへ）
   setTimeout(() => {
