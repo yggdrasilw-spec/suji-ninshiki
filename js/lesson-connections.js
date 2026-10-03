@@ -24,10 +24,10 @@
   };
   var room, online = false, data, answered = new WeakSet();
   window.LessonRaid = {
-    init: function () {
+    init: function (options) {
       var bar = document.createElement('div'); bar.className = 'settingsCard';
       bar.innerHTML = '<h3>👾 クラスのレイドに参加</h3><label>レイドコード <input id="classRaidCode" maxlength="8"></label><button id="classRaidConnect" type="button">接続</button><p id="classRaidStatus" role="status">未接続</p>';
-      document.getElementById('topPage').appendChild(bar);
+      document.getElementById((options && options.mount) || 'topPage').appendChild(bar);
       document.getElementById('classRaidConnect').onclick = this.connect;
       var code = new URLSearchParams(location.search).get('code');
       if (code) { document.getElementById('classRaidCode').value = code; this.connect(); }

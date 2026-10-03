@@ -177,15 +177,17 @@ body {
 #practicePage {
   /* 筆算マスの大きさ：画面の高さ・幅に合わせて自動で最大化（4桁＋符号でも収まる） */
   --cell-h: clamp(56px, min(18vh, calc((100vw - 230px) / 5.4)), 170px);
-  --cell-w: calc(var(--cell-h) * 1.15);
+  --cell-w: var(--cell-h);
   position: fixed;
   inset: 0;
-  display: grid;
+  display: none;
   grid-template-columns: 1fr 190px;
   grid-template-rows: 52px 1fr;
   background: var(--bg);
   overflow: hidden;
 }
+
+#practicePage.active { display: grid; }
 
 /* Header bar */
 #practiceHeader {
@@ -475,9 +477,7 @@ body {
 
 /* 繰り上がり行：足される数の上！ */
 #calcTable tr.carry-row td {
-  height: calc(var(--cell-h) * 0.6);
-  border: none !important;
-  background: transparent !important;
+  height: var(--cell-h);
   text-align: center;
   vertical-align: middle;
   padding: 0 !important;
@@ -531,32 +531,18 @@ body.handwritingMode .carryBox {
   line-height: 1;
 }
 
-.sign-cell {
-  border: none !important;
-  background: transparent !important;
+#calcTable td.sign-cell {
   font-size: calc(var(--cell-h) * 0.6);
   font-weight: 900;
   color: var(--accent);
   text-align: center;
   padding: 0 !important;
-  width: calc(var(--cell-h) * 0.7) !important;
-}
-
-/* 空白マス（先頭の桁がない部分） */
-#calcTable td.empty-pos {
-  border: none !important;
-  background: transparent !important;
 }
 
 /* 答え行：上部に太い黒い筆算横線 */
 #calcTable tr.ans-row td {
   border-top: 5px solid #222 !important;
   background: var(--ans-bg);
-}
-
-#calcTable tr.ans-row td.sign-cell {
-  border-top: 5px solid #222 !important;
-  border-bottom: none !important;
 }
 
 .ans-cell {
@@ -1156,12 +1142,6 @@ td.hasValue .ghostDigit { display: none !important; }
   #leftRail { display: none; }
 }
 
-/* Empty-cell border for num-cell with no digit (padded) */
-.num-cell.empty-pos {
-  border-color: transparent !important;
-  background: transparent !important;
-}
-
 /* Highlight classes used by SVG hint system */
 .pos-highlight-ones   { outline: 3px solid var(--accent) !important; outline-offset: 1px; z-index: 10; }
 .pos-highlight-tens   { outline: 3px solid var(--blue)   !important; outline-offset: 1px; z-index: 10; }
@@ -1203,7 +1183,7 @@ td.hasValue .ghostDigit { display: none !important; }
 body.subMode #auxOverlayCanvas { z-index: 30; pointer-events: none; }
 body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
 /* くり下がりを書き込むための余白（引かれる数の上） */
-#calcTable tr.carry-row.borrow-row td { height: calc(var(--cell-h) * 0.95); }
+#calcTable tr.carry-row.borrow-row td { height: var(--cell-h); }
 </style>
 </head>
 <body>
@@ -1300,6 +1280,7 @@ body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
         <button class="headerModeBtn" data-mode="handwriting" onclick="switchInputMode('handwriting')" title="手書き認識入力">✍️ 手書き</button>
       </div>
       <button class="headerRaidBtn" onclick="showPage('raidPage')">👾 レイドボス</button>
+      <button class="headerSettingsBtn" type="button" onclick="LessonShare.open()" aria-label="設定・配布URLを開く">🔗 URL配布</button>
     </div>
   </div>
 
@@ -1413,59 +1394,12 @@ body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
 
 <!-- ===== RAID PAGE ===== -->
 <div id="raidPage" class="page">
-  <h2>👾 レイドボスチャレンジ</h2>
-
-  <div id="raidSetupArea">
-    <div class="raidCard">
-      <h3 style="font-size:16px;font-weight:800;margin-bottom:12px">🔥 ボス設定</h3>
-      <div id="bossArea">
-        <span id="bossMonster">👾</span>
-        <div id="bossHpBar"><div id="bossHpFill" style="width:100%"></div></div>
-        <div id="bossHpText">HP: — / —</div>
-      </div>
-    </div>
-
-    <div class="raidCard">
-      <h3 style="font-size:16px;font-weight:800;margin-bottom:12px">📋 ルームせってい</h3>
-      <input class="raidInput" id="raidPlayerName" placeholder="プレイヤー名を入力" value="さくら">
-      <input class="raidInput" id="raidRoomId" placeholder="ルームID（例: room01）" value="room01">
-      <div style="display:flex;gap:10px;margin-bottom:10px">
-        <select class="raidInput" id="raidTimeLimit" style="flex:1">
-          <option value="10">10秒/問</option>
-          <option value="15" selected>15秒/問</option>
-          <option value="20">20秒/問</option>
-          <option value="30">30秒/問</option>
-        </select>
-        <select class="raidInput" id="raidBossHp" style="flex:1">
-          <option value="500">HP: 500</option>
-          <option value="1000" selected>HP: 1000</option>
-          <option value="2000">HP: 2000</option>
-        </select>
-      </div>
-      <button class="bigStartBtn" style="max-width:none;font-size:16px;padding:14px" onclick="joinRaid()">🚪 ルームに入る</button>
-    </div>
-
-    <div class="raidCard" id="leaderboardCard" style="display:none">
-      <h3 style="font-size:16px;font-weight:800;margin-bottom:10px">🏆 ランキング</h3>
-      <div class="leaderboard" id="leaderboardDiv"></div>
-    </div>
-  </div>
-
-  <!-- Raid play area -->
-  <div id="raidPlayArea" class="raidCard">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <span id="raidStatusText" style="font-weight:800;font-size:14px;color:var(--accent)">接続中...</span>
-      <button class="resultBtn secondary" style="padding:6px 12px;font-size:13px" onclick="leaveRaid()">退出</button>
-    </div>
-    <div id="raidTimerBar"><div id="raidTimerFill" style="width:100%"></div></div>
-    <div id="raidProblemDisplay">—</div>
-    <input class="raidAnswerInput" id="raidAnswerInput" type="number" placeholder="こたえ">
-    <button class="railActionBtn" style="max-width:200px;margin:0 auto" onclick="submitRaidAnswer()">こたえる！</button>
-    <div id="raidResult" style="margin-top:10px;font-size:16px;font-weight:800;min-height:22px;text-align:center"></div>
-  </div>
-
+  <h2>👾 クラスのレイドボス</h2>
+  <p>先生のレイドコードで参加します。筆算に正解すると、クラス共通のボスに10ダメージを送ります。</p>
+  <div id="raidConnectionArea"></div>
   <div style="text-align:center;margin-top:16px">
-    <button class="resultBtn secondary" onclick="showPage('topPage')">← もどる</button>
+    <button class="resultBtn" onclick="showPage('practicePage')">筆算にもどる</button>
+    <button class="resultBtn secondary" onclick="showPage('topPage')">設定にもどる</button>
   </div>
 </div>
 
@@ -1483,17 +1417,6 @@ body.subMode #calcGridArea { cursor: crosshair; touch-action: none; }
 <!-- ===== JAVASCRIPT ===== -->
 <script>
 'use strict';
-
-// ===== Firebase config (user fills in) =====
-const FIREBASE_CONFIG = {
-  apiKey: "",
-  authDomain: "",
-  databaseURL: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
-};
 
 // ===== State =====
 let settings = {
@@ -1525,20 +1448,10 @@ let audioCtx = null;
 
 // Aux canvas variables are declared with aux overlay implementation below
 
-// Firebase / Raid
-let raidDB         = null;
-let raidRoomRef    = null;
-let raidRoomId     = null;
-let raidPlayerName = '';
-let raidTimerInt   = null;
-let raidTimeLeft   = 15;
-let raidProblem    = null;
-
 // ===== Page navigation =====
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  if (id === 'topPage') cleanupRaid();
 }
 
 // ===== Mode selection (top page) =====
@@ -1842,10 +1755,9 @@ function buildGrid(problem) {
   }
 
   // 答えは繰り上がりで桁が増える場合があるため、表示桁数は答えも含める。
-  // ただし、＋記号は足される数・足す数の桁数の多い方のすぐ左に固定する。
+  // 記号は左端のマスに置き、答えの全桁を続けて書けるようにする。
   const operandDigits = Math.max(String(a).length, String(b).length);
   const totalDigits = Math.max(operandDigits, String(answer).length);
-  const resultOnlyDigits = totalDigits - operandDigits;
 
   const tbl = document.getElementById('calcTable');
   tbl.innerHTML = '';
@@ -1893,23 +1805,18 @@ function buildGrid(problem) {
       td.appendChild(carryBox);
     }
   }
-  for (let c = 0; c < resultOnlyDigits; c++) addCarryCell(totalDigits - 1 - c);
   const signCarry = rowCarry.insertCell();
   signCarry.className = 'sign-cell';
-  for (let c = resultOnlyDigits; c < totalDigits; c++) addCarryCell(totalDigits - 1 - c);
+  for (let c = 0; c < totalDigits; c++) addCarryCell(totalDigits - 1 - c);
 
   // --- 行1: たされる数 A ---
   const rowA = tbl.insertRow();
   rowA.className = 'num-row';
 
-  for (let c = 0; c < resultOnlyDigits; c++) {
-    const td = rowA.insertCell();
-    td.className = 'num-cell empty-pos';
-  }
   const signA = rowA.insertCell();
   signA.className = 'sign-cell';
 
-  for (let c = resultOnlyDigits; c < totalDigits; c++) {
+  for (let c = 0; c < totalDigits; c++) {
     const colFromRight = totalDigits - 1 - c;
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = rowA.insertCell();
@@ -1931,15 +1838,11 @@ function buildGrid(problem) {
   const rowB = tbl.insertRow();
   rowB.className = 'num-row';
 
-  for (let c = 0; c < resultOnlyDigits; c++) {
-    const td = rowB.insertCell();
-    td.className = 'num-cell empty-pos';
-  }
   const signB = rowB.insertCell();
   signB.className = 'sign-cell';
   signB.textContent = isSub ? '－' : '＋';
 
-  for (let c = resultOnlyDigits; c < totalDigits; c++) {
+  for (let c = 0; c < totalDigits; c++) {
     const colFromRight = totalDigits - 1 - c;
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = rowB.insertCell();
@@ -2000,10 +1903,9 @@ function buildGrid(problem) {
       initHandCell(td, `ans-${pos}`, false);
     }
   }
-  for (let c = 0; c < resultOnlyDigits; c++) addAnswerCell(totalDigits - 1 - c);
   const signAns = ansRow.insertCell();
   signAns.className = 'sign-cell';
-  for (let c = resultOnlyDigits; c < totalDigits; c++) addAnswerCell(totalDigits - 1 - c);
+  for (let c = 0; c < totalDigits; c++) addAnswerCell(totalDigits - 1 - c);
 
   // 初期フォーカス（一の位の答えマスへ）
   setTimeout(() => {
@@ -3086,234 +2988,6 @@ function showFeedback(symbol, correct) {
   setTimeout(() => circle.classList.remove('show'), 1000);
 }
 
-// ===== Firebase / Raid =====
-function initFirebase() {
-  if (!FIREBASE_CONFIG.apiKey) return false;
-  try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(FIREBASE_CONFIG);
-    }
-    raidDB = firebase.database();
-    return true;
-  } catch(e) {
-    console.warn('Firebase init failed:', e);
-    return false;
-  }
-}
-
-function joinRaid() {
-  raidPlayerName = document.getElementById('raidPlayerName').value.trim() || 'プレイヤー';
-  raidRoomId     = document.getElementById('raidRoomId').value.trim()     || 'room01';
-  const timeLimit = parseInt(document.getElementById('raidTimeLimit').value);
-  const bossHp    = parseInt(document.getElementById('raidBossHp').value);
-
-  if (!initFirebase()) {
-    // Demo mode without Firebase
-    startRaidDemoMode(bossHp, timeLimit);
-    return;
-  }
-
-  raidRoomRef = raidDB.ref(`rooms/${raidRoomId}`);
-  const playerId = 'p_' + Date.now();
-
-  // Initialize boss if not exists
-  raidRoomRef.child('boss').transaction(boss => {
-    if (!boss) return { name: '大ボス', hp: bossHp, maxHp: bossHp, defeated: false };
-    return boss;
-  });
-
-  // Register player
-  raidRoomRef.child(`players/${playerId}`).set({ name: raidPlayerName, damage: 0 });
-  raidRoomRef.child(`players/${playerId}`).onDisconnect().remove();
-
-  // Listen to boss HP
-  raidRoomRef.child('boss').on('value', snap => {
-    const boss = snap.val();
-    if (boss) updateBossDisplay(boss);
-  });
-
-  // Listen to leaderboard
-  raidRoomRef.child('players').on('value', snap => {
-    updateLeaderboard(snap.val());
-  });
-
-  // Show play area
-  document.getElementById('raidSetupArea').style.display  = 'none';
-  document.getElementById('raidPlayArea').style.display   = '';
-  document.getElementById('leaderboardCard').style.display = '';
-  document.getElementById('raidStatusText').textContent   = `✅ ルーム: ${raidRoomId} に接続中`;
-
-  startRaidProblem(timeLimit, playerId, bossHp);
-}
-
-function startRaidDemoMode(bossHp, timeLimit) {
-  // Single-player demo mode
-  const demoState = { hp: bossHp, maxHp: bossHp };
-  document.getElementById('raidSetupArea').style.display = 'none';
-  document.getElementById('raidPlayArea').style.display  = '';
-  document.getElementById('raidStatusText').textContent  = '🎮 デモモード（Firebase未設定）';
-
-  updateBossDisplay(demoState);
-  startRaidProblemLocal(timeLimit, demoState);
-}
-
-function startRaidProblemLocal(timeLimit, bossState) {
-  raidProblem = generateProblem(
-    parseInt(document.getElementById('digitsA').value),
-    parseInt(document.getElementById('digitsB').value),
-    document.getElementById('carryMode').value
-  );
-
-  const { a, b } = raidProblem;
-  document.getElementById('raidProblemDisplay').textContent =
-    `${a} ＋ ${b} ＝ ？`;
-  document.getElementById('raidAnswerInput').value = '';
-  document.getElementById('raidResult').textContent = '';
-  document.getElementById('raidAnswerInput').focus();
-
-  // Timer
-  raidTimeLeft = timeLimit;
-  clearInterval(raidTimerInt);
-  document.getElementById('raidTimerFill').style.width = '100%';
-  raidTimerInt = setInterval(() => {
-    raidTimeLeft--;
-    const pct = Math.max(0, (raidTimeLeft / timeLimit) * 100);
-    document.getElementById('raidTimerFill').style.width = pct + '%';
-    if (raidTimeLeft <= 0) {
-      clearInterval(raidTimerInt);
-      document.getElementById('raidResult').textContent = `⏱ じかんぎれ！ こたえ: ${raidProblem.answer}`;
-      setTimeout(() => startRaidProblemLocal(timeLimit, bossState), 2000);
-    }
-  }, 1000);
-
-  // Store submit reference for local demo
-  window._raidSubmitLocal = (ans) => {
-    clearInterval(raidTimerInt);
-    if (parseInt(ans) === raidProblem.answer) {
-      const dmg = 10 + Math.round(raidTimeLeft / timeLimit * 20);
-      bossState.hp = Math.max(0, bossState.hp - dmg);
-      updateBossDisplay(bossState);
-      document.getElementById('raidResult').textContent = `⚡ ${dmg}ダメージ！ せいかい！`;
-      playCorrect();
-    } else {
-      document.getElementById('raidResult').textContent =
-        `❌ ちがう！ こたえは ${raidProblem.answer}`;
-      playWrong();
-    }
-    if (bossState.hp <= 0) {
-      document.getElementById('raidResult').textContent += '  🎉 ボスをたおした！';
-      setTimeout(() => { bossState.hp = bossState.maxHp; updateBossDisplay(bossState); }, 3000);
-    }
-    setTimeout(() => startRaidProblemLocal(timeLimit, bossState), 2000);
-  };
-}
-
-function startRaidProblem(timeLimit, playerId, bossHp) {
-  raidProblem = generateProblem(
-    parseInt(document.getElementById('digitsA').value),
-    parseInt(document.getElementById('digitsB').value),
-    document.getElementById('carryMode').value
-  );
-
-  const { a, b } = raidProblem;
-  document.getElementById('raidProblemDisplay').textContent = `${a} ＋ ${b} ＝ ？`;
-  document.getElementById('raidAnswerInput').value = '';
-  document.getElementById('raidResult').textContent = '';
-  document.getElementById('raidAnswerInput').focus();
-
-  raidTimeLeft = timeLimit;
-  clearInterval(raidTimerInt);
-  document.getElementById('raidTimerFill').style.width = '100%';
-  raidTimerInt = setInterval(() => {
-    raidTimeLeft--;
-    const pct = Math.max(0, (raidTimeLeft / timeLimit) * 100);
-    document.getElementById('raidTimerFill').style.width = pct + '%';
-    if (raidTimeLeft <= 0) {
-      clearInterval(raidTimerInt);
-      document.getElementById('raidResult').textContent =
-        `⏱ じかんぎれ！ こたえ: ${raidProblem.answer}`;
-      setTimeout(() => startRaidProblem(timeLimit, playerId, bossHp), 2500);
-    }
-  }, 1000);
-
-  window._raidSubmitFn = (ans) => {
-    clearInterval(raidTimerInt);
-    if (parseInt(ans) === raidProblem.answer) {
-      const dmg = 10 + Math.round(raidTimeLeft / timeLimit * 20);
-      dealDamage(dmg, playerId);
-      document.getElementById('raidResult').textContent = `⚡ ${dmg}ダメージ！ せいかい！`;
-      playCorrect();
-    } else {
-      document.getElementById('raidResult').textContent =
-        `❌ ちがう！ こたえは ${raidProblem.answer}`;
-      playWrong();
-    }
-    setTimeout(() => startRaidProblem(timeLimit, playerId, bossHp), 2000);
-  };
-}
-
-function submitRaidAnswer() {
-  const ans = document.getElementById('raidAnswerInput').value;
-  if (!ans) return;
-  if (window._raidSubmitLocal) { window._raidSubmitLocal(ans); return; }
-  if (window._raidSubmitFn)   { window._raidSubmitFn(ans);    return; }
-}
-
-// Enter key for raid
-document.getElementById('raidAnswerInput')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') submitRaidAnswer();
-});
-
-function dealDamage(amount, playerId) {
-  if (!raidDB || !raidRoomId) return;
-  // Decrement boss HP
-  raidRoomRef.child('boss/hp').transaction(hp => Math.max(0, (hp || 0) - amount));
-  // Add to player damage
-  raidRoomRef.child(`players/${playerId}/damage`).transaction(d => (d || 0) + amount);
-}
-
-function updateBossDisplay(boss) {
-  if (!boss) return;
-  const pct = boss.maxHp > 0 ? (boss.hp / boss.maxHp) * 100 : 100;
-  document.getElementById('bossHpFill').style.width = pct + '%';
-  document.getElementById('bossHpText').textContent  = `HP: ${boss.hp || 0} / ${boss.maxHp || 0}`;
-}
-
-function updateLeaderboard(players) {
-  if (!players) return;
-  const lb = document.getElementById('leaderboardDiv');
-  if (!lb) return;
-  lb.innerHTML = '';
-  const sorted = Object.values(players).sort((a, b) => (b.damage||0) - (a.damage||0));
-  sorted.forEach((p, i) => {
-    const row = document.createElement('div');
-    row.className = 'lbRow';
-    row.innerHTML = `<span class="lbRank">${i+1}</span>
-      <span class="lbName">${escHtml(p.name||'—')}</span>
-      <span class="lbDmg">${p.damage||0}ダメ</span>`;
-    lb.appendChild(row);
-  });
-}
-
-function leaveRaid() {
-  cleanupRaid();
-  document.getElementById('raidPlayArea').style.display  = 'none';
-  document.getElementById('raidSetupArea').style.display = '';
-}
-
-function cleanupRaid() {
-  clearInterval(raidTimerInt);
-  window._raidSubmitLocal = null;
-  window._raidSubmitFn    = null;
-  if (raidRoomRef) { raidRoomRef.off(); raidRoomRef = null; }
-}
-
-function escHtml(str) {
-  return str.replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-}
-
 // ===== Keyboard shortcut: Enter on practice page =====
 document.addEventListener('keydown', e => {
   if (isExplanationOpen()) {
@@ -3384,7 +3058,7 @@ LessonShare.init({id:'tashi-hiki-hissan',name:'足し算・引き算の筆算',m
  F('input','回答方法',[['keyboard','キーボード・電卓'],['handwriting','手書き']],function(){return settings.inputMode;},function(v){switchInputMode(v);}),
  ...Object.keys(hintsEnabled).map(function(key){return F('hint-'+key,({arrow:'矢印ヒント',text:'説明ヒント',ghost:'うすい数字',super:'超ヒント'})[key],null,function(){return hintsEnabled[key];},function(v){if(hintsEnabled[key]!==v)toggleHint(key,document.createElement('button'));});})
 ],validate:function(data){if(Object.keys(data).some(function(k){return ['ops','digits','carries'].includes(k);})&&!combinations(data).length)throw new Error('選択した桁数とくり上がり・くり下がりでは問題を作れません。');},afterRestore:function(){nextProblemByType();}});
-LessonRaid.init();
+LessonRaid.init({mount:'raidConnectionArea'});
 var oldNext=nextProblemByType; nextProblemByType=function(){oldNext();if(window.TeacherBridge)TeacherBridge.updateProgress({step:(currentOp()==='sub'?'引き算':'足し算')+' '+currentProblem.a+'・'+currentProblem.b,screenId:'practicePage',screenName:'筆算練習'});};
 
 },0);});
