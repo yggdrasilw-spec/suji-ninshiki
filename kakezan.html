@@ -8000,7 +8000,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
     connectToRaidCode(codeParam.trim());
   } else {
     const savedCode = localStorage.getItem('raid_boss_student_code');
-    if(savedCode) connectToRaidCode(savedCode);
+    if(savedCode && urlParams.get('share') !== '1') connectToRaidCode(savedCode);
   }
 });
 </script>
@@ -10620,6 +10620,27 @@ function fmtChallengeDate(d){
   try{ return new Date(d).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}); }
   catch(_){ return String(d); }
 }
+</script>
+
+<!-- Distribution settings -->
+<script src="js/student-profile.js"></script>
+<script src="js/teacher-bridge.js"></script>
+<script src="js/lesson-connections.js"></script>
+<script src="js/lesson-share.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var F=function(key,label,options,get,set,multiple){return {key:key,label:label,options:options,get:get,set:set,multiple:!!multiple};}; var S=LessonShare.select,C=LessonShare.checkbox;
+
+var fields=[S('top','自由練習：かけられる数の桁数','topDigitsSelect'),S('bottom','自由練習：かける数の桁数','bottomDigitsSelect'),C('decimal','自由練習：小数を含める','#practiceDecimalEnabled'),C('raidDecimal','レイド：小数を含める','#raidDecimalCheckbox'),C('raidNoCarry','レイド：くり上がりなし','#raidNoCarryCheckbox'),F('raidDifficulty','レイドの難易度',[['beginner','初級'],['intermediate','中級'],['advanced','上級']],function(){return appState.raidDifficulty;},function(v){selectRaidDifficulty(v);}),F('input','回答方法',[['keyboard','キーボード'],['handwriting','手書き']],function(){return appState.inputMode;},function(v){saveInputModeSetting(v);})];
+fields.push(S('attackTop','タイムアタック：かけられる数の桁数','attackTopDigitsSelect'),S('attackBottom','タイムアタック：かける数の桁数','attackBottomDigitsSelect'),S('attackCount','タイムアタック：問題数','attackQuestionCountSelect'),C('attackDecimal','タイムアタック：小数を含める','#attackDecimalEnabled'));
+fields.find(function(f){return f.key==='raidDifficulty';}).options.push(['expert','達人'],['master','超人']);
+for(var i=0;i<=4;i++){fields.push(C('decimal-'+i,'自由練習：小数点以下 '+i+'桁','#practiceDecimalPlace'+i));fields.push(C('attackDecimal-'+i,'タイムアタック：小数点以下 '+i+'桁','#attackDecimalPlace'+i));}
+['carryMode','attackCarryMode'].forEach(function(name){fields.push(F(name,(name==='carryMode'?'自由練習':'タイムアタック')+'：くり上がり',[['random','おまかせ'],['none','なし'],['custom','桁ごとに指定（かける数が1桁の場合）']],function(){return document.querySelector('input[name="'+name+'"]:checked').value;},function(v){var el=document.querySelector('input[name="'+name+'"][value="'+v+'"]');el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}));}));});
+['carryCheck','attackCarryCheck'].forEach(function(cls){for(let index=0;index<4;index++){fields.push(F(cls+'-'+index,(cls==='carryCheck'?'自由練習':'タイムアタック')+'：'+getCarryLabel(index),null,function(){var el=document.querySelectorAll('.'+cls)[index];return !!(el&&el.checked);},function(v){var el=document.querySelectorAll('.'+cls)[index];if(el){el.checked=v;el.dispatchEvent(new Event('change',{bubbles:true}));}}));}});
+Object.keys(getPracticeHintDefaults()).forEach(function(key){fields.push(F('hint-'+key,'ヒント：'+({arrow:'矢印',target:'注目する桁',correctness:'正誤',text:'説明',superHint:'超ヒント',dummyCells:'補助マス'})[key],null,function(){return getPracticeHintDefaults()[key];},function(v){var next=getPracticeHintDefaults();next[key]=v;savePracticeHintDefaults(next);}));});
+LessonShare.init({id:'kakezan-hissan',name:'かけ算の筆算',mount:'#settingsPage',raid:true,fields:fields});
+
+},0);});
 </script>
 </body>
 </html>

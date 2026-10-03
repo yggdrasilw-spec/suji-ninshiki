@@ -1648,6 +1648,7 @@ function generateProblemByType() {
   if (digitsVal === '1_1') { dA = 1; dB = 1; }
   else if (digitsVal === '2_1') { dA = 2; dB = 1; }
   else if (digitsVal === '2_2') { dA = 2; dB = 2; }
+  else if (digitsVal === '3_1') { dA = 3; dB = 1; }
   else if (digitsVal === '3_2') { dA = 3; dB = 2; }
   else if (digitsVal === '3_3') { dA = 3; dB = 3; }
 
@@ -1724,8 +1725,8 @@ function generateSubProblem(dA, dB, carryVal) {
 }
 
 const DIGIT_OPTIONS = {
-  add: [['2_1', '2けた ＋ 1けた'], ['2_2', '2けた ＋ 2けた'], ['3_2', '3けた ＋ 2けた'], ['3_3', '3けた ＋ 3けた'], ['1_1', '1けた ＋ 1けた']],
-  sub: [['2_1', '2けた － 1けた'], ['2_2', '2けた － 2けた'], ['3_2', '3けた － 2けた'], ['3_3', '3けた － 3けた']]
+  add: [['2_1', '2けた ＋ 1けた'], ['2_2', '2けた ＋ 2けた'], ['3_1', '3けた ＋ 1けた'], ['3_2', '3けた ＋ 2けた'], ['3_3', '3けた ＋ 3けた'], ['1_1', '1けた ＋ 1けた']],
+  sub: [['2_1', '2けた － 1けた'], ['2_2', '2けた － 2けた'], ['3_1', '3けた － 1けた'], ['3_2', '3けた － 2けた'], ['3_3', '3けた － 3けた'], ['1_1', '1けた － 1けた']]
 };
 
 function applyOpUI() {
@@ -2147,6 +2148,7 @@ function checkAnswer() {
 
   if (allCorrect) {
     score++;
+    if (window.LessonRaid) LessonRaid.answer(currentProblem);
     updateHeader();
     playCorrect();
     showFeedback('⭕', true);
@@ -2486,8 +2488,8 @@ function toggleHint(key, btn) {
       hintsEnabled.ghost || hintsEnabled.super);
   }
   if (key === 'text') {
-    document.getElementById('hintSection').style.display =
-      hintsEnabled.text ? '' : 'none';
+    const hintSection = document.getElementById('hintSection');
+    if (hintSection) hintSection.style.display = hintsEnabled.text ? '' : 'none';
   }
   if (key === 'arrow') {
     clearArrowSvg();
@@ -3352,6 +3354,40 @@ function init() {
 }
 
 init();
+</script>
+
+<!-- Distribution settings -->
+<script src="js/student-profile.js"></script>
+<script src="js/teacher-bridge.js"></script>
+<script src="js/lesson-connections.js"></script>
+<script src="js/lesson-share.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){
+var F=function(key,label,options,get,set,multiple){return {key:key,label:label,options:options,get:get,set:set,multiple:!!multiple};}; var S=LessonShare.select,C=LessonShare.checkbox;
+
+var selectedTypes={};
+var digitOptions=[['1_1','1けた・1けた'],['2_1','2けた・1けた'],['2_2','2けた・2けた'],['3_1','3けた・1けた'],['3_2','3けた・2けた'],['3_3','3けた・3けた']];
+var carryOptions=[['random','おまかせ'],['none','なし'],['1','1回'],['2','2回'],['all','ぜんぶ']];
+var originalGenerate=generateProblemByType;
+function combinations(data){
+ var ops=data.ops||[currentOp()],digits=data.digits||[document.getElementById('probDigits').value],carries=data.carries||[document.getElementById('probCarry').value],result=[];
+ ops.forEach(function(op){digits.forEach(function(digit){carries.forEach(function(carry){var ds=digit.split('_').map(Number),max=op==='sub'?ds[0]-1:Math.max(ds[0],ds[1]); if((carry==='random'||carry==='none'||(carry==='all'&&max>0)||Number(carry)<=max))result.push([op,digit,carry]);});});});return result;
+}
+generateProblemByType=function(){
+ if(Object.keys(selectedTypes).length){var choices=combinations(selectedTypes);if(choices.length){var choice=choices[Math.floor(Math.random()*choices.length)];settings.op=choice[0];applyOpUI();document.getElementById('probDigits').value=choice[1];document.getElementById('probCarry').value=choice[2];}}
+ return originalGenerate();
+};
+LessonShare.init({id:'tashi-hiki-hissan',name:'足し算・引き算の筆算',mount:'#topPage',raid:true,fields:[
+ F('ops','出題する計算（複数選択可）',[['add','足し算'],['sub','引き算']],function(){return selectedTypes.ops||[currentOp()];},function(v){selectedTypes.ops=v;},true),
+ F('digits','出題する桁数（複数選択可）',digitOptions,function(){return selectedTypes.digits||[document.getElementById('probDigits').value];},function(v){selectedTypes.digits=v;},true),
+ F('carries','くり上がり・くり下がり（複数選択可）',carryOptions,function(){return selectedTypes.carries||[document.getElementById('probCarry').value];},function(v){selectedTypes.carries=v;},true),
+ F('input','回答方法',[['keyboard','キーボード・電卓'],['handwriting','手書き']],function(){return settings.inputMode;},function(v){switchInputMode(v);}),
+ ...Object.keys(hintsEnabled).map(function(key){return F('hint-'+key,({arrow:'矢印ヒント',text:'説明ヒント',ghost:'うすい数字',super:'超ヒント'})[key],null,function(){return hintsEnabled[key];},function(v){if(hintsEnabled[key]!==v)toggleHint(key,document.createElement('button'));});})
+],validate:function(data){if(Object.keys(data).some(function(k){return ['ops','digits','carries'].includes(k);})&&!combinations(data).length)throw new Error('選択した桁数とくり上がり・くり下がりでは問題を作れません。');},afterRestore:function(){nextProblemByType();}});
+LessonRaid.init();
+var oldNext=nextProblemByType; nextProblemByType=function(){oldNext();if(window.TeacherBridge)TeacherBridge.updateProgress({step:(currentOp()==='sub'?'引き算':'足し算')+' '+currentProblem.a+'・'+currentProblem.b,screenId:'practicePage',screenName:'筆算練習'});};
+
+},0);});
 </script>
 </body>
 </html>
