@@ -2775,7 +2775,9 @@ function runAnim(animType,prevState,nextState,onDone){
 
     layer.innerHTML='';
     const n=Math.min(lA.length,lB.length);
-    if(n===0){ if(onAllDone) onAllDone(); onDone(); return; }
+    // ひく数のこの位に数字がなくても、A側に残るタイルは答えへ移動させる。
+    // ペアが0組だからと直接完了すると、905−18の百の位のように残りが瞬間移動する。
+    if(n===0){ afterAllPairs(); return; }
 
     // 「右から」結ばれるように、配列の末尾（＝最後に描かれたタイル。
     // 一の位が6〜9個等で2行に折り返す場合は最終行の右端）から逆順に処理する。

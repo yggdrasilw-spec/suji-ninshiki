@@ -1840,8 +1840,11 @@ function buildGrid(problem) {
     return parseInt(s[idx], 10);
   }
 
-  // 筆算全体の桁数
-  const totalDigits = Math.max(String(a).length, String(b).length, String(answer).length);
+  // 答えは繰り上がりで桁が増える場合があるため、表示桁数は答えも含める。
+  // ただし、＋記号は足される数・足す数の桁数の多い方のすぐ左に固定する。
+  const operandDigits = Math.max(String(a).length, String(b).length);
+  const totalDigits = Math.max(operandDigits, String(answer).length);
+  const resultOnlyDigits = totalDigits - operandDigits;
 
   const tbl = document.getElementById('calcTable');
   tbl.innerHTML = '';
@@ -1852,11 +1855,7 @@ function buildGrid(problem) {
   const rowCarry = tbl.insertRow();
   rowCarry.className = isSub ? 'carry-row borrow-row' : 'carry-row';
 
-  const signCarry = rowCarry.insertCell();
-  signCarry.className = 'sign-cell';
-
-  for (let c = 0; c < totalDigits; c++) {
-    const colFromRight = totalDigits - 1 - c;
+  function addCarryCell(colFromRight) {
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = rowCarry.insertCell();
     td.className = 'carry-cell-container';
@@ -1893,15 +1892,23 @@ function buildGrid(problem) {
       td.appendChild(carryBox);
     }
   }
+  for (let c = 0; c < resultOnlyDigits; c++) addCarryCell(totalDigits - 1 - c);
+  const signCarry = rowCarry.insertCell();
+  signCarry.className = 'sign-cell';
+  for (let c = resultOnlyDigits; c < totalDigits; c++) addCarryCell(totalDigits - 1 - c);
 
   // --- 行1: たされる数 A ---
   const rowA = tbl.insertRow();
   rowA.className = 'num-row';
 
+  for (let c = 0; c < resultOnlyDigits; c++) {
+    const td = rowA.insertCell();
+    td.className = 'num-cell empty-pos';
+  }
   const signA = rowA.insertCell();
   signA.className = 'sign-cell';
 
-  for (let c = 0; c < totalDigits; c++) {
+  for (let c = resultOnlyDigits; c < totalDigits; c++) {
     const colFromRight = totalDigits - 1 - c;
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = rowA.insertCell();
@@ -1923,11 +1930,15 @@ function buildGrid(problem) {
   const rowB = tbl.insertRow();
   rowB.className = 'num-row';
 
+  for (let c = 0; c < resultOnlyDigits; c++) {
+    const td = rowB.insertCell();
+    td.className = 'num-cell empty-pos';
+  }
   const signB = rowB.insertCell();
   signB.className = 'sign-cell';
   signB.textContent = isSub ? '－' : '＋';
 
-  for (let c = 0; c < totalDigits; c++) {
+  for (let c = resultOnlyDigits; c < totalDigits; c++) {
     const colFromRight = totalDigits - 1 - c;
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = rowB.insertCell();
@@ -1949,11 +1960,7 @@ function buildGrid(problem) {
   const ansRow = tbl.insertRow();
   ansRow.className = 'ans-row';
 
-  const signAns = ansRow.insertCell();
-  signAns.className = 'sign-cell';
-
-  for (let c = 0; c < totalDigits; c++) {
-    const colFromRight = totalDigits - 1 - c;
+  function addAnswerCell(colFromRight) {
     const pos = posNames[colFromRight] || `col-${colFromRight}`;
     const td = ansRow.insertCell();
     td.className = 'ans-cell';
@@ -1980,6 +1987,7 @@ function buildGrid(problem) {
         e.target.value = v ? v[v.length - 1] : '';
         td.classList.toggle('hasValue', !!e.target.value);
         if (e.target.value) autoAdvance(inp);
+        maybeAutoCheckAnswer();
       });
       inp.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') checkAnswer();
@@ -1991,6 +1999,10 @@ function buildGrid(problem) {
       initHandCell(td, `ans-${pos}`, false);
     }
   }
+  for (let c = 0; c < resultOnlyDigits; c++) addAnswerCell(totalDigits - 1 - c);
+  const signAns = ansRow.insertCell();
+  signAns.className = 'sign-cell';
+  for (let c = resultOnlyDigits; c < totalDigits; c++) addAnswerCell(totalDigits - 1 - c);
 
   // 初期フォーカス（一の位の答えマスへ）
   setTimeout(() => {
@@ -2038,6 +2050,7 @@ function numpadInput(digit) {
   } else {
     focusedCell.focus();
   }
+  maybeAutoCheckAnswer();
 }
 
 function numpadDelete() {
@@ -2207,6 +2220,17 @@ function getUserValue(td) {
   } else {
     return td.dataset.value !== undefined ? td.dataset.value : '';
   }
+}
+
+function maybeAutoCheckAnswer() {
+  const requiredCells = [...document.querySelectorAll('.ans-cell')]
+    .filter(td => td.dataset.correctDigit !== '' && td.dataset.correctDigit !== undefined);
+  if (!requiredCells.length) return;
+  const allFilled = requiredCells.every(td => {
+    const value = getUserValue(td);
+    return value !== '' && value !== null && value !== undefined && String(value).trim() !== '';
+  });
+  if (allFilled) checkAnswer();
 }
 
 // ===== Error analysis =====
@@ -2890,6 +2914,7 @@ async function recognizeCell(st) {
     vctx.clearRect(0, 0, st.visibleCanvas.width, st.visibleCanvas.height);
     const rctx = st.recCanvas.getContext('2d');
     rctx.fillRect(0, 0, st.recCanvas.width, st.recCanvas.height);
+    maybeAutoCheckAnswer();
   } catch (e) {
     console.warn("数字認識エラー:", e);
     tensor.dispose();
