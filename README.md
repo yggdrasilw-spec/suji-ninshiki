@@ -8,6 +8,8 @@ GitHub Pages等のHTTP(S)配信で `index.html` を開きます。モデルやTe
 
 [`warizan_renshu_hint.html`](warizan_renshu_hint.html) は、ヒント付きのわり算・筆算教材です。「入力方法」で数字ボタンと手書きを切り替えます。手書きでは式の空欄や筆算の各マスに直接書き、その場に表示される認識候補を選びます。筆算では同じ工程のマスを好きな順番で埋められ、マスの「⤢」で位置を確認しながら拡大して書けます。商・あまりと筆算の途中計算に対応し、認識モデルは手書きを選んだときだけ読み込みます。
 
+[`3nen_kakezan_hissan.html`](3nen_kakezan_hissan.html) は、3年生のかけ算の筆算⑴教材です。設定でキーボード入力と手書きを切り替えます。手書きでは答えと右上に重ねた小さい補助計算マスに好きな順番で書けます。ダブルタップまたは「拡大」で大きいキャンバスを開き、認識後の補助数字は赤字で表示します。「数字を直す」で認識結果を訂正し、「こたえあわせ」で答えと補助計算を確認できます。入力方法は端末に保存します。数字認識は同じリポジトリの `model/model.json` を使用します。旧 `sonohoka` のURLからは新しいページに移動します。
+
 ## データ・素材・クレジット
 
 - NotebookはKerasの `tf.keras.datasets.mnist.load_data()` によるMNIST読み込みを記載しています。公式情報: [MNIST database](https://yann.lecun.org/exdb/mnist/index.html)。

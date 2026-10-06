@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>かけ算の筆算⑴</title>
+<style>
+:root{--g:#1f9d57;--p:#5b5fb0;--bg:#e9f5ec;--ink:#23312b}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:#cfe3d6;font-family:"BIZ UDPGothic","Hiragino Maru Gothic ProN","Meiryo",sans-serif;color:var(--ink)}
+body{display:grid;place-items:center}
+#app{width:min(100vw,177.78vh);height:min(56.25vw,100vh);font-size:min(1.9vw,3.37vh);background:var(--bg);display:grid;grid-template-rows:auto 1fr auto;overflow:hidden}
+header{display:flex;gap:.6em;align-items:center;padding:.3em .8em;background:var(--g);color:#fff}
+header b{white-space:nowrap}nav{display:flex;gap:.3em;flex:1;justify-content:flex-end}
+nav button{border:0;border-radius:.5em;padding:.05em .55em;font:inherit;font-size:.8em;background:#fff6;color:#fff;cursor:pointer}
+nav .on{background:#fff;color:var(--g)}nav .ok::after{content:"✓"}
+main{display:grid;grid-template-columns:1fr 1.05fr;grid-template-rows:auto 1fr auto auto;grid-template-areas:"q q" "L g" "hb hb" "m m";gap:.4em;padding:.4em;min-height:0;font-size:.85em}
+#q{grid-area:q}#L{grid-area:L;display:flex;flex-direction:column;gap:.4em;min-height:0}#L .pn{flex:1;min-height:0}#g{grid-area:g}#m{grid-area:m}
+.pn{position:relative;background:#fff;border-radius:.8em;padding:1.2em .5em .3em;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3em;min-height:2.2em}
+.pn::before{content:attr(data-l);position:absolute;top:0;left:0;font-size:.7em;background:#8aa;color:#fff;border-radius:.8em 0 .8em 0;padding:0 .9em}
+.pn.on{box-shadow:0 0 0 3px #e08a1e}#q,#m{align-items:flex-start;padding-left:3.6em;text-align:left;justify-content:center}
+#hb{grid-area:hb;display:flex;gap:.6em;align-items:center;background:#fffbe6;border-radius:.8em;padding:.4em .7em}#h{font-size:1.1em;line-height:1.55;flex:1}
+.t{color:#fff;border-radius:.4em;padding:.1em .7em;background:var(--g);white-space:nowrap}
+.t図{background:var(--p)}.t式{background:#e08a1e}.tことば{background:#9b4fb0}.t筆算{background:#16899a}.t練習{background:#d6493f}
+.tp{width:100%}.br{text-align:center;border-bottom:2px dotted #888;border-radius:50% 50% 0 0;margin:0 3%}
+.bars{display:flex}.bars b{flex:1;text-align:center;padding:.3em 0;background:#fbe0dc;border:1px solid #e9a;font-weight:400}.bars b:first-child{background:#f09890}
+.c{display:inline-flex;align-items:center;justify-content:center;width:1.9em;height:1.9em;border-radius:50%;font-style:normal;font-size:.7em;margin:.1em;border:2px solid #0003}
+.c1{background:#f4a1b5;width:1.3em;height:1.3em}.c10{background:#ffd93d}.c100{background:#7fb8ee}.c1000{background:#9bd68d}
+.cols{display:flex;gap:.8em}.col{border:2px solid #0002;padding:.3em;border-radius:.5em;display:flex;flex-wrap:wrap;width:2.9em;justify-content:center}
+.eq{display:flex;flex-direction:column;gap:.2em;font-size:1.1em;background:#fff3c4;padding:.4em .8em;border-radius:.6em}
+.bl{display:flex;gap:.4em}.pc{border:2px solid #0002;border-radius:.5em;padding:.2em;text-align:center}
+.pc h5{font-size:.9em;background:#fff9;border-radius:.3em}.pc .r{background:#fff9;margin:.1em 0;min-height:1.3em;display:flex;justify-content:center;flex-wrap:wrap}.pc em{font-style:normal;font-size:.8em}
+.bl .c{font-size:.5em}.z{opacity:.3;font-style:normal}
+.pt{display:flex;flex-direction:column;gap:.25em}.pt p{padding:.15em .6em;border-radius:.4em}.pt .on{outline:3px solid #d6493f}.pt .sm{background:#eee}.pt s{text-decoration:none;font-weight:700}
+.pat{border-collapse:collapse;font-size:1.7em}.pat td{padding:.05em .25em;text-align:center;white-space:nowrap}.pat .r{text-align:right}.pat .a{color:#d6493f;font-size:.5em;font-weight:700}.pat .bk{writing-mode:vertical-rl;color:#d6493f;font-size:.5em;font-weight:700;border:3px solid #d6493f;border-radius:.8em;padding:0 .3em}
+.dg{display:inline-block;width:.8em;font-style:normal;text-align:center}
+.hw{position:relative;container-type:inline-size;margin:auto}.ci{position:absolute;border:2px solid var(--p);border-radius:.2em;text-align:center;padding:0;background:transparent;color:var(--ink);font:inherit}.cc{border-color:#d6493f;color:#d6493f}
+input{font:inherit;width:4em;border:2px solid var(--p);border-radius:.4em;padding:.1em .3em}
+button{font:inherit}#h button,footer button{border:0;border-radius:.6em;background:var(--g);color:#fff;padding:.2em .9em;cursor:pointer}button:disabled{background:#aaa!important;cursor:default}
+footer{display:flex;justify-content:space-between;align-items:center;padding:.3em .8em;background:#fff}
+.qq{display:flex;align-items:center;gap:.8em}
+button:focus-visible,input:focus-visible{outline:3px solid #e08a1e}
+.w0{background:#fcd5de}.w1{background:#fff0a8}.w2{background:#cfe6fb}.w3{background:#d7f0d2}
+</style></head><body><div id="app">
+<header><b id="ttl"></b><nav id="nav"></nav><button id="settingsOpen" type="button">⚙ 設定</button></header>
+<main><div id="q" class="pn"></div><div id="L"><div id="f" class="pn"></div><div id="e" class="pn"></div></div><div id="g" class="pn"></div><div id="hb"><span class="t" id="tag"></span><div id="h"></div></div><div id="m" class="pn"></div></main>
+<footer><button id="bk" onclick="mv(-1)">← もどる</button><span id="dots"></span><button onclick="say()">📖 よむ</button><button id="sb" onclick="sm()"></button><button id="nx" onclick="mv(1)">つぎへ →</button></footer></div>
+<dialog id="settings"><h2>設定</h2><label>筆算の入力方法 <select id="inputMode"><option value="keyboard">キーボード（順番に入力）</option><option value="handwriting">手書き（好きなマスから）</option></select></label><p>手書き：マスに直接書けます。ダブルタップで拡大します。補助計算は右上の小さいマスに書きます。</p><button type="button" id="settingsClose">とじる</button></dialog>
+<link rel="stylesheet" href="css/multiplication-handwriting.css">
+<script src="js/multiplication-handwriting.js"></script>
+<script>
+const $=s=>document.querySelector(s),K=['一','十','百','千'],D=a=>[...String(a)].map(Number),S=44;
+const PC=['#f4a1b5','#ffd93d','#7fb8ee','#9bd68d'],PD=['#d94a73','#c98f00','#2a7fd0','#3c9a4a'];
+const coin=(v,n=1)=>`<i class="c c${v}">${v}</i>`.repeat(n);
+const tape=(u,n,un,cu='こ')=>{const x0=26,L=n>5?270:300,sw=L/n,x1=x0+L,m=(x0+x1)/2,fs=Math.min(15,sw/3.6);
+let s=`<svg viewBox="0 0 360 190" style="width:100%;max-height:100%"><path d="M${x0},100C${x0},18 ${x1},18 ${x1},100" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="4 3"/><rect x="${m-32}" y="26" width="64" height="28" rx="4" fill="#fff" stroke="#555"/><text x="${m}" y="40" font-size="20" text-anchor="middle" dominant-baseline="central">□${un}</text>`;
+for(let i=0;i<n;i++){const a=x0+i*sw;s+=`<rect x="${a}" y="100" width="${sw}" height="40" fill="${i?'#fbe0dc':'#f09890'}" stroke="#e9a"/><path d="M${a+5},98Q${a+sw/2},68 ${a+sw-5},98" fill="none" stroke="#555" stroke-dasharray="3 3"/><text x="${a+sw/2}" y="72" font-size="${fs}" text-anchor="middle" dominant-baseline="central">${u}${un}</text>`}
+s+=`<path d="M${x0},165H${x1+22}" stroke="#333" stroke-width="2"/>`;for(let i=0;i<=n;i++){const x=x0+i*sw;s+=`<path d="M${x},159V171" stroke="#333" stroke-width="2"/><text x="${x}" y="183" font-size="14" text-anchor="middle">${i}</text>`}
+return s+`<text x="${x1+36}" y="168" font-size="13" text-anchor="middle">(${cu})</text></svg>`};
+const SVG=(w,h,b)=>`<svg viewBox="0 0 ${w} ${h}" style="height:5.4em;width:auto;flex:none">${b}</svg>`;
+const tg=(x,y,t)=>`<g transform="translate(${x},${y}) rotate(-5)"><rect width="${8*t.length+14}" height="26" rx="3" fill="#fff8e1" stroke="#b98"/><circle cx="7" cy="7" r="2.5" fill="#b98"/><text x="${(8*t.length+14)/2}" y="14" font-size="14" text-anchor="middle" dominant-baseline="central" fill="#7a4b1f">${t}</text></g>`;
+const ILL={
+ame:t=>SVG(170,120,`<ellipse cx="51" cy="113" rx="38" ry="5" fill="#0002"/><path d="M24,30Q19,42 18,62V100Q18,112 30,112H72Q84,112 84,100V62Q83,42 78,30Z" fill="#dff1f7" stroke="#8ab" stroke-width="2"/>${[...Array(22).keys()].map(i=>{const x=31+i*29%42,y=46+i*17%58;return `<circle cx="${x}" cy="${y}" r="7" fill="${['#e8504f','#f4b400','#4db26a','#4a8fe0','#d86bb4','#ff8a3d'][i%6]}" stroke="#0003"/><circle cx="${x-2}" cy="${y-2}" r="2" fill="#fff9"/>`}).join('')}<rect x="20" y="18" width="62" height="13" rx="5" fill="#c9a23d" stroke="#8a6a1a"/><path d="M26,40Q24,70 26,100" stroke="#fff" stroke-width="3" opacity=".6" fill="none"/>${tg(96,40,t)}`),
+paper:t=>SVG(190,120,`${['#f7a8bd','#ffe08a','#9fd0f5','#a9dfb0'].map((c,i)=>`<g transform="translate(0,${-i*8})"><path d="M22,84L112,84L138,100L48,100Z" fill="${c}" stroke="#0003"/><path d="M48,100L138,100V108H48Z" fill="${c}" stroke="#0003"/><path d="M22,84V92L48,108V100Z" fill="${c}" stroke="#0003" opacity=".8"/></g>`).join('')}${tg(130,20,t)}`),
+sq:t=>SVG(150,110,`<rect x="60" y="14" width="76" height="76" fill="#e6f3ff" stroke="#23312b" stroke-width="3"/><path d="M48,14V90M44,14H52M44,90H52" stroke="#555" stroke-width="2"/><text x="42" y="52" font-size="14" text-anchor="end" dominant-baseline="central">${t}</text>`),
+ribbon:t=>SVG(180,120,`<ellipse cx="50" cy="112" rx="40" ry="5" fill="#0002"/><ellipse cx="54" cy="60" rx="36" ry="42" fill="#c2335f"/><ellipse cx="46" cy="58" rx="34" ry="40" fill="#f06292" stroke="#b02a55" stroke-width="2"/><ellipse cx="46" cy="58" rx="22" ry="27" fill="none" stroke="#b02a55" opacity=".5"/><ellipse cx="46" cy="58" rx="11" ry="14" fill="#fff" stroke="#b02a55"/><path d="M60,96C90,112 110,88 150,104L152,114C112,98 92,122 58,104Z" fill="#f06292" stroke="#b02a55"/>${tg(100,18,t)}`),
+okashi:t=>SVG(190,110,`${[0,1].map(i=>`<g transform="translate(${8+i*92},44)"><rect width="82" height="44" rx="4" fill="#8d5a2b" stroke="#5a3515" stroke-width="2"/><rect x="5" y="5" width="72" height="34" rx="3" fill="#f3d9a8"/>${[0,1,2,3,4].map(j=>`<circle cx="${14+j*13.5}" cy="22" r="6" fill="#d9a35b" stroke="#8a5a22"/><circle cx="${13+j*13.5}" cy="21" r="1.5" fill="#5a3515"/>`).join('')}</g>`).join('')}${tg(60,8,t)}`),
+tulip:()=>SVG(170,110,`<rect x="6" y="20" width="158" height="84" rx="6" fill="#8b6b4a"/>${[0,1,2].map(r=>[0,1,2,3,4].map(c=>`<g transform="translate(${26+c*30},${44+r*26})"><path d="M0,-8Q8,-2 0,10Q-8,-2 0,-8Z" fill="#f3e2b5" stroke="#a8884a"/><path d="M0,-8Q-1,-14 3,-17" stroke="#4db26a" stroke-width="2" fill="none"/></g>`).join('')).join('')}`),
+juice:(t,n=3)=>SVG(190,120,`${[...Array(n).keys()].map(i=>`<g transform="translate(${14+i*52},8)"><rect x="12" y="0" width="14" height="12" rx="2" fill="#2f7d4f"/><path d="M12,12H26L36,30V98Q36,106 28,106H10Q2,106 2,98V30Z" fill="#ffb347" stroke="#b86a00" stroke-width="2"/><rect x="2" y="48" width="34" height="30" fill="#fff" opacity=".85"/><text x="19" y="63" font-size="9" text-anchor="middle" dominant-baseline="central" fill="#b86a00">${t}</text></g>`).join('')}`),
+pear:()=>SVG(150,100,`<rect x="8" y="20" width="134" height="66" rx="6" fill="#c9a36b" stroke="#8a6a3a" stroke-width="2"/>${[...Array(8).keys()].map(i=>`<ellipse cx="${30+(i%4)*30}" cy="${44+(i>>2)*26}" rx="12" ry="13" fill="#ffa63d" stroke="#c46a00"/><path d="M${30+(i%4)*30},${31+(i>>2)*26}v-5" stroke="#6a4a2a" stroke-width="2"/>`).join('')}`)};
+const eq=(...l)=>`<div class="eq">${l.map(x=>`<p>${x}</p>`).join('')}</div>`;
+const big=(d,p,b)=>`<div class="cols">${`<div class="col w${String(p).length-1}">${coin(p,d)}</div>`.repeat(b)}</div>`;
+const nd=n=>[...String(n)].reverse().map((c,i)=>`<i class="dg w${i}">${c}</i>`).reverse().join('');
+const pat=(m,b,ms)=>{const r=[];ms.forEach((x,i)=>{if(i){const q=`↓${x/ms[i-1]}倍`;r.push(`<tr><td class="a">${q}</td><td></td><td></td><td></td><td class="a">${q}</td></tr>`)}r.push(`<tr><td></td><td class="r">${nd(m*x)}</td><td>×${b}＝</td><td class="r">${nd(m*x*b)}</td><td></td></tr>`)});
+if(ms.length>2){const o=`<td class="bk" rowspan="${r.length}">${ms[ms.length-1]}倍</td>`;r[0]=r[0].replace('<tr>','<tr>'+o).replace('</tr>',o+'</tr>')}
+return `<table class="pat">${r.join('')}</table>`};
+function calc(a,b){let c=0;return D(a).reverse().map(d=>{const p0=d*b,p=p0+c,r={d,p0,cin:c,p,w:p%10,up:p/10|0};c=r.up;return r})}
+function seq(a,b){const R=calc(a,b),n=R.length,q=[];R.forEach((r,i)=>{q.push(['r'+i,r.w]);if(i==n-1){if(r.up)q.push(['r'+n,r.up])}else if(r.up)q.push(['c'+(i+1),r.up])});return q}
+function hs(a,b,o={}){const A=D(a),n=A.length,W=(n+2)*S,H=3*S,x=p=>(n+1-p)*S,c=p=>x(p)+S/2,V=o.vals||{},
+T=(t,X,Y,z=34,f='#23312b',an='middle')=>`<text x="${X}" y="${Y}" font-size="${z}" text-anchor="${an}" dominant-baseline="central" fill="${f}">${t}</text>`;
+let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block"><defs><filter id="gl" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter><marker id="ah" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0L9,4.5L0,9z" fill="context-stroke"/></marker></defs>`;
+for(let i=0;i<=n+2;i++)s+=`<path d="M${i*S},0V${H}" stroke="#d5dde0"/>`;
+for(let j=0;j<=3;j++)s+=`<path d="M0,${j*S}H${W}" stroke="#d5dde0"/>`;
+A.forEach((d,i)=>{const p=n-1-i;s+=`<rect x="${x(p)}" y="0" width="${S}" height="${S}" fill="${PC[p]}" opacity=".65"/>`});
+for(let p=0;p<n;p++)s+=`<rect x="${x(p)+3}" y="${2*S+3}" width="${S-6}" height="${S-6}" fill="none" stroke="#9ab" stroke-dasharray="3 3"/>`;
+const u=o.cur;if(u>=0&&u<n){s+=`<rect x="${x(u)}" y="${2*S}" width="${S}" height="${S}" fill="${PC[u]}" filter="url(#gl)"/><rect x="${x(u)}" y="${2*S}" width="${S}" height="${S}" fill="${PC[u]}" opacity=".7" stroke="${PD[u]}" stroke-width="2"/>`;
+s+=`<path d="M${c(0)},${S+16}L${c(u)},${S-9}" stroke="${PD[u]}" stroke-width="3" marker-end="url(#ah)"/>`}
+s+=`<path d="M${S*.4},${2*S}H${W}" stroke="#23312b" stroke-width="3"/>`+T('×',S*.5,1.5*S)+T(b,c(0),1.5*S);
+A.forEach((d,i)=>{s+=T(d,c(n-1-i),S/2)});
+if(!o.inp)calc(a,b).forEach((r,i)=>{if(i<(o.k||0)){s+=T(r.w,c(i),2.5*S);if(i==n-1){if(r.up)s+=T(r.up,c(n),2.5*S)}else if(r.up)s+=T(r.up,x(i+1)+S-4,2*S+12,17,'#d6493f','end')}});
+else Object.entries(V).forEach(([k,v])=>{const p=+k.slice(1);s+=k[0]=='c'?T(v.val,x(p)+S-4,2*S+12,17,'#d6493f','end'):T(v.val,c(p),2.5*S)});
+s+='</svg>';let ip='';
+if(o.act){const p=+o.act.slice(1),cc=o.act[0]=='c',w=cc?S/2:S,h=cc?S*.45:S,l=cc?x(p)+S/2:x(p),t=2*S;
+ip=`<input class="ci ${cc?'cc':''}" maxlength="1" inputmode="numeric" style="left:${l/W*100}%;top:${t/H*100}%;width:${w/W*100}%;height:${h/H*100}%;font-size:${(cc?20:34)/W*100}cqw">`}
+return `<div class="hw" style="width:min(100%,${W*2}px)">${s}${ip}</div>`}
+const parts=(a,b,hi=-1,sum=1)=>`<div class="pt">${D(a).reverse().map((d,i)=>`<p class="${i==hi?'on':''} w${i}">${d*10**i}×${b}＝<s>${d*b*10**i}</s></p>`).reverse().join('')}${sum?`<p class="sm">あわせて <s>${a*b}</s></p>`:''}</div>`;
+const bl=(a,b)=>{const A=D(a),n=A.length;return `<div class="bl">${A.map((d,i)=>{const q=n-1-i,v=10**q;return `<div class="pc w${q}"><h5>${K[q]}</h5>${`<div class="r">${coin(v,d)||'<i class=z>0</i>'}</div>`.repeat(b)}<em>${d*v}×${b}</em></div>`}).join('')}</div>`};
+const E={e:'',g:'',m:'',i:''};
+function mk10(d,p,b,story){const a=d*p,A=a*b;return[
+{t:'課題',q:story,...E,i:ILL.ame(`${a}円`),h:'まず 場面を 読もう。何を もとめるのかな。',f:tape(a,b,'円')},
+{t:'式',h:`ねだん×買う数＝代金 だから、式は ${a}×${b}。${a}円は ${p}円玉が ${d}こ分。`,e:eq(`${a}×${b}`)},
+{t:'図',h:`${p}円玉を ならべると、1つ分は ${d}こ。${b}つ分で、${p}円玉は ${d}×${b}＝${d*b}こ。`,f:big(d,p,b)},
+{t:'ことば',h:`${p}が ${d*b}こ だから ${A}。答え ${A}円`,e:eq(`${d}×${b}＝${d*b}`,`${p}が ${d*b}こ → ${A}`),g:p==10?pat(d,b,[1,10]):'',m:`${p}を もとにすれば、九九を 使って 計算できる。`}]}
+function mk2(story,sh,u,a,b,cu,ill){const A=D(a),n=A.length,R=calc(a,b),sp=A.map((d,i)=>d*10**(n-1-i)).filter(x=>x).join('と');return[
+{t:'課題',q:story,...E,i:ill||'',h:'まず 場面を 読もう。',f:sh?tape(a,b,u,cu):eq(`${a}×${b}`)},
+{t:'式',h:sh?`${sh} だから、式は ${a}×${b}。まだ 習っていない かけ算だね。どうしよう？`:`式は ${a}×${b}。位ごとに 分けて 考えよう。`,e:eq(`${a}×${b}`)},
+{t:'図',h:`${a}を ${sp} に 分けて 考える。${b}つ分を、位ごとに ならべたよ。`,f:bl(a,b)},
+{t:'式',h:'位ごとに 九九で 計算して、あわせる。',e:parts(a,b)},
+{t:'筆算',h:'この 計算を たてに 書くのが 筆算。位を たてに そろえて 書く。かけられる数の 各位に 位の 色を つけたよ。',g:hs(a,b,{k:0})},
+...R.map((r,i)=>({t:'筆算',h:`${K[i]}の位: かける数の ${b}から ${r.d}へ 矢印。${r.d}×${b}＝${r.p0}。${r.cin?`くり上げた ${r.cin}を たして ${r.p}。`:''}${i==n-1?`${r.p}を 書く。`:r.up?`${r.w}を ${K[i]}の位に 書いて、${r.up}を ${K[i+1]}の位の 右上に 小さく くり上げる。`:`${r.w}を ${K[i]}の位に 書く。`}`,g:hs(a,b,{k:i+1,cur:i}),e:parts(a,b,i)})),
+{t:'ことば',h:`答えは ${a*b}${u}。`,g:hs(a,b,{k:n}),e:parts(a,b),m:'位を そろえて 書き、一の位から じゅんに 計算する。九九が 使えるから 筆算できる。'}]}
+const pS=(d,b)=>[{t:'図',on:'g',h:`${d}×${b}＝${d*b} の ${d} を 10倍に すると ${d*10}。位を たてに そろえて 見よう。${d}は 十の位に 上がり、答えの ${d*b}も 10倍で ${d*b*10}。`,g:pat(d,b,[1,10])},
+{t:'ことば',on:'g',h:`${d*100}×${b}は、${d}を 100倍に したよ。`,g:pat(d,b,[1,10,100]),m:'かけられる数が 10倍、100倍に なると、答えも 10倍、100倍に なる。'}];
+const kim=[
+{t:'課題',q:'1こ 45円の クッキーが、1ふくろに 5こずつ 入っています。2ふくろ 買うと、代金は いくらですか。',...E,i:ILL.okashi('45円'),h:'まず 場面を 読もう。',f:eq('45円 × 5こ × 2ふくろ')},
+{t:'式',h:'ゆい: 1ふくろの 代金を 先に もとめた。',e:eq('45×5＝225','225×2＝450')},
+{t:'式',h:'そうた: クッキーの 数を 先に もとめた。',e:eq('ゆい　45×5＝225 → 225×2＝450','そうた　5×2＝10 → 45×10＝450')},
+{t:'筆算',h:'2人の 考えを、それぞれ 1つの 式に 表そう。（　）の 中を 先に 計算するよ。',g:eq('ゆい　(45×5)×2＝450','そうた　45×(5×2)＝450')},
+{t:'ことば',h:'どちらも 答えは 450円。',m:'3つの 数の かけ算では、はじめの 2つを 先に 計算しても、あとの 2つを 先に 計算しても、答えは 同じに なる。(45×5)×2＝45×(5×2)'}];
+const ST=[
+{n:'何十のかけ算',gl:'くらべよう',s:[...mk10(4,10,2,'1こ 40円の ビー玉を、2こ 買います。代金は いくらですか。')],p:['20×4','60×5','70×8']},
+{n:'何百のかけ算',gl:'くらべよう',s:[...mk10(4,100,2,'1つ 400円の ビー玉の びんを、2つ 買います。代金は いくらですか。'),...pS(4,2)],p:['200×5','600×4','300×3']},
+{n:'2けた×1けた（くり上がりなし）',s:mk2('1まい 32円の おり紙を、3まい 買います。代金は いくらですか。','ねだん×買う数＝代金','円',32,3,'まい',ILL.paper('32円')),p:['21×4','42×2','13×3']},
+{n:'2けた×1けた（くり上がりあり）',s:[...mk2('1つの 辺が 18cmの 正方形の、まわりの 長さは 何cmですか。','1辺の長さ×4＝まわりの長さ','cm',18,4,'辺',ILL.sq('18cm')),...mk2('38×3を 筆算で しましょう。','','',38,3)],p:['17×5','24×4','46×3']},
+{n:'3けた×1けた',s:mk2('1mの ねだんが 421円の ビニールテープを、2m 買います。代金は いくらですか。','ねだん×買う長さ＝代金','円',421,2,'m',ILL.ribbon('421円')),p:['324×2','132×3','402×2']},
+{n:'3けた×1けた（くり上がりあり）',s:mk2('758×4を 筆算で しましょう。答えが 4けたに なるよ。','','',758,4),p:['216×4','549×3','683×6']},
+{n:'かけ算のきまり',gl:'しき',s:kim,p:['70×2×4','246×5×2','50×3×2']},
+{n:'まとめの もんだい',s:[{t:'課題',q:'かけ算の 筆算⑴の まとめ。2けたや 3けたの かけ算が 正しく できるか、たしかめよう。',...E,h:'ここまでの 学習を ふりかえろう。',f:eq('かけられる数が','2けたや 3けたの かけ算')}],p:['40×6','500×4','15×3','62×4','86×6','305×7','721×4','864×9',
+{q:'18×4',i:ILL.tulip(),s:'ひまわりの たねを、1れつに 18こずつ、4れつ まきます。全部で 何こ いるでしょうか。'},
+{q:'124×3',i:ILL.juice('360mL',3),s:'360mL入りの ジュースを 3本 買います。1本 124円です。代金は いくらですか。'},
+{q:'360×3',i:ILL.juice('360mL',3),s:'360mL入りの ジュースを 3本 買います。全部で 何mLですか。'},
+{q:'53×6',s:'53×6の 筆算の 答えが 3018 に なっていたよ。50×6 だから 答えは だいたい 300。正しい 答えは？'},
+{q:'504×3',s:'504×3の 筆算の 答えが 152 に なっていたよ。500×3 に 近い 数に なるはず。正しい 答えは？'},
+'80×2×4','37×2×5','400×2×3']},
+{n:'かんがえかたを つなげよう',s:[...mk2('ゆいさんは、365×4の 計算を せつ明しています。数の しくみに 注目して、位ごとに 計算しよう。','','',365,4),
+{t:'課題',q:'かいとさんは、5×28×2 を くふうして 計算しました。5×28は まだ 習っていないけど…。',...E,h:'かけ算の きまりを 使って くふうしたよ。'},
+{t:'式',h:'じゅんばんを かえる。5×28×2＝28×5×2＝28×(5×2)',e:eq('5×28×2','＝28×5×2','＝28×(5×2)','＝28×10＝280')},
+{t:'ことば',h:'答えは 280。',m:'かけ算の きまりを 生かして、10や 100に なる 組を 先に 計算すると、らくに 計算できる。'}],p:['64×5×2','53×2×5','47×5×2']},
+{n:'ふくしゅう・キリのいい数を つかおう',s:[{t:'課題',q:'これまでの 計算を ふりかえろう。さいごは「キリのいい 数を 使って あそぼう」だよ。',...E,h:'かけ算・わり算・たし算・ひき算の ふくしゅうだよ。'}],p:['6×10','8×7','0×5','56÷7','45÷9','72÷8',
+{q:'60÷8',a:8,i:ILL.pear(),s:'みかんが 60こ あります。1ふくろに 8こずつ 入れます。全部 入れるには、ふくろは 何ふくろ あれば よいでしょうか。'},
+{q:'27+39',s:'あ 27＋40＝67 を もとにして、い 27＋39 の 答えを もとめよう。39は 40より 1 小さいよ。'},
+{q:'48+28',s:'あ 48＋30＝78 を もとにして、い 48＋28 の 答えを もとめよう。28は 30より 2 小さいよ。'},
+{q:'53-29',s:'あ 53－30＝23 を もとにして、い 53－29 の 答えを もとめよう。ひく数が 1 小さいと…？'},
+{q:'72-38',s:'あ 72－40＝32 を もとにして、い 72－38 の 答えを もとめよう。ひく数が 2 小さいと…？'}]}];
+const nz=s=>s.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248));
+const val=q=>Function('return '+q.replace(/×/g,'*').replace(/÷/g,'/'))(),kind=q=>{const n=q.split(/[×÷+-]/).map(Number);if(/[+\-÷]/.test(q))return 'x';if(n.length==3)return 'k';return n[0]<10?'x':D(n[0]).filter(x=>x).length==1?'t':'h'};
+ST.forEach(s=>s.s=[...s.s,...s.p.map(q=>({t:'練習',...(typeof q=='string'?{q}:q)}))]);
+let AC,mute=false;try{mute=localStorage.kms=='1'}catch(e){}
+const snd=t=>{if(mute)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const N={pop:[[880,.07]],ok:[[660,.1],[880,.1],[1320,.2]],ng:[[330,.12,'triangle'],[247,.22,'triangle']],tap:[[520,.04]],fan:[[523,.12],[659,.12],[784,.12],[1047,.34]]}[t];let a=AC.currentTime;N.forEach(([f,d,ty])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=ty||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,a);g.gain.exponentialRampToValueAtTime(.18,a+.01);g.gain.exponentialRampToValueAtTime(.0001,a+d);o.connect(g);g.connect(AC.destination);o.start(a);o.stop(a+d+.02);a+=d*.9})}catch(e){}};
+function sb(){$('#sb').textContent=mute?'🔇 おと OFF':'🔊 おと ON'}
+function sm(){mute=!mute;try{localStorage.kms=mute?'1':'0'}catch(e){}sb();snd('pop')}
+const MAP={課題:'q',図:'f',式:'e',筆算:'g',ことば:'m'};
+let S0=0,I=0,ok=0,miss=0,P=null,done=[];try{done=JSON.parse(localStorage.kh||'[]')}catch(e){}
+function R(){multiplicationHandwriting.reset();const st=ST[S0],sp=st.s[I],pr=sp.t=='練習';ok=0;miss=0;P=null;
+$('#ttl').textContent=`${S0+1}. ${st.n}`;
+$('#nav').innerHTML=ST.map((x,i)=>`<button class="${i==S0?'on':''} ${done[i]?'ok':''}" onclick="S0=${i};I=0;R()">${i+1}</button>`).join('');
+const o={};if(pr){o.q=sp.s||`${sp.q} を 計算しよう。`;o.i=sp.i||''}else st.s.slice(0,I+1).forEach(x=>{if(x.t!='練習')for(const k of 'qfegmi')if(x[k]!=null)o[k]=x[k]});
+const L={q:'課題',f:'図',e:'式',g:st.gl||'ひっ算',m:'ことば'};
+for(const k in L){const el=$('#'+k);el.dataset.l=L[k];el.innerHTML=k=='q'?`<div class="qq"><span>${o.q||''}</span>${o.i||''}</div>`:o[k]||'';el.classList.toggle('on',!pr&&MAP[sp.on||sp.t]==k)}
+$('#tag').textContent=sp.t;$('#tag').className='t t'+sp.t;
+if(pr)pinit(sp);else $('#h').innerHTML=sp.h;
+$('#dots').textContent=`${I+1} / ${st.s.length}`;$('#bk').disabled=!I&&!S0;
+$('#nx').textContent=I==st.s.length-1?(S0==ST.length-1?'おわり':'つぎのステージ →'):'つぎへ →';$('#nx').disabled=pr;if(!pr)document.activeElement.blur()}
+function pinit(sp){const n=sp.q.split(/[×÷+-]/).map(Number);
+if(kind(sp.q)=='h'||(multiplicationHandwriting.enabled()&&kind(sp.q)=='t')){P={a:n[0],b:n[1],seq:seq(n[0],n[1]),idx:0,vals:{},hint:0,miss:0};$('#h').innerHTML=`${sp.q} を 筆算で。マスに 数を 入れよう。 <button onclick="hint()">ヒント</button> <b id="fb"></b>`;gridR()}
+else{$('#h').innerHTML=`${sp.q} ＝ <input id="in" type="text" inputmode="numeric" autocomplete="off"> <button onclick="chk()">こたえあわせ</button> <b id="fb"></b>`;$('#in').focus()}}
+function gridR(){const{a,b,seq:q,idx:i,vals}=P,n=D(a).length,key=i<q.length?q[i][0]:null,cur=key?(key[0]=='r'?Math.min(+key.slice(1),n-1):+key.slice(1)-1):-1;
+if(multiplicationHandwriting.enabled()){ $('#g').innerHTML=hs(a,b,{inp:1});$('#f').innerHTML=P.hint?bl(a,b):'';$('#e').innerHTML=P.hint?parts(a,b,cur,0):'';multiplicationHandwriting.mount(P);return; }
+$('#g').innerHTML=hs(a,b,{inp:1,vals,act:key,cur:P.hint?cur:-1});$('#f').innerHTML=P.hint?bl(a,b):'';$('#e').innerHTML=P.hint?parts(a,b,cur,0):'';
+if(key&&P.hint){const r=calc(a,b)[cur];$('#fb').textContent=`${P.miss?'おしい！ ':''}${K[cur]}の位: ${b}から ${r.d}へ。${r.d}×${b}＝${r.p0}${r.cin?`、くり上げた ${r.cin}を たして ${r.p}`:''}。${key[0]=='c'?`${r.up}を 次の位の マスの 右上に 小さく 書く。`:key=='r'+n&&n>0&&cur==n-1&&key!='r'+cur?`${r.up}を そのまま 書く。`:`${r.w}を 書く。`}`}
+const x=$('#g .ci');if(x)x.focus()}
+function hint(){if(P&&!ok){P.hint=1;gridR()}}
+function gk(v){if(!P||P.idx>=P.seq.length||!/^\d$/.test(v))return;const[key,e]=P.seq[P.idx];
+if(v==String(e)){P.vals[key]={val:e};P.idx++;P.miss=0;P.hint=0;snd(P.idx>=P.seq.length?'ok':'pop')}else{snd('ng');P.miss++;P.hint=1;if(P.miss>=4){P.vals[key]={val:e};P.idx++;P.miss=0}}
+gridR();if(P.idx>=P.seq.length){ok=1;$('#nx').disabled=0;$('#fb').textContent=`せいかい！ 答えは ${P.a*P.b}（Enterで つぎへ）`}else if(P.miss&&!P.hint)$('#fb').textContent='おしい！ もういちど。'}
+function chk(){const sp=ST[S0].s[I],n=sp.q.split(/[×÷+-]/).map(Number),ans=sp.a??val(sp.q),k=kind(sp.q),v=nz($('#in').value).trim();
+if(v!==''&&+v==ans){snd('ok');ok=1;$('#fb').textContent=`せいかい！ 答えは ${ans}（Enterで つぎへ）`;$('#nx').disabled=0;return}
+miss++;snd('ng');let h;
+if(k=='t'){const b=10**(String(n[0]).length-1);h=pat(n[0]/b,n[1],[1,b])}
+else if(k=='k')h=eq(`${n[1]}×${n[2]}＝${n[1]*n[2]} を 先に`,`${n[0]}×${n[1]*n[2]}＝ ?`);
+else h=eq('九九や、わかっている 計算を もとにして','考えてみよう');
+$('#g').innerHTML=h;
+if(miss>=2){$('#fb').textContent=`答えは ${ans}。ヒントを見て たしかめよう。`;$('#nx').disabled=0}else $('#fb').textContent='おしい！ ヒントを 見て もういちど。'}
+function mv(d){const st=ST[S0];snd(d>0&&I==st.s.length-1?'fan':'tap');if(d>0&&I==st.s.length-1){done[S0]=1;try{localStorage.kh=JSON.stringify(done)}catch(e){}if(S0<ST.length-1){S0++;I=0}else{alert('ぜんぶ クリア！ よくがんばったね');return}}else if(d<0&&I==0){S0--;I=ST[S0].s.length-1}else I+=d;R()}
+const DIC=[['一の位','いちのくらい'],['十の位','じゅうのくらい'],['百の位','ひゃくのくらい'],['筆算','ひっさん'],['何十','なんじゅう'],['何百','なんびゃく'],['位','くらい'],['代金','だいきん'],['円','えん'],['倍','ばい'],['式','しき'],['答え','こたえ'],['九九','くく'],['×','かける'],['÷','わる'],['+','たす'],['-','ひく'],['mL','ミリリットル'],['cm','センチメートル'],['＝','は'],['1つ','ひとつ'],['2つ','ふたつ'],['3つ','みっつ'],['4つ','よっつ'],['1こ','いっこ'],['2こ','にこ'],['3こ','さんこ'],['4こ','よんこ'],['5こ','ごこ'],['6こ','ろっこ'],['1箱','ひとはこ'],['2箱','ふたはこ'],['箱','はこ'],['1まい','いちまい'],['先','さき'],['数','かず'],['同じ','おなじ'],['計算','けいさん'],['書','か'],['正方形','せいほうけい'],['分けて','わけて'],['分','ぶん'],['辺','へん'],['長さ','ながさ'],['十','じゅう'],['百','ひゃく'],['一','いち'],['（',''],['）','']];
+function say(){const sp=ST[S0].s[I],e=document.createElement('div');e.innerHTML=sp.t=='練習'?`${sp.s||''} ${sp.q}は いくつ`:sp.h;const u=new SpeechSynthesisUtterance(DIC.reduce((s,[a,b])=>s.split(a).join(b),e.textContent));u.lang='ja-JP';u.rate=.9;speechSynthesis.cancel();speechSynthesis.speak(u)}
+$('#g').addEventListener('input',e=>{if(e.target.classList.contains('ci')){const v=nz(e.target.value).trim();if(/^\d$/.test(v))gk(v);else if(v)e.target.value=''}});
+document.addEventListener('keydown',e=>{if(e.isComposing||document.querySelector('dialog[open]'))return;const t=e.target,i=t.tagName=='INPUT',nx=$('#nx'),bk=$('#bk'),free=!(i&&t.value&&!ok);
+if(e.key=='Enter'){if(t.id=='in')ok?mv(1):chk();else if(i)ok?mv(1):gk(nz(t.value).trim());else if(t.tagName!='BUTTON'&&!nx.disabled)mv(1)}
+else if(e.key=='ArrowRight'&&free&&!nx.disabled)mv(1);
+else if(e.key=='ArrowLeft'&&free&&!bk.disabled)mv(-1)});
+sb();R();
+</script></body></html>

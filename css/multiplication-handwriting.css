@@ -1,0 +1,15 @@
+#settingsOpen{border:0;border-radius:.5em;padding:.15em .5em;color:#1f9d57;background:white;white-space:nowrap;cursor:pointer}
+dialog{margin:auto;padding:1em;border:2px solid #5b5fb0;border-radius:1em;max-width:95vw;max-height:95dvh;overflow:auto;font:inherit;color:#23312b;background:#fff}
+dialog::backdrop{background:#17342b88}dialog h2{font-size:1.2em;margin-bottom:.6em}dialog p{margin:.8em 0;max-width:30em;line-height:1.6}dialog button,dialog select{font:inherit;padding:.25em .6em;border-radius:.4em}
+.hand-cell{position:absolute;border:2px solid #5b5fb0;background:#fff;border-radius:.2em;overflow:hidden}
+.hand-cell.carry{z-index:2;border-color:#d6493f;background:#fff5ed}
+.hand-cell canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.hand-cell .digit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;color:#23312b;background:#fff;font-size:15cqw}
+.hand-cell.carry .digit{color:#d6493f;font-size:8cqw;background:#fff5ed}
+.hand-cell.selected{outline:3px solid #e08a1e}.hand-cell.wrong{border-color:#d6493f;box-shadow:0 0 0 2px #d6493f}
+.hand-tools{display:flex;flex-wrap:wrap;align-items:center;gap:.3em;font-size:.8em;margin-top:.3em}
+.hand-tools button{border:0;border-radius:.4em;padding:.2em .5em;background:#e9edf8;color:#23312b;cursor:pointer}
+.hand-tools select{font:inherit}.hand-tools output{flex-basis:100%;min-height:1.3em}
+.hand-zoom{width:min(420px,95vw);font-size:18px}.hand-zoom .heading{display:flex;justify-content:space-between;align-items:center;gap:.5em}
+.hand-zoom canvas{width:min(280px,65vw,48dvh);height:min(280px,65vw,48dvh);display:block;margin:.5em auto;touch-action:none;border:2px solid #5b5fb0;background:white}
+.hand-zoom .context{margin:.5em 0;text-align:center}.hand-zoom .context.carry{color:#d6493f}.hand-zoom output{display:block;min-height:1.5em}.hand-zoom .buttons{display:flex;gap:.4em;flex-wrap:wrap;justify-content:center}
