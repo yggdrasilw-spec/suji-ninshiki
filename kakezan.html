@@ -6157,7 +6157,7 @@ function snapshotCanvasContent(canvas){
 function restoreCanvasContent(canvas, snapshot){
   if(!canvas || !snapshot) return;
   try{
-    canvas.getContext("2d").drawImage(snapshot, 0, 0);
+    canvas.getContext("2d").drawImage(snapshot, 0, 0, canvas.width, canvas.height);
   }catch(e){}
 }
 
@@ -8317,7 +8317,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   window.clearPopupCanvas = clearPopupCanvas;
   window.applyPopupRecognition = applyPopupRecognition;
 
-  bindPopupTriggers();
+  // Popup triggers are installed by the final pointer-based implementation below.
 
   const _saveInputModeSetting = saveInputModeSetting;
   saveInputModeSetting = function(mode){
@@ -8367,6 +8367,7 @@ document.addEventListener("DOMContentLoaded", ()=>{
   buildTable = function(kind){
     _buildTable(kind);
     scheduleHandwritingLayout(kind);
+    window.__scheduleHandwritingBoardFit?.();
   };
 
   const _initHandwritingFields = initHandwritingFields;
@@ -8488,7 +8489,8 @@ document.addEventListener("DOMContentLoaded", ()=>{
 
 <div id="handwritingPopup" class="handwritingPopup">
 <div class="handwritingPopupCard">
-<div style="font-size:24px;font-weight:700;margin-bottom:10px;">✏️ 大きく書こう</div>
+<div id="popupWritingTitle" style="font-size:24px;font-weight:700;margin-bottom:10px;">✏️ 大きく書こう</div>
+<p id="popupWritingContext" aria-live="polite"></p>
 <div class="popupCanvasWrap">
   <canvas id="popupCanvas" class="handwritingPopupCanvas" width="480" height="260"></canvas>
   <div id="popupRecognizedText" class="popupRecognizedText" aria-live="polite"></div>
@@ -8573,6 +8575,7 @@ body.ipadDevice .handwritingPopupCanvas{
   let popupResizeTimer = 0;
   let ipadHintRefreshTimer1 = 0;
   let ipadHintRefreshTimer2 = 0;
+  let popupInkVersion = 0;
   const deviceFlags = {
     isIPad: /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
     isSafari: /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
@@ -8622,6 +8625,7 @@ body.ipadDevice .handwritingPopupCanvas{
 
   function shouldOpenPopupFromTarget(target){
     if(appState.inputMode !== 'handwriting') return false;
+    if(Date.now() - (window.lastBoardGestureAt || 0) < 800) return false;
     if(!target) return false;
     if(target.classList && target.classList.contains('handField')){
       const lastStrokeEnd = Number(window.lastHandwritingStrokeEndAt || 0);
@@ -8644,6 +8648,10 @@ body.ipadDevice .handwritingPopupCanvas{
 
   function popupStart(e){
     if(!getPopupCanvas()) return;
+    clearTimeout(popupDrawTimer);
+    popupInkVersion++;
+    if(document.getElementById('popupRecognizedText').style.display === 'flex') fillPopupWhite();
+    document.getElementById('popupRecognizedText').style.display = 'none';
     e.preventDefault();
     popupDrawing = true;
     popupPointerId = e.pointerId ?? null;
@@ -8686,6 +8694,9 @@ body.ipadDevice .handwritingPopupCanvas{
 
   async function recognizePopupCanvas(){
     if(!popupTargetNode) return;
+    const target = popupTargetNode;
+    const fieldId = popupTargetFieldId;
+    const version = popupInkVersion;
     const canvas = getPopupCanvas();
     if(!canvas) return;
 
@@ -8693,6 +8704,7 @@ body.ipadDevice .handwritingPopupCanvas{
       if(typeof ensureHandwritingModel === 'function'){
         await ensureHandwritingModel();
       }
+      if(popupTargetNode !== target || popupInkVersion !== version || !target.isConnected) return;
       if(typeof handwritingModel === 'undefined' || !handwritingModel){
         return;
       }
@@ -8712,8 +8724,12 @@ body.ipadDevice .handwritingPopupCanvas{
       }
       input.dispose?.();
       output?.dispose?.();
+      if(popupTargetNode !== target || popupTargetFieldId !== fieldId || popupInkVersion !== version || !target.isConnected) return;
 
       const recognized = String(idx);
+      const feedback = document.getElementById('popupRecognizedText');
+      feedback.textContent = recognized;
+      feedback.style.display = 'flex';
 
       if(popupTargetKind === 'handwriting'){
         const st = handwritingFields && popupTargetFieldId ? handwritingFields[popupTargetFieldId] : null;
@@ -8737,6 +8753,9 @@ body.ipadDevice .handwritingPopupCanvas{
   function openPopupForNode(node){
     if(appState.inputMode !== 'handwriting') return;
     if(!node) return;
+    popupInkVersion++;
+    clearTimeout(popupDrawTimer);
+    document.getElementById('popupRecognizedText').style.display = 'none';
     popupTargetNode = node;
     popupTargetKind = node.classList.contains('handField') ? 'handwriting' : 'keyboard';
     popupTargetFieldId = popupTargetKind === 'handwriting' ? node.id : null;
@@ -8749,7 +8768,6 @@ body.ipadDevice .handwritingPopupCanvas{
     clearTimeout(popupResizeTimer);
     popupResizeTimer = setTimeout(()=>{
       resizePopupCanvas();
-      fillPopupWhite();
       // 自動フィットはしない
     }, 50);
   }
@@ -8768,10 +8786,15 @@ body.ipadDevice .handwritingPopupCanvas{
     popupTargetNode = null;
     popupTargetKind = null;
     popupTargetFieldId = null;
+    popupInkVersion++;
+    document.querySelectorAll('.writingPadTarget').forEach(el => el.classList.remove('writingPadTarget'));
     // 自動フィットはしない
   };
 
   window.clearPopupCanvas = function(){
+    clearTimeout(popupDrawTimer);
+    popupInkVersion++;
+    document.getElementById('popupRecognizedText').style.display = 'none';
     fillPopupWhite();
   };
 
@@ -9101,16 +9124,28 @@ body.boardMoveMode .boardPannable{
     board.style.transition = '';
 
     const viewportRect = viewport.getBoundingClientRect();
-    const availableW = Math.max(260, viewportRect.width - 12);
-    const availableH = Math.max(180, viewportRect.height - 12);
+    const availableW = Math.max(1, viewportRect.width - 24);
+    const availableH = Math.max(1, viewportRect.height - 24);
 
-    let scale = Math.min(1, availableW / naturalW, availableH / naturalH);
+    let scale = Math.min(availableW / naturalW, availableH / naturalH);
     if(!Number.isFinite(scale) || scale <= 0) scale = 1;
-    scale = clamp(scale, 0.6, 1);
+    scale = clamp(scale, 0.15, 8);
+
+    // Remember the physical cell size, rather than a percentage of a different board.
+    const cellWidth = board.querySelector('td')?.offsetWidth || 64;
+    if(st.preferredCellSize && !options.reset){
+      scale = clamp(st.preferredCellSize / cellWidth, 0.15, 8);
+    }
+    if(options.reset){
+      st.preferredCellSize = null;
+      try{ localStorage.removeItem('multiplicationBoardSize-' + key); }catch(e){}
+    }
 
     st.scale = scale;
-    st.panX = 0;
-    st.panY = 0;
+    board.style.transform = 'none';
+    const naturalRect = board.getBoundingClientRect();
+    st.panX = viewportRect.left + viewportRect.width / 2 - (naturalRect.left + naturalW / 2);
+    st.panY = viewportRect.top + 6 - naturalRect.top;
     st.manual = false;
     applyTransform(key);
   }
@@ -9123,8 +9158,28 @@ body.boardMoveMode .boardPannable{
     const key = activeKey();
     const st = state(key);
     st.manual = true;
-    st.scale = clamp(Math.round((st.scale + delta) * 100) / 100, 0.6, 2.4);
+    zoomAt(key, clamp(st.scale * (delta > 0 ? 1.2 : 1 / 1.2), 0.15, 8));
+    rememberSize(key);
     applyTransform(key);
+  }
+
+  function rememberSize(key){
+    const st = state(key);
+    st.preferredCellSize = (boardEl(key)?.querySelector('td')?.offsetWidth || 64) * st.scale;
+    try{ localStorage.setItem('multiplicationBoardSize-' + key, String(st.preferredCellSize)); }catch(e){}
+  }
+
+  function zoomAt(key, scale, x, y){
+    const st = state(key), board = boardEl(key), vp = viewportEl(key);
+    if(!board || !vp) return;
+    const rect = board.getBoundingClientRect(), area = vp.getBoundingClientRect();
+    x ??= area.left + area.width / 2;
+    y ??= area.top + area.height / 2;
+    const ratio = scale / st.scale;
+    st.panX += (x - (rect.left + rect.width / 2)) * (1 - ratio);
+    st.panY += (y - rect.top) * (1 - ratio);
+    st.scale = scale;
+    st.manual = true;
   }
 
   function setMode(mode){
@@ -9159,8 +9214,10 @@ body.boardMoveMode .boardPannable{
       if(!btn || !bar.contains(btn)) return;
       const action = btn.dataset.action;
       const mode = btn.dataset.mode;
-      if(action === 'fit'){
-        fitActiveBoard(true);
+      if(action === 'help'){
+        document.getElementById('boardOperationHelp').showModal();
+      }else if(action === 'fit'){
+        fitBoard(activeKey(), { force:true, reset:true });
       }else if(action === 'zoom-out'){
         zoomActive(-0.1);
       }else if(action === 'zoom-in'){
@@ -9202,6 +9259,31 @@ body.boardMoveMode .boardPannable{
     }
 
     bindControlBar(bar);
+    const words = {fit:'全体を大きく', 'zoom-out':'− 小さく', 'zoom-in':'+ 大きく', help:'操作のしかた'};
+    const icons = {fit:'📐', 'zoom-out':'➖', 'zoom-in':'➕', help:'？'};
+    bar.querySelectorAll('[data-action]').forEach(btn => {
+      btn.textContent = icons[btn.dataset.action];
+      btn.setAttribute('aria-label', words[btn.dataset.action]);
+      btn.title = words[btn.dataset.action];
+    });
+    bar.querySelectorAll('[data-mode]').forEach(btn => btn.hidden = true);
+    if(!bar.querySelector('[data-action="help"]')){
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'boardControlBtn';
+      button.dataset.action = 'help';
+      button.textContent = '？';
+      button.title = '操作のしかた';
+      button.setAttribute('aria-label', '操作のしかた');
+      button.setAttribute('aria-haspopup', 'dialog');
+      bar.querySelector('.boardControlPanel').append(button);
+    }
+    if(!bar.querySelector('.boardGestureHelp')){
+      const help = document.createElement('div');
+      help.className = 'boardGestureHelp';
+      help.textContent = '2本指で移動・拡大';
+      bar.querySelector('.boardControlPanel').append(help);
+    }
   }
 
   function bindPan(key){
@@ -9210,10 +9292,59 @@ body.boardMoveMode .boardPannable{
     vp.__boardPanBound = true;
 
     const st = state(key);
+    const pointers = new Map();
+    let gesture = null, beforeStroke = null, padTap = null;
+    const showPad = field => {
+      openPopupForInput(field); setupPopupCanvas();
+      const carry = field.classList.contains('miniCarryBox');
+      const place = currentCols - 1 - field.closest('td').cellIndex;
+      const placeName = ['一','十','百','千','万','十万','百万','千万','億'][place] || '';
+      document.getElementById('popupWritingTitle').textContent = placeName + 'の位の' + (carry ? '補助計算' : '答え') + 'を書こう';
+      document.getElementById('popupWritingContext').textContent = topDisplayStr + ' × ' + bottomDisplayStr;
+      document.querySelectorAll('.writingPadTarget').forEach(el => el.classList.remove('writingPadTarget'));
+      field.classList.add('writingPadTarget');
+    };
+    const center = () => {
+      const [a,b] = [...pointers.values()];
+      return {x:(a.x+b.x)/2, y:(a.y+b.y)/2, distance:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y))};
+    };
 
     vp.addEventListener('pointerdown', (e) => {
-      if(document.body.classList.contains('boardMoveMode') === false) return;
       if(e.target.closest('button, input, select, textarea, label, .toggleBtn, .navBtn, .cardBtn, .boardControlBtn')) return;
+      pointers.set(e.pointerId, {x:e.clientX,y:e.clientY});
+      if(pointers.size === 1){
+        const field = e.target.closest('.handField');
+        const ink = field && handwritingFields[field.id];
+        beforeStroke = ink ? {ink, visible:snapshotCanvasContent(ink.visibleCanvas), rec:snapshotCanvasContent(ink.recCanvas), value:ink.value, finalized:ink.finalized} : null;
+      }
+      if(pointers.size >= 2){
+        window.lastBoardGestureAt = Date.now();
+        padTap = null;
+        if(beforeStroke){
+          const {ink,visible,rec,value,finalized} = beforeStroke;
+          clearTimeout(handwritingPendingTimers[ink.fieldId]);
+          ink.drawing = false; ink.activePointerId = null;
+          ink.visibleCtx.clearRect(0,0,ink.visibleCanvas.width,ink.visibleCanvas.height);
+          ink.recCtx.clearRect(0,0,ink.recCanvas.width,ink.recCanvas.height);
+          restoreCanvasContent(ink.visibleCanvas,visible); restoreCanvasContent(ink.recCanvas,rec);
+          setFieldValue(ink.fieldId,value); ink.finalized = finalized;
+          beforeStroke = null;
+        }
+        gesture = center();
+        st.panActive = false;
+        for(const id of pointers.keys()){ try{ vp.setPointerCapture(id); }catch(err){} }
+        e.preventDefault(); e.stopImmediatePropagation(); return;
+      }
+      const field = e.target.closest('.handField');
+      if(field && !document.body.classList.contains('boardMoveMode')){
+        // A single tap opens a full-size pad when the actual writing area is small.
+        if(appState.inputMode === 'handwriting' && (field.classList.contains('miniCarryBox') || field.getBoundingClientRect().width < 90)){
+          e.preventDefault(); e.stopImmediatePropagation();
+          padTap = {field, pointer:e.pointerId, x:e.clientX, y:e.clientY};
+          try{ vp.setPointerCapture(e.pointerId); }catch(err){}
+        }
+        return;
+      }
       st.panActive = true;
       st.panPointerId = e.pointerId;
       st.panStartX = e.clientX;
@@ -9222,31 +9353,65 @@ body.boardMoveMode .boardPannable{
       st.panBaseY = st.panY;
       try{ vp.setPointerCapture(e.pointerId); }catch(err){}
       e.preventDefault();
-    }, { passive:false });
+    }, { passive:false, capture:true });
 
     vp.addEventListener('pointermove', (e) => {
+      if(pointers.has(e.pointerId)) pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      if(gesture && pointers.size >= 2){
+        const next = center();
+        zoomAt(key, clamp(st.scale * next.distance / gesture.distance, 0.15, 8), gesture.x, gesture.y);
+        st.panX += next.x - gesture.x; st.panY += next.y - gesture.y;
+        gesture = next;
+        applyTransform(key, {redraw:false});
+        e.preventDefault(); e.stopImmediatePropagation(); return;
+      }
+      if(padTap && padTap.pointer === e.pointerId){
+        if(Math.hypot(e.clientX-padTap.x,e.clientY-padTap.y)>12){
+          st.panActive=true; st.panPointerId=e.pointerId;
+          st.panStartX=padTap.x; st.panStartY=padTap.y;
+          st.panBaseX=st.panX; st.panBaseY=st.panY;
+          padTap=null;
+        }else{
+          e.preventDefault(); e.stopImmediatePropagation(); return;
+        }
+      }
       if(!st.panActive || st.panPointerId !== e.pointerId) return;
       st.panX = st.panBaseX + (e.clientX - st.panStartX);
       st.panY = st.panBaseY + (e.clientY - st.panStartY);
       applyTransform(key, { redraw: false });
       e.preventDefault();
-    }, { passive:false });
+    }, { passive:false, capture:true });
 
     const endPan = (e) => {
+      pointers.delete(e.pointerId);
+      if(padTap && padTap.pointer === e.pointerId){
+        const field=padTap.field; padTap=null;
+        if(e.type === 'pointerup') showPad(field);
+        e.preventDefault(); e.stopImmediatePropagation();
+      }
+      if(gesture){
+        window.lastBoardGestureAt = Date.now();
+        if(pointers.size < 2){ gesture = null; rememberSize(key); refreshGuides(key); }
+        e.preventDefault(); e.stopImmediatePropagation();
+      }
+      if(!pointers.size) beforeStroke = null;
       if(!st.panActive || st.panPointerId !== e.pointerId) return;
       st.panActive = false;
       st.panPointerId = null;
       e.preventDefault();
     };
 
-    vp.addEventListener('pointerup', endPan, { passive:false });
-    vp.addEventListener('pointercancel', endPan, { passive:false });
-    vp.addEventListener('pointerleave', endPan, { passive:false });
+    vp.addEventListener('pointerup', endPan, { passive:false, capture:true });
+    vp.addEventListener('pointercancel', endPan, { passive:false, capture:true });
 
     vp.classList.add('boardPannable');
   }
 
   function initKey(key){
+    try{
+      const size = Number(localStorage.getItem('multiplicationBoardSize-' + key));
+      if(size > 0 && Number.isFinite(size)) state(key).preferredCellSize = size;
+    }catch(e){}
     ensureControlBar(key);
     bindPan(key);
     applyTransform(key);
@@ -9267,18 +9432,23 @@ body.boardMoveMode .boardPannable{
 
   window.__resetActiveBoardZoom = function(){};
   window.__fitActiveBoard = fitActiveBoard;
-  window.__scheduleHandwritingBoardFit = function(){};
+  window.__scheduleHandwritingBoardFit = function(){ requestAnimationFrame(() => fitActiveBoard(true)); };
   window.__setBoardInteractionMode = setMode;
   window.__zoomActiveBoard = zoomActive;
   window.__getBoardScale = function(key){ return state(key).scale; };
   window.__applyBoardScaleOnce = function(key, scale){
     const st = state(key);
-    st.scale = clamp(Number(scale) || 1, 0.6, 2.4);
+    st.scale = clamp(Number(scale) || 1, 0.15, 8);
     st.manual = true;
     st.panX = 0;
     st.panY = 0;
-    applyTransform(key);
+    fitBoard(key, {force:true});
   };
+
+  const observer = new ResizeObserver(() => window.__scheduleHandwritingBoardFit());
+  document.addEventListener('DOMContentLoaded', () => {
+    ['practice','attack'].forEach(key => { const vp = viewportEl(key); if(vp) observer.observe(vp); });
+  });
 
   const oldShowPage = window.showPage;
   if(typeof oldShowPage === 'function'){
@@ -10623,6 +10793,51 @@ function fmtChallengeDate(d){
 </script>
 
 <!-- Distribution settings -->
+<dialog id="boardOperationHelp" aria-labelledby="boardOperationHelpTitle">
+  <div class="boardHelpHeading"><h2 id="boardOperationHelpTitle">操作のしかた</h2><form method="dialog"><button autofocus aria-label="操作案内を閉じる">×</button></form></div>
+  <div class="boardHelpGrid">
+    <section><div class="boardHelpPicture" aria-hidden="true">☝️ ✎</div><h3>1本指で書く</h3><p>マスの中に数字を書こう。</p></section>
+    <section><svg class="boardHelpPicture" viewBox="0 0 160 64" aria-hidden="true"><path d="M30 16H130M30 16L40 8M30 16L40 24M130 16L120 8M130 16L120 24"/><circle cx="64" cy="46" r="12"/><circle cx="96" cy="46" r="12"/></svg><h3>2本指で動かす</h3><p>マスの上に2本指を置き、いっしょに滑らせよう。余白がなくても動かせるよ。</p></section>
+    <section><svg class="boardHelpPicture" viewBox="0 0 160 64" aria-hidden="true"><circle cx="60" cy="32" r="12"/><circle cx="100" cy="32" r="12"/><path d="M40 32H12M12 32L22 24M12 32L22 40M120 32H148M148 32L138 24M148 32L138 40"/></svg><h3>2本指で大きさを変える</h3><p>指を広げると大きく、近づけると小さくなるよ。</p></section>
+    <section><div class="boardHelpPicture" aria-hidden="true">▧ → □</div><h3>小さいマスはタップ</h3><p>補助計算や小さい答えのマスを1回タップすると、大きな手書き欄が開くよ。</p></section>
+  </div>
+  <p class="boardHelpTip">余白を1本指でなぞっても移動できます。<br>📐 全体表示　➖ 小さく　➕ 大きく<br>大きさを変えると、次の問題でも同じマスの大きさになります。</p>
+  <form method="dialog" class="boardHelpClose"><button>わかった</button></form>
+</dialog>
+<style id="accessibleWritingControls">
+#boardOperationHelp{width:min(620px,94vw);max-height:92dvh;border:0;border-radius:20px;padding:20px;color:#243041;background:white;box-shadow:0 16px 60px #0003;text-align:left;}
+#boardOperationHelp::backdrop{background:#172b4d88;}
+.boardHelpHeading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.boardHelpHeading h2{font-size:22px;margin:0;}
+#boardOperationHelp button{border:0;border-radius:12px;min-width:44px;min-height:44px;font-size:20px;cursor:pointer;background:#e7f0ff;color:#1f3f80;}
+.boardHelpGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.boardHelpGrid section{border-radius:14px;background:#f4f7fb;padding:12px;}
+.boardHelpPicture{display:block;width:100%;height:64px;text-align:center;font-size:40px;line-height:64px;color:#2b7cff;}
+svg.boardHelpPicture{stroke:#2b7cff;stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.boardHelpGrid h3{font-size:17px;margin:6px 0;}
+#boardOperationHelp p{font-size:15px;line-height:1.6;margin:0;}
+#boardOperationHelp .boardHelpTip{margin-top:14px;color:#475569;}
+.boardHelpClose{text-align:center;margin-top:16px;}
+.boardHelpClose button{padding:8px 28px;}
+@media(max-width:480px){.boardHelpGrid{grid-template-columns:1fr;gap:8px;}.boardHelpGrid section{padding:10px;}.boardHelpPicture{height:40px;line-height:40px;font-size:30px;}#boardOperationHelp{padding:16px;}}
+.boardControlBtn[hidden]{display:none !important;}
+.boardGestureHelp{font-size:12px;color:#475569;line-height:1.5;flex-basis:100%;white-space:normal;overflow-wrap:anywhere;min-width:0;}
+.boardControlPanel .boardControlBtn{min-height:44px;white-space:normal;}
+@media (orientation:landscape) and (min-width:721px){
+  #practicePlayPage .boardControlPanel,#attackPlayPage .boardControlPanel{display:flex !important;flex-direction:column !important;}
+  .boardGestureHelp{font-size:10px;flex-basis:auto;}
+}
+.writingPadTarget{outline:4px solid #ff9800 !important;}
+#popupWritingContext{margin:0 0 8px;color:#475569;font-size:20px;}
+.handwritingPopupCard{max-height:96dvh;overflow:auto;}
+#popupCanvas{width:min(68dvh,80vw,480px) !important;height:min(68dvh,80vw,480px) !important;margin:0 auto;}
+@media (orientation:landscape) and (max-height:500px){
+  #popupCanvas{width:55dvh !important;height:55dvh !important;}
+  .handwritingPopupCard{padding:8px;}
+  #popupWritingTitle{font-size:18px !important;margin-bottom:2px !important;}
+  #popupWritingContext{font-size:16px;margin-bottom:2px;}
+}
+</style>
 <script src="js/student-profile.js"></script>
 <script src="js/teacher-bridge.js"></script>
 <script src="js/lesson-connections.js"></script>
