@@ -36,6 +36,8 @@ footer{display:flex;justify-content:space-between;align-items:center;padding:.3e
 .qq{display:flex;align-items:center;gap:.8em}
 button:focus-visible,input:focus-visible{outline:3px solid #e08a1e}
 .w0{background:#fcd5de}.w1{background:#fff0a8}.w2{background:#cfe6fb}.w3{background:#d7f0d2}
+.groupDiagram{width:100%;font-size:.8em;text-align:center}.bagRow{display:flex;gap:.5em;justify-content:center;margin:.4em 0}.cookieBag{border:2px solid #789486;border-radius:.6em;padding:.35em;background:#f4f8f5}.cookieBag.selected,.cookie.selected{border:3px solid #c36b00;background:#fff0c4}.cookies{display:grid;grid-template-columns:repeat(var(--count),1fr);gap:.2em}.cookie{display:grid;place-items:center;border:2px solid #ac7951;border-radius:50%;background:#fff3e6;min-width:2.4em;min-height:2.4em;font-size:.85em}.countSelected .cookies{outline:3px solid #c36b00;outline-offset:2px;background:#fff0c4}.groupCaption{font-weight:bold;color:#945000;margin-top:.5em}.firstPair{background:#fff0c4;color:#945000;border-bottom:3px solid #c36b00}.methodBadge{font-weight:bold;padding:.2em .5em;background:#edf6ee;border-radius:.4em}.methodCompare{display:grid;gap:.4em;font-size:.9em}.methodCompare p{padding:.3em;background:#f3f6f3;border-radius:.4em}.mentalPlace{border-collapse:collapse;font-size:1.1em}.mentalPlace th,.mentalPlace td{border:1px solid #8aa;padding:.2em .6em;text-align:center}.calcChoices{display:flex;gap:.3em;flex-wrap:wrap;justify-content:center}.calcChoices button{border:2px solid #8aa;border-radius:.4em;background:#fff;padding:.2em .4em;cursor:pointer}.calcChoices button[aria-pressed=true]{border-color:#c36b00;background:#fff0c4}.practiceWork{font-size:.95em;display:grid;gap:.4em}.practiceWork input{width:4.5em}.practiceWork label{display:block}.dualWritten{display:flex;align-items:center;gap:.4em;width:100%}.dualWritten>div{width:48%;text-align:center}.dualWritten .hw{max-width:100%}#h .calcFeedback{font-size:.9em}
+.cookie{min-width:3em;white-space:nowrap}
 </style></head><body><div id="app">
 <header><b id="ttl"></b><nav id="nav"></nav><button id="settingsOpen" type="button">⚙ 設定</button></header>
 <main><div id="q" class="pn"></div><div id="L"><div id="f" class="pn"></div><div id="e" class="pn"></div></div><div id="g" class="pn"></div><div id="hb"><span class="t" id="tag"></span><div id="h"></div></div><div id="m" class="pn"></div></main>
@@ -106,12 +108,18 @@ function mk2(story,sh,u,a,b,cu,ill){const A=D(a),n=A.length,R=calc(a,b),sp=A.map
 {t:'ことば',h:`答えは ${a*b}${u}。`,g:hs(a,b,{k:n}),e:parts(a,b),m:'位を そろえて 書き、一の位から じゅんに 計算する。九九が 使えるから 筆算できる。'}]}
 const pS=(d,b)=>[{t:'図',on:'g',h:`${d}×${b}＝${d*b} の ${d} を 10倍に すると ${d*10}。位を たてに そろえて 見よう。${d}は 十の位に 上がり、答えの ${d*b}も 10倍で ${d*b*10}。`,g:pat(d,b,[1,10])},
 {t:'ことば',on:'g',h:`${d*100}×${b}は、${d}を 100倍に したよ。`,g:pat(d,b,[1,10,100]),m:'かけられる数が 10倍、100倍に なると、答えも 10倍、100倍に なる。'}];
+function groupDiagram(a,b,c,pair='',result=false){
+const caption=pair==='left'?`色のついた 1ふくろ分の 代金：${a}×${b}${result?'＝'+a*b+'円':''}`:pair==='right'?`色のついた 全ふくろの クッキーの数：${b}×${c}${result?'＝'+b*c+'こ':''}`:pair==='outer'?`色のついた 各ふくろの 1こずつの 代金：${a}×${c}${result?'＝'+a*c+'円':''}`:'1こ分の ねだん × 1ふくろの こ数 × ふくろの数';
+return `<div class="groupDiagram"><p>1こ ${a}円 ／ 1ふくろ ${b}こ ／ ${c}ふくろ</p><div class="bagRow">${Array.from({length:c},(_,r)=>`<div class="cookieBag ${pair==='left'&&r===0?'selected':''} ${pair==='right'?'countSelected':''}"><p>${r+1}ふくろめ</p><div class="cookies" style="--count:${b}">${Array.from({length:b},(_,i)=>`<span class="cookie ${pair==='outer'&&i===0?'selected':''}">${a}円</span>`).join('')}</div></div>`).join('')}</div><p class="groupCaption">${caption}</p></div>`}
+const firstExpression=(a,b,c,pair)=>pair==='left'?`(<span class="firstPair">${a}×${b}</span>)×${c}`:pair==='right'?`${a}×(<span class="firstPair">${b}×${c}</span>)`:`(<span class="firstPair">${a}×${c}</span>)×${b}`;
 const kim=[
-{t:'課題',q:'1こ 45円の クッキーが、1ふくろに 5こずつ 入っています。2ふくろ 買うと、代金は いくらですか。',...E,i:ILL.okashi('45円'),h:'まず 場面を 読もう。',f:eq('45円 × 5こ × 2ふくろ')},
-{t:'式',h:'ゆい: 1ふくろの 代金を 先に もとめた。',e:eq('45×5＝225','225×2＝450')},
-{t:'式',h:'そうた: クッキーの 数を 先に もとめた。',e:eq('ゆい　45×5＝225 → 225×2＝450','そうた　5×2＝10 → 45×10＝450')},
-{t:'筆算',h:'2人の 考えを、それぞれ 1つの 式に 表そう。（　）の 中を 先に 計算するよ。',g:eq('ゆい　(45×5)×2＝450','そうた　45×(5×2)＝450')},
-{t:'ことば',h:'どちらも 答えは 450円。',m:'3つの 数の かけ算では、はじめの 2つを 先に 計算しても、あとの 2つを 先に 計算しても、答えは 同じに なる。(45×5)×2＝45×(5×2)'}];
+{t:'課題',q:'1こ 75円の クッキーが、1ふくろに 5こずつ 入っています。2ふくろ 買うと、代金は いくらですか。',...E,h:'図の 1こ、1ふくろ、2ふくろを 見て、式の 75、5、2と むすびつけよう。',f:groupDiagram(75,5,2),e:eq('75×5×2')},
+{t:'図',h:'ゆいは、お話の 順に 計算するよ。色のついた 1ふくろ分の 代金を、75×5で 先に もとめる。式の 色と 図の 色を 見くらべよう。',f:groupDiagram(75,5,2,'left'),e:eq('ゆい　'+firstExpression(75,5,2,'left')),g:'',m:''},
+{t:'筆算',h:'75×5を 筆算すると 375円。つぎに 375×2も 筆算すると 750円。ゆいは 筆算を 2回 したね。',f:groupDiagram(75,5,2,'left',true),e:eq('75×5＝375（1ふくろの 代金）','375×2＝750（2ふくろの 代金）'),g:`<div class="dualWritten"><div><p>① 75×5</p>${hs(75,5,{k:2})}</div><div><p>② 375×2</p>${hs(375,2,{k:3})}</div></div><p class="methodBadge">筆算 2回</p>`},
+{t:'図',h:'そうたは、クッキーの 数を 先に もとめるよ。図の 5こずつが 2ふくろで、5×2＝10こ。これは 九九で 暗算できるね。',f:groupDiagram(75,5,2,'right',true),e:eq('そうた　'+firstExpression(75,5,2,'right'),'5×2＝10（全部の こ数）'),g:eq('① 5×2＝10　暗算'),m:''},
+{t:'式',h:'つぎは 75円の 10こ分で、75×10。10倍すると、7は 百の位、5は 十の位へ 移り、一の位は 0になる。750円も 暗算で もとめられるね。',e:eq(firstExpression(75,5,2,'right'),'＝75×10＝750'),g:'<table class="mentalPlace"><caption>② 75の 10倍</caption><tr><th></th><th>百</th><th>十</th><th>一</th></tr><tr><th>75</th><td></td><td>7</td><td>5</td></tr><tr><th>750</th><td>7</td><td>5</td><td>0</td></tr></table><p class="methodBadge">暗算 2回</p>'},
+{t:'ことば',h:'どちらも 750円。今回は、どちらが らくかな？ 下の ボタンで 選ぼう。',f:groupDiagram(75,5,2),e:eq('(75×5)×2＝75×(5×2)'),g:'<div class="methodCompare"><p>ゆい：75×5 → 375×2<br><b>筆算 2回</b></p><p>そうた：5×2 → 75×10<br><b>暗算 2回</b></p></div>',m:'先に 計算する 2つの数を かえても、答えは 同じ。10や 100に なる 組を 見つけると、らくに 計算できる。',choice:true},
+{t:'ことば',h:'式を 見て、先に 計算すると らくな 組を 選ぼう。つぎは、自分で 選んで 練習するよ。',m:'（　）の中を 先に 計算する。数の じゅんばんを かえて、はなれた 2つの数を 先に 計算しても よい。',g:eq('5×2＝10 を 先に','75×10＝750')}];
 const ST=[
 {n:'何十のかけ算',gl:'くらべよう',s:[...mk10(4,10,2,'1こ 40円の ビー玉を、2こ 買います。代金は いくらですか。')],p:['20×4','60×5','70×8']},
 {n:'何百のかけ算',gl:'くらべよう',s:[...mk10(4,100,2,'1つ 400円の ビー玉の びんを、2つ 買います。代金は いくらですか。'),...pS(4,2)],p:['200×5','600×4','300×3']},
@@ -119,7 +127,7 @@ const ST=[
 {n:'2けた×1けた（くり上がりあり）',s:[...mk2('1つの 辺が 18cmの 正方形の、まわりの 長さは 何cmですか。','1辺の長さ×4＝まわりの長さ','cm',18,4,'辺',ILL.sq('18cm')),...mk2('38×3を 筆算で しましょう。','','',38,3)],p:['17×5','24×4','46×3']},
 {n:'3けた×1けた',s:mk2('1mの ねだんが 421円の ビニールテープを、2m 買います。代金は いくらですか。','ねだん×買う長さ＝代金','円',421,2,'m',ILL.ribbon('421円')),p:['324×2','132×3','402×2']},
 {n:'3けた×1けた（くり上がりあり）',s:mk2('758×4を 筆算で しましょう。答えが 4けたに なるよ。','','',758,4),p:['216×4','549×3','683×6']},
-{n:'かけ算のきまり',gl:'しき',s:kim,p:['70×2×4','246×5×2','50×3×2']},
+{n:'かけ算のきまり',gl:'計算のしかた',s:kim,p:['68×5×2','43×2×5','25×3×4']},
 {n:'まとめの もんだい',s:[{t:'課題',q:'かけ算の 筆算⑴の まとめ。2けたや 3けたの かけ算が 正しく できるか、たしかめよう。',...E,h:'ここまでの 学習を ふりかえろう。',f:eq('かけられる数が','2けたや 3けたの かけ算')}],p:['40×6','500×4','15×3','62×4','86×6','305×7','721×4','864×9',
 {q:'18×4',i:ILL.tulip(),s:'ひまわりの たねを、1れつに 18こずつ、4れつ まきます。全部で 何こ いるでしょうか。'},
 {q:'124×3',i:ILL.juice('360mL',3),s:'360mL入りの ジュースを 3本 買います。1本 124円です。代金は いくらですか。'},
@@ -154,11 +162,22 @@ const L={q:'課題',f:'図',e:'式',g:st.gl||'ひっ算',m:'ことば'};
 for(const k in L){const el=$('#'+k);el.dataset.l=L[k];el.innerHTML=k=='q'?`<div class="qq"><span>${o.q||''}</span>${o.i||''}</div>`:o[k]||'';el.classList.toggle('on',!pr&&MAP[sp.on||sp.t]==k)}
 $('#tag').textContent=sp.t;$('#tag').className='t t'+sp.t;
 if(pr)pinit(sp);else $('#h').innerHTML=sp.h;
+if(sp.choice){$('#h').innerHTML+=` <button onclick="compareChoice('left')">ゆい：筆算 2回</button> <button onclick="compareChoice('right')">そうた：暗算 2回</button> <span id="compareFeedback" role="status"></span>`;}
 $('#dots').textContent=`${I+1} / ${st.s.length}`;$('#bk').disabled=!I&&!S0;
-$('#nx').textContent=I==st.s.length-1?(S0==ST.length-1?'おわり':'つぎのステージ →'):'つぎへ →';$('#nx').disabled=pr;if(!pr)document.activeElement.blur()}
+$('#nx').textContent=I==st.s.length-1?(S0==ST.length-1?'おわり':'つぎのステージ →'):'つぎへ →';$('#nx').disabled=pr||!!sp.choice;if(!pr)document.activeElement.blur()}
+function compareChoice(pair){$('#f').innerHTML=groupDiagram(75,5,2,pair,true);$('#e').innerHTML=eq(firstExpression(75,5,2,pair)+'＝750');$('#compareFeedback').textContent=pair==='right'?'そうだね！ 10を 先につくると、暗算 2回で らくに できるね。':'この 方法も 答えは 同じ。筆算 2回と 暗算 2回を くらべて、らくな 方を 選び直そう。';$('#nx').disabled=pair!=='right';if(pair==='right')snd('ok');}
 function pinit(sp){const n=sp.q.split(/[×÷+-]/).map(Number);
-if(kind(sp.q)=='h'||(multiplicationHandwriting.enabled()&&kind(sp.q)=='t')){P={a:n[0],b:n[1],seq:seq(n[0],n[1]),idx:0,vals:{},hint:0,miss:0};$('#h').innerHTML=`${sp.q} を 筆算で。マスに 数を 入れよう。 <button onclick="hint()">ヒント</button> <b id="fb"></b>`;gridR()}
+if(kind(sp.q)==='k'){P={mode:'triple',n,pair:null};$('#f').innerHTML=groupDiagram(...n);$('#e').innerHTML=eq(sp.q);$('#g').innerHTML=`<div class="practiceWork"><p>① 先に 計算する 組を 選ぼう</p><div class="calcChoices">${[['left',n[0],n[1]],['right',n[1],n[2]],['outer',n[0],n[2]]].map(([pair,a,b])=>`<button type="button" aria-pressed="false" data-pair="${pair}" onclick="choosePair('${pair}')">${a}×${b}</button>`).join('')}</div><div id="tripleWork"></div></div>`;$('#h').innerHTML='10や 100に なる 組は あるかな？ 図の 色と 式の 色も たしかめよう。 <span id="fb" class="calcFeedback" role="status"></span>';}
+else if(kind(sp.q)=='h'||(multiplicationHandwriting.enabled()&&kind(sp.q)=='t')){P={a:n[0],b:n[1],seq:seq(n[0],n[1]),idx:0,vals:{},hint:0,miss:0};$('#h').innerHTML=`${sp.q} を 筆算で。マスに 数を 入れよう。 <button onclick="hint()">ヒント</button> <b id="fb"></b>`;gridR()}
 else{$('#h').innerHTML=`${sp.q} ＝ <input id="in" type="text" inputmode="numeric" autocomplete="off"> <button onclick="chk()">こたえあわせ</button> <b id="fb"></b>`;$('#in').focus()}}
+function pairNumbers(pair,n){return pair==='left'?[n[0],n[1],n[2]]:pair==='right'?[n[1],n[2],n[0]]:[n[0],n[2],n[1]];}
+function choosePair(pair){if(!P||P.mode!=='triple')return;P.pair=pair;ok=0;$('#nx').disabled=true;const [a,b,c]=pairNumbers(pair,P.n);$('#g').querySelectorAll('[data-pair]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.pair===pair)));$('#f').innerHTML=groupDiagram(...P.n,pair);$('#e').innerHTML=eq(firstExpression(...P.n,pair));$('#tripleWork').innerHTML=`<label>② ${a}×${b}＝ <input id="pairAnswer" aria-label="先に計算する組の答え" inputmode="numeric" autocomplete="off"></label><label>③ <span id="secondExpression">②の 答え</span> × ${c}＝ <input id="totalAnswer" aria-label="全体の答え" inputmode="numeric" autocomplete="off"></label><button type="button" onclick="checkTriple()">たしかめる</button>`;$('#pairAnswer').addEventListener('input',()=>{$('#secondExpression').textContent=nz($('#pairAnswer').value).trim()||'②の 答え';ok=0;$('#nx').disabled=true;});$('#totalAnswer').addEventListener('input',()=>{ok=0;$('#nx').disabled=true;});$('#fb').textContent='色のついた 部分を 先に 計算しよう。';$('#pairAnswer').focus();}
+function checkTriple(){if(!P||P.mode!=='triple'||!P.pair)return;const [a,b,c]=pairNumbers(P.pair,P.n),mid=nz($('#pairAnswer').value).trim(),total=nz($('#totalAnswer').value).trim(),easy=['left','right','outer'].filter(pair=>[10,100].includes(pairNumbers(pair,P.n).slice(0,2).reduce((x,y)=>x*y)));
+if(!/^\d+$/.test(mid)||+mid!==a*b){$('#fb').textContent=`先に 計算する ${a}×${b}を もう一度 たしかめよう。`;snd('ng');return;}
+$('#f').innerHTML=groupDiagram(...P.n,P.pair,true);$('#e').innerHTML=eq(firstExpression(...P.n,P.pair),`${a}×${b}＝${a*b}`,`${a*b}×${c}＝${total||'□'}`);
+if(!/^\d+$/.test(total)||+total!==a*b*c){$('#fb').textContent=`つぎは ${a*b}×${c}だよ。②の 答えを 使って たしかめよう。`;snd('ng');return;}
+if(easy.length&&!easy.includes(P.pair)){$('#fb').textContent='答えは 合っているよ！ さらに らくにするため、10や 100に なる 組を 探して 選び直そう。';return;}
+ok=1;$('#nx').disabled=false;$('#fb').textContent=easy.length?`せいかい！ ${a}×${b}＝${a*b}を 先にすると、${a*b}×${c}も 暗算で できるね。`:'せいかい！ 先に 計算した 部分を、図と 式で たしかめられたね。';snd('ok');}
 function gridR(){const{a,b,seq:q,idx:i,vals}=P,n=D(a).length,key=i<q.length?q[i][0]:null,cur=key?(key[0]=='r'?Math.min(+key.slice(1),n-1):+key.slice(1)-1):-1;
 if(multiplicationHandwriting.enabled()){ $('#g').innerHTML=hs(a,b,{inp:1});$('#f').innerHTML=P.hint?bl(a,b):'';$('#e').innerHTML=P.hint?parts(a,b,cur,0):'';multiplicationHandwriting.mount(P);return; }
 $('#g').innerHTML=hs(a,b,{inp:1,vals,act:key,cur:P.hint?cur:-1});$('#f').innerHTML=P.hint?bl(a,b):'';$('#e').innerHTML=P.hint?parts(a,b,cur,0):'';
@@ -168,7 +187,7 @@ function hint(){if(P&&!ok){P.hint=1;gridR()}}
 function gk(v){if(!P||P.idx>=P.seq.length||!/^\d$/.test(v))return;const[key,e]=P.seq[P.idx];
 if(v==String(e)){P.vals[key]={val:e};P.idx++;P.miss=0;P.hint=0;snd(P.idx>=P.seq.length?'ok':'pop')}else{snd('ng');P.miss++;P.hint=1;if(P.miss>=4){P.vals[key]={val:e};P.idx++;P.miss=0}}
 gridR();if(P.idx>=P.seq.length){ok=1;$('#nx').disabled=0;$('#fb').textContent=`せいかい！ 答えは ${P.a*P.b}（Enterで つぎへ）`}else if(P.miss&&!P.hint)$('#fb').textContent='おしい！ もういちど。'}
-function chk(){const sp=ST[S0].s[I],n=sp.q.split(/[×÷+-]/).map(Number),ans=sp.a??val(sp.q),k=kind(sp.q),v=nz($('#in').value).trim();
+function chk(){if(P&&P.mode==='triple'){checkTriple();return;}const sp=ST[S0].s[I],n=sp.q.split(/[×÷+-]/).map(Number),ans=sp.a??val(sp.q),k=kind(sp.q),v=nz($('#in').value).trim();
 if(v!==''&&+v==ans){snd('ok');ok=1;$('#fb').textContent=`せいかい！ 答えは ${ans}（Enterで つぎへ）`;$('#nx').disabled=0;return}
 miss++;snd('ng');let h;
 if(k=='t'){const b=10**(String(n[0]).length-1);h=pat(n[0]/b,n[1],[1,b])}
@@ -181,7 +200,7 @@ const DIC=[['一の位','いちのくらい'],['十の位','じゅうのくら�
 function say(){const sp=ST[S0].s[I],e=document.createElement('div');e.innerHTML=sp.t=='練習'?`${sp.s||''} ${sp.q}は いくつ`:sp.h;const u=new SpeechSynthesisUtterance(DIC.reduce((s,[a,b])=>s.split(a).join(b),e.textContent));u.lang='ja-JP';u.rate=.9;speechSynthesis.cancel();speechSynthesis.speak(u)}
 $('#g').addEventListener('input',e=>{if(e.target.classList.contains('ci')){const v=nz(e.target.value).trim();if(/^\d$/.test(v))gk(v);else if(v)e.target.value=''}});
 document.addEventListener('keydown',e=>{if(e.isComposing||document.querySelector('dialog[open]'))return;const t=e.target,i=t.tagName=='INPUT',nx=$('#nx'),bk=$('#bk'),free=!(i&&t.value&&!ok);
-if(e.key=='Enter'){if(t.id=='in')ok?mv(1):chk();else if(i)ok?mv(1):gk(nz(t.value).trim());else if(t.tagName!='BUTTON'&&!nx.disabled)mv(1)}
+if(e.key=='Enter'){if(P&&P.mode==='triple'&&i){e.preventDefault();ok?mv(1):checkTriple();}else if(t.id=='in')ok?mv(1):chk();else if(i)ok?mv(1):gk(nz(t.value).trim());else if(t.tagName!='BUTTON'&&!nx.disabled)mv(1)}
 else if(e.key=='ArrowRight'&&free&&!nx.disabled)mv(1);
 else if(e.key=='ArrowLeft'&&free&&!bk.disabled)mv(-1)});
 sb();R();
